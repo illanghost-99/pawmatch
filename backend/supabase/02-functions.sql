@@ -1,0 +1,1 @@
+-- See supabase/migrations/20260920120100_functions.sql

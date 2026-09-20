@@ -1,0 +1,17 @@
+# supabase link --project-ref DITT_REF
+project_id = "pawmatch"
+
+[api]
+enabled = true
+
+[db]
+major_version = 15
+
+[auth]
+enabled = true
+site_url = "https://pawmatch.app"
+
+[auth.external.apple]
+enabled = true
+client_id = "env(APPLE_CLIENT_ID)"
+secret = "env(APPLE_SECRET)"
