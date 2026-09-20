@@ -1,0 +1,1 @@
+Name: PawMatch. Category: Lifestyle. Age 12+. Demo account required. Privacy labels must match Supabase/RevenueCat/Sentry. IAP: premium.monthly, premium.yearly, boost.1. Physical goods are not IAP and not in v1.

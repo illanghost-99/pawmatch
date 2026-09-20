@@ -1,0 +1,1 @@
+-- See local artifacts for full RLS schema: profiles, dogs, swipes, matches, messages, blocks, reports, swipe_quotas.
