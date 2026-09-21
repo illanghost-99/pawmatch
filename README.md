@@ -1,29 +1,38 @@
 # PawMatch
 
-Social plattform för hundägare. Flutter + Supabase. Byggd för App Store v1.
+Sveriges sociala app för hundägare. Matcha hundar i närheten — till **vänner** eller **valpkull**.
 
 Repo: https://github.com/illanghost-99/pawmatch
 
-## Läs först
-- `docs/00-RISKS-AND-V1-SCOPE.md` — vad som får lov att släppas, vad Apple avslår
-- `docs/APP-STORE.md` — metadata, IAP, review-notes
-- `docs/PRIVACY-POLICY-DRAFT.md` — utkast, inte juridiskt granskat
+Stack: **Flutter** (iOS + Android) + **Supabase** (gratisnivå).
 
-## Stack
-- App: Flutter, Cupertino-first
-- Backend: Supabase Auth + Postgres + Storage + Realtime
-- Betalning i appen: StoreKit via RevenueCat
+Inte i v1: BankID, avtalsverktyg, valpprovision, betald Premium.
 
-Firebase används inte som databas i v1.
+## Kom igång
 
-## Kör lokalt
 ```bash
-cd apps/mobile
+git clone https://github.com/illanghost-99/pawmatch.git
+cd pawmatch
+flutter create . --project-name pawmatch --org app.pawmatch --platforms=ios,android
 flutter pub get
-flutter run --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...
+flutter run
 ```
 
-## Är detta produktionsklart?
-Nej. Detta är en granskbar v1-grund, inte en färdig app för 100 miljoner användare.
+`flutter create .` skapar `ios/` och `android/` utan att skriva över `lib/`.
 
-Varumärke: PawMatch (inte Pawamatch).
+På Mac öppnar du sedan `ios/Runner.xcworkspace` i Xcode för TestFlight.
+
+### Supabase (valfritt)
+
+Utan nycklar kör appen testdata.
+
+```bash
+flutter run --dart-define=SUPABASE_URL=https://DIN.supabase.co --dart-define=SUPABASE_ANON_KEY=DIN_KEY
+```
+
+## v1
+- Onboarding: roll + intressen
+- För dig — rankat på intressen och plats
+- Utforska — swipe + filter
+- Match + chatt
+- Blockera / radera konto
