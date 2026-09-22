@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_state.dart';
+import '../data/suggestions.dart';
 import '../models.dart';
 
 const _rose = Color(0xFFC23B2E);
@@ -95,7 +96,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                   }),
                 ),
                 const SizedBox(height: 24),
-                Text(titles[page], style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: _ink, letterSpacing: -0.6)),
+                Text(titles[page], style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: _ink)),
                 const SizedBox(height: 8),
                 Text(subs[page], style: TextStyle(fontSize: 16, color: _ink.withValues(alpha: 0.7), height: 1.35)),
                 const SizedBox(height: 20),
@@ -133,11 +134,6 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                                         showCheckmark: false,
                                         selectedColor: _rose.withValues(alpha: 0.18),
                                         backgroundColor: Colors.white,
-                                        side: BorderSide(color: s.interests.contains(i.id) ? _rose : Colors.black12),
-                                        labelStyle: TextStyle(
-                                          color: _ink,
-                                          fontWeight: s.interests.contains(i.id) ? FontWeight.w700 : FontWeight.w500,
-                                        ),
                                         onSelected: (_) => setState(() => s.toggleInterest(i.id)),
                                       ),
                                   ],
@@ -148,9 +144,19 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                                 children: [
                                   _field(dogName, 'Hundens namn'),
                                   const SizedBox(height: 12),
-                                  _field(dogBreed, 'Ras'),
+                                  _suggestField(
+                                    controller: dogBreed,
+                                    label: 'Ras',
+                                    hint: 'Skriv pom — välj Pomeranian',
+                                    options: kBreeds,
+                                  ),
                                   const SizedBox(height: 12),
-                                  _field(dogCity, 'Ort'),
+                                  _suggestField(
+                                    controller: dogCity,
+                                    label: 'Ort',
+                                    hint: 'Skriv upplands — välj Upplands Väsby',
+                                    options: kCities,
+                                  ),
                                   const SizedBox(height: 16),
                                   Text('Ålder: $dogAge år', style: const TextStyle(fontWeight: FontWeight.w600)),
                                   Slider(
@@ -192,7 +198,6 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                     style: FilledButton.styleFrom(
                       backgroundColor: _rose,
                       foregroundColor: Colors.white,
-                      textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                     ),
                     onPressed: _next,
@@ -210,12 +215,43 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   Widget _field(TextEditingController c, String label) {
     return TextField(
       controller: c,
+      keyboardType: TextInputType.text,
+      textCapitalization: TextCapitalization.words,
       decoration: InputDecoration(
         labelText: label,
         filled: true,
         fillColor: Colors.white,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
       ),
+    );
+  }
+
+  Widget _suggestField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required List<String> options,
+  }) {
+    return Autocomplete<String>(
+      initialValue: TextEditingValue(text: controller.text),
+      optionsBuilder: (v) => suggest(v.text, options),
+      onSelected: (v) => controller.text = v,
+      fieldViewBuilder: (context, textController, focus, onSubmit) {
+        textController.addListener(() => controller.text = textController.text);
+        return TextField(
+          controller: textController,
+          focusNode: focus,
+          keyboardType: TextInputType.text,
+          textCapitalization: TextCapitalization.words,
+          decoration: InputDecoration(
+            labelText: label,
+            hintText: hint,
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+          ),
+        );
+      },
     );
   }
 }
@@ -268,7 +304,6 @@ class _RoleCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: _ink)),
-                      const SizedBox(height: 2),
                       Text(subtitle, style: TextStyle(fontSize: 13, color: _ink.withValues(alpha: 0.62))),
                     ],
                   ),
