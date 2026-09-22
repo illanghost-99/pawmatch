@@ -16,7 +16,7 @@ class _PawMatchAppState extends State<PawMatchApp> {
 
   @override
   Widget build(BuildContext context) {
-    const rust = Color(0xFFC47A52);
+    const rose = Color(0xFFC23B2E);
     return AnimatedBuilder(
       animation: state,
       builder: (_, __) {
@@ -24,12 +24,13 @@ class _PawMatchAppState extends State<PawMatchApp> {
           title: 'PawMatch',
           debugShowCheckedModeBanner: false,
           theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: rust),
+            colorScheme: ColorScheme.fromSeed(seedColor: rose),
             textTheme: GoogleFonts.dmSansTextTheme(),
             useMaterial3: true,
+            scaffoldBackgroundColor: const Color(0xFFFFF6F4),
           ),
           darkTheme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: rust, brightness: Brightness.dark),
+            colorScheme: ColorScheme.fromSeed(seedColor: rose, brightness: Brightness.dark),
             textTheme: GoogleFonts.dmSansTextTheme(ThemeData.dark().textTheme),
             useMaterial3: true,
           ),
