@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'app_state.dart';
 import 'features/auth.dart';
@@ -23,19 +24,19 @@ class _PawMatchAppState extends State<PawMatchApp> {
       builder: (_, __) {
         return MaterialApp(
           title: 'PawMatch',
-          locale: const Locale('sv', 'SE'),
-          supportedLocales: const [Locale('sv', 'SE'), Locale('en', 'US')],
+          locale: const Locale('sv'),
+          supportedLocales: const [Locale('sv'), Locale('en')],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
           debugShowCheckedModeBanner: false,
           theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: navy, primary: navy, secondary: gold),
+            colorScheme: ColorScheme.fromSeed(seedColor: navy, secondary: gold),
             textTheme: GoogleFonts.dmSansTextTheme(),
             useMaterial3: true,
             scaffoldBackgroundColor: const Color(0xFFF7F4EE),
-          ),
-          darkTheme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: navy, secondary: gold, brightness: Brightness.dark),
-            textTheme: GoogleFonts.dmSansTextTheme(ThemeData.dark().textTheme),
-            useMaterial3: true,
           ),
           home: AnimatedSwitcher(
             duration: const Duration(milliseconds: 400),
