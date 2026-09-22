@@ -8,7 +8,7 @@ const kCities = [
   'Sigtuna', 'Vallentuna', 'Österåker', 'Ekerö', 'Tyresö', 'Danderyd', 'Vaxholm',
   'Mölndal', 'Partille', 'Kungälv', 'Lerum', 'Kungsbacka', 'Varberg', 'Falkenberg',
   'Eskilstuna', 'Nyköping', 'Strängnäs', 'Enköping', 'Västervik', 'Oskarshamn',
-  'Karlskrona', 'Karlshamn', 'Ronneby', 'Ystad', 'Trelleborg', 'Lund', 'Landskrona',
+  'Karlskrona', 'Karlshamn', 'Ronneby', 'Ystad', 'Trelleborg', 'Landskrona',
   'Ängelholm', 'Hässleholm', 'Vänersborg', 'Skövde', 'Lidköping', 'Mariestad',
   'Piteå', 'Skellefteå', 'Boden', 'Kalix', 'Haparanda', 'Gällivare', 'Arvidsjaur',
 ];
@@ -17,18 +17,24 @@ const kBreeds = [
   'Golden retriever', 'Labrador retriever', 'Schäfer', 'Jämthund', 'Norsk älghund',
   'Border collie', 'Västgötaspets', 'Fransk bulldogg', 'Husky', 'Siberian husky',
   'Rottweiler', 'Cocker spaniel', 'Tax', 'Shetland sheepdog', 'Dobermann',
-  'Pudel', 'Basset hound', 'Australisk herdehund', 'Bernersennen', 'Whippet',
-  'Cavalier king charles spaniel', 'Norsk buhund', 'Beagle', 'Boxer',
-  'Jack russell terrier', 'Chihuahua', 'Dansk-svensk gårdshund', 'Drever',
-  'Hamiltonstövare', 'Finsk spets', 'Karelsk björnhund', 'Samojed',
-  'Alaskan malamute', 'Akita', 'Shiba', 'Malteser', 'Bichon frisé',
-  'Rhodesian ridgeback', 'Vizsla', 'Weimaraner', 'Dalmatiner', 'Cane corso',
-  'Staffordshire bullterrier', 'Amerikansk staffordshire terrier', 'Amstaff',
+  'Pudel', 'Pomeranian', 'Tysk spets / Pomeranian', 'Zwergspitz', 'Basset hound',
+  'Australisk herdehund', 'Bernersennen', 'Whippet', 'Cavalier king charles spaniel',
+  'Norsk buhund', 'Beagle', 'Boxer', 'Jack russell terrier', 'Chihuahua',
+  'Dansk-svensk gårdshund', 'Drever', 'Hamiltonstövare', 'Finsk spets',
+  'Karelsk björnhund', 'Samojed', 'Alaskan malamute', 'Akita', 'Shiba',
+  'Malteser', 'Bichon frisé', 'Rhodesian ridgeback', 'Vizsla', 'Weimaraner',
+  'Dalmatiner', 'Cane corso', 'Staffordshire bullterrier', 'Amstaff',
   'Mops', 'Shih tzu', 'Yorkshireterrier', 'Papillon', 'Blandras',
 ];
 
+String _fold(String s) => s
+    .toLowerCase()
+    .replaceAll('å', 'a')
+    .replaceAll('ä', 'a')
+    .replaceAll('ö', 'o');
+
 List<String> suggest(String query, List<String> source) {
-  final q = query.trim().toLowerCase();
+  final q = _fold(query.trim());
   if (q.isEmpty) return source.take(8).toList();
-  return source.where((s) => s.toLowerCase().contains(q)).take(8).toList();
+  return source.where((s) => _fold(s).contains(q)).take(8).toList();
 }
