@@ -6,7 +6,18 @@
 .vscode/
 build/
 ios/Pods/
+ios/.symlinks/
 android/.gradle/
 *.iml
 .env
 .DS_Store
+
+# Secrets — never commit
+GoogleService-Info.plist
+google-services.json
+**/GoogleService-Info.plist
+**/google-services.json
+*.p8
+*.p12
+key.properties
+*.jks

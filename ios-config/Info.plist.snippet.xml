@@ -1,0 +1,7 @@
+<!-- Lägg in i ios/Runner/Info.plist när flutter create . är kört -->
+<key>NSFaceIDUsageDescription</key>
+<string>PawMatch använder Face ID för snabb och säker inloggning.</string>
+<key>UIBackgroundModes</key>
+<array>
+  <string>remote-notification</string>
+</array>
