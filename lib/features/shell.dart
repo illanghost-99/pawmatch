@@ -25,7 +25,7 @@ class _AppShellState extends State<AppShell> {
         onDestinationSelected: (v) => setState(() => i = v),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.auto_awesome), label: 'För dig'),
-          NavigationDestination(icon: Icon(Icons.style), label: 'Utforska'),
+          NavigationDestination(icon: Icon(Icons.favorite), label: 'Matcha'),
           NavigationDestination(icon: Icon(Icons.chat_bubble_outline), label: 'Chatt'),
           NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profil'),
         ],
