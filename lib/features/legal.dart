@@ -11,44 +11,80 @@ class LegalPage extends StatelessWidget {
       appBar: AppBar(title: Text(title)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
-        child: Text(body),
+        child: Text(body, style: const TextStyle(height: 1.45, fontSize: 15)),
       ),
     );
   }
 }
 
 const kTerms = '''
-Användarvillkor (utkast v1)
+Användarvillkor — PawMatch (Sverige, v1)
 
-1. PawMatch är en social plattform för hundägare. Vi förmedlar kontakt, inte veterinärvård eller juridisk rådgivning.
-2. Du ansvarar för att uppgifter om din hund är korrekta. Stamtavla och hälsouppgifter granskas i rimlig utsträckning men godkännande är inte en veterinärcertifiering.
-3. Avel och valpförsäljning sker mellan användare. Följ svensk lag, djurskyddsregler och eventuella rasorganisationers krav.
-4. Respektera andra. Trakasserier, bedrägeri och olagligt innehåll leder till avstängning.
-5. Du kan radera ditt konto i appen. Vissa loggar kan sparas enligt lag.
+1. Tjänsten
+PawMatch är en social app där hundägare kan hitta vänner till sina hundar eller komma i kontakt kring seriös avel. PawMatch förmedlar kontakt. Vi säljer inte hundar, ger inte veterinärråd och är inte part i avtal mellan användare.
 
-Kontakta support@pawmatch.app vid frågor.
+2. Konto
+Du måste ange korrekta uppgifter och vara myndig. Ett konto per person. Du ansvarar för inloggningen. Du kan radera kontot i appen (Profil).
+
+3. Hundprofiler
+Du ansvarar för att bilder och uppgifter stämmer. Stamtavla, vaccin och hälsouppgifter kan granskas av oss. Ett godkännande i appen är inte ett veterinärintyg och inte en garanti.
+
+4. Avel och valpar
+Avel och eventuell försäljning sker mellan användarna. Följ djurskyddslagen, Jordbruksverkets regler och rasorganisationers krav. PawMatch tar i version 1 ingen provision och hanterar inga betalningar.
+
+5. Förbjudet
+Trakasserier, bedrägeri, förfalskade intyg, olagligt innehåll, sexuellt innehåll, djurplågeri och att locka minderåriga. Brott anmäls och kontot stängs.
+
+6. Moderering
+Vi kan ta bort innehåll och stänga konton. Du kan överklaga till support@pawmatch.app.
+
+7. App Store
+Appen följer Apples App Review Guidelines: konto kan raderas i appen, integritetspolicy finns, och känsliga uppgifter begärs bara när de behövs för tjänsten.
+
+8. Ansvar
+Tjänsten lämnas i befintligt skick. Vi ansvarar inte för möten, avelsresultat eller skador mellan användare.
+
+Kontakt: support@pawmatch.app
 ''';
 
 const kPrivacy = '''
-Integritetspolicy (utkast v1)
+Integritetspolicy — PawMatch (GDPR / Apple)
 
-Personuppgiftsansvarig: PawMatch (kontakt: support@pawmatch.app).
+Personuppgiftsansvarig: PawMatch, kontakt support@pawmatch.app.
 
-Vi behandlar e-post, profil, hunduppgifter, plats (ungefärlig) och chatt för att leverera tjänsten.
-Rättslig grund: avtal och berättigat intresse (säkerhet, missbruk).
+Vad vi samlar in
+• E-post och inloggning
+• Profil och roll (hundägare, kennel, veterinär, intresserad)
+• Hunduppgifter du själv lägger in
+• Ungefärlig plats för att visa hundar i närheten
+• Chatt efter match
+• Enhetsuppgifter för push och felrapporter
 
-Du kan begära registerutdrag och radering.
-Vi använder leverantörer (t.ex. molndatabas) inom EU när det är möjligt.
+Vi samlar inte in BankID i version 1. Vi säljer inte dina uppgifter.
 
-App Store: vi följer Apples krav på tydlig policy och kontoborttagning.
+Varför
+Avtal (leverera appen), berättigat intresse (säkerhet och missbruk) och samtycke när det krävs (notiser, plats).
+
+Lagring
+Så länge kontot finns. Vid radering tar vi bort profil och hundar. Viss logg kan sparas om lagen kräver det.
+
+Dina rättigheter
+Registerutdrag, rättelse, radering, invändning och klagomål till IMY. Radering finns i appen under Profil.
+
+Apple Privacy Nutrition Labels
+Kontaktuppgifter, användarinnehåll, plats (ungefärlig), identifierare för konto och notiser. Ingen spårning för annonser i v1.
+
+Leverantörer
+Moln inom EU när det är möjligt (t.ex. databas och notiser).
 ''';
 
 const kCommunity = '''
 Communityregler
 
-- Var ärlig om din hunds hälsa och temperament.
-- Dela inte andras personuppgifter utan samtycke.
-- Inga hot, hat eller sexuellt innehåll.
-- Rapportera misstänkt bedrägeri till support.
-- Avel: prioritera djurskydd. PawMatch godkänner inte djurplågeri.
+• Var ärlig om hälsa, temperament och avelsstatus.
+• Behandla andra ägare med respekt — både den som söker vän och den som söker avel.
+• Dela inte andras personuppgifter utan samtycke.
+• Inga hot, hat, nakenhet eller sexuellt innehåll.
+• Avel ska sätta djurskydd först. Misstänkt vanvård rapporteras.
+• Anmäl bedrägeri till support@pawmatch.app.
 ''';
