@@ -11,9 +11,17 @@ const kInterests = [
   Interest('play', 'Lekträffar', '🎾'),
   Interest('training', 'Träning', '🏅'),
   Interest('puppies', 'Valpar / avel', '🍼'),
+  Interest('park', 'Hundrastgård', '🌳'),
+  Interest('swim', 'Simma', '🌊'),
+  Interest('cafe', 'Uteservering', '☕'),
+  Interest('agility', 'Agility', '⚡'),
   Interest('hunt', 'Jakt', '🌲'),
+  Interest('show', 'Utställning', '🎩'),
   Interest('city', 'Stad', '🏙️'),
   Interest('nature', 'Natur', '⛰️'),
+  Interest('small', 'Små raser', '🐶'),
+  Interest('large', 'Stora raser', '🐕'),
+  Interest('senior', 'Seniorhundar', '👴'),
 ];
 
 enum UserRole { owner, kennel, vet, enthusiast }
@@ -32,6 +40,7 @@ class DogProfile {
     required this.bio,
     required this.owner,
     required this.tags,
+    this.photoUrl = '',
     this.intent = 'friends',
     this.pedigreeStatus = ReviewStatus.none,
     this.vaccineStatus = ReviewStatus.none,
@@ -49,6 +58,7 @@ class DogProfile {
   final String bio;
   final String owner;
   final List<String> tags;
+  final String photoUrl;
   final String intent;
   final ReviewStatus pedigreeStatus;
   final ReviewStatus vaccineStatus;
