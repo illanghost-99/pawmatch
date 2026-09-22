@@ -27,10 +27,6 @@ class _PawMatchAppState extends State<PawMatchApp> {
             colorScheme: ColorScheme.fromSeed(seedColor: rust),
             textTheme: GoogleFonts.dmSansTextTheme(),
             useMaterial3: true,
-            pageTransitionsTheme: const PageTransitionsTheme(builders: {
-              TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-              TargetPlatform.android: ZoomPageTransitionsBuilder(),
-            }),
           ),
           darkTheme: ThemeData(
             colorScheme: ColorScheme.fromSeed(seedColor: rust, brightness: Brightness.dark),
