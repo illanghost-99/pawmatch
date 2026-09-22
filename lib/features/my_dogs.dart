@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../app_state.dart';
+import '../data/suggestions.dart';
 import '../models.dart';
+import '../widgets/suggest_field.dart';
 
 const _rose = Color(0xFFC23B2E);
 const _ink = Color(0xFF1C1410);
@@ -125,11 +127,11 @@ class MyDogsPage extends StatelessWidget {
                 const SizedBox(height: 16),
                 const Text('Ny hund', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 12),
-                TextField(controller: name, decoration: const InputDecoration(labelText: 'Namn', filled: true, fillColor: Colors.white)),
+                TextField(controller: name, textCapitalization: TextCapitalization.words, decoration: const InputDecoration(labelText: 'Namn', filled: true, fillColor: Colors.white)),
                 const SizedBox(height: 8),
-                TextField(controller: breed, decoration: const InputDecoration(labelText: 'Ras', filled: true, fillColor: Colors.white)),
+                SuggestField(controller: breed, label: 'Ras', hint: 'Skriv pom — välj Pomeranian', options: kBreeds),
                 const SizedBox(height: 8),
-                TextField(controller: city, decoration: const InputDecoration(labelText: 'Ort', filled: true, fillColor: Colors.white)),
+                SuggestField(controller: city, label: 'Ort', hint: 'Skriv upplands — välj Upplands Väsby', options: kCities),
                 Text('Ålder: $age'),
                 Slider(value: age.toDouble(), min: 0, max: 15, divisions: 15, activeColor: _rose, onChanged: (v) => setLocal(() => age = v.round())),
                 TextField(controller: bio, decoration: const InputDecoration(labelText: 'Kort beskrivning', filled: true, fillColor: Colors.white)),
