@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../app_state.dart';
 import '../data/suggestions.dart';
 import '../models.dart';
+import '../widgets/suggest_field.dart';
 
 const _navy = Color(0xFF152033);
 const _gold = Color(0xFFC9A24A);
@@ -46,8 +47,21 @@ class DiscoverPage extends StatelessWidget {
             : Column(
                 children: [
                   Text('${deck.length} hundar · ${state.locationLabel}', style: const TextStyle(color: _navy)),
-                  const SizedBox(height: 10),
-                  Expanded(child: _SwipeCard(dog: deck.first, km: state.kmTo(deck.first).round())),
+                  const Text('Svep höger för like, vänster för nej', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: Dismissible(
+                      key: ValueKey(deck.first.id),
+                      direction: DismissDirection.horizontal,
+                      background: _swipeBg(Alignment.centerLeft, const Color(0xFF2F6B4F), Icons.thumb_up_alt_rounded, 'LIKE'),
+                      secondaryBackground: _swipeBg(Alignment.centerRight, const Color(0xFF5C6473), Icons.thumb_down_alt_rounded, 'NEJ'),
+                      onDismissed: (dir) {
+                        HapticFeedback.mediumImpact();
+                        state.swipe(deck.first, like: dir == DismissDirection.startToEnd);
+                      },
+                      child: _SwipeCard(dog: deck.first, km: state.kmTo(deck.first).round()),
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -84,6 +98,21 @@ class DiscoverPage extends StatelessWidget {
                   ),
                 ],
               ),
+      ),
+    );
+  }
+
+  Widget _swipeBg(Alignment align, Color color, IconData icon, String text) {
+    return Container(
+      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(28)),
+      alignment: align,
+      padding: const EdgeInsets.symmetric(horizontal: 28),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: Colors.white, size: 40),
+          Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+        ],
       ),
     );
   }
@@ -234,8 +263,8 @@ class FiltersSheet extends StatefulWidget {
 }
 
 class _FiltersSheetState extends State<FiltersSheet> {
-  late String breed = widget.state.breedQuery;
-  late String area = widget.state.area;
+  late final breed = TextEditingController(text: widget.state.breedQuery);
+  late final area = TextEditingController(text: widget.state.area);
 
   @override
   Widget build(BuildContext context) {
@@ -249,37 +278,9 @@ class _FiltersSheetState extends State<FiltersSheet> {
           children: [
             const Text('Filter', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
             const SizedBox(height: 12),
-            Autocomplete<String>(
-              initialValue: TextEditingValue(text: breed),
-              optionsBuilder: (v) => suggest(v.text, kBreeds),
-              onSelected: (v) => breed = v,
-              fieldViewBuilder: (context, controller, focus, onSubmit) {
-                return TextField(
-                  controller: controller,
-                  focusNode: focus,
-                  keyboardType: TextInputType.text,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(labelText: 'Ras', hintText: 'Börja skriv — förslag visas'),
-                  onChanged: (v) => breed = v,
-                );
-              },
-            ),
+            SuggestField(controller: breed, label: 'Ras', hint: 'Börja skriv — förslag visas', options: kBreeds),
             const SizedBox(height: 8),
-            Autocomplete<String>(
-              initialValue: TextEditingValue(text: area),
-              optionsBuilder: (v) => suggest(v.text, kCities),
-              onSelected: (v) => area = v,
-              fieldViewBuilder: (context, controller, focus, onSubmit) {
-                return TextField(
-                  controller: controller,
-                  focusNode: focus,
-                  keyboardType: TextInputType.text,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(labelText: 'Område / ort', hintText: 'T.ex. Upplands Väsby'),
-                  onChanged: (v) => area = v,
-                );
-              },
-            ),
+            SuggestField(controller: area, label: 'Område / ort', hint: 'T.ex. Upplands Väsby', options: kCities),
             Text('Ålder ${s.ageMin}–${s.ageMax}'),
             RangeSlider(
               values: RangeValues(s.ageMin.toDouble(), s.ageMax.toDouble()),
@@ -296,8 +297,8 @@ class _FiltersSheetState extends State<FiltersSheet> {
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: _navy),
               onPressed: () {
-                s.breedQuery = breed;
-                s.area = area;
+                s.breedQuery = breed.text;
+                s.area = area.text;
                 s.applyFilters();
                 Navigator.pop(context);
               },
