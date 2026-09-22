@@ -18,6 +18,8 @@ const kInterests = [
 
 enum UserRole { owner, kennel, vet, enthusiast }
 
+enum ReviewStatus { none, pending, approved, rejected }
+
 class DogProfile {
   const DogProfile({
     required this.id,
@@ -31,6 +33,10 @@ class DogProfile {
     required this.owner,
     required this.tags,
     this.intent = 'friends',
+    this.pedigreeStatus = ReviewStatus.none,
+    this.vaccineStatus = ReviewStatus.none,
+    this.availableForBreeding = false,
+    this.availableForFriends = true,
   });
 
   final String id;
@@ -44,6 +50,10 @@ class DogProfile {
   final String owner;
   final List<String> tags;
   final String intent;
+  final ReviewStatus pedigreeStatus;
+  final ReviewStatus vaccineStatus;
+  final bool availableForBreeding;
+  final bool availableForFriends;
 }
 
 class ChatLine {
@@ -56,4 +66,31 @@ class MatchThread {
   MatchThread(this.dog, this.messages);
   final DogProfile dog;
   final List<ChatLine> messages;
+}
+
+class MyDog {
+  MyDog({
+    required this.name,
+    required this.breed,
+    required this.age,
+    required this.city,
+    required this.bio,
+    this.availableForFriends = true,
+    this.availableForBreeding = false,
+    this.pedigreeNote = '',
+    this.vaccineNote = '',
+    this.pedigreeStatus = ReviewStatus.pending,
+    this.vaccineStatus = ReviewStatus.pending,
+  });
+  String name;
+  String breed;
+  int age;
+  String city;
+  String bio;
+  bool availableForFriends;
+  bool availableForBreeding;
+  String pedigreeNote;
+  String vaccineNote;
+  ReviewStatus pedigreeStatus;
+  ReviewStatus vaccineStatus;
 }
