@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'data/sample_dogs.dart';
 import 'models.dart';
+import 'services/push.dart';
 
 class AppState extends ChangeNotifier {
   UserRole role = UserRole.owner;
@@ -26,6 +27,7 @@ class AppState extends ChangeNotifier {
   void signIn(String e) {
     email = e;
     signedIn = true;
+    PushService.init();
     notifyListeners();
   }
 
@@ -48,6 +50,7 @@ class AppState extends ChangeNotifier {
 
   void addMyDog(MyDog d) {
     myDogs.add(d);
+    PushService.notifyLive(d.name);
     notifyListeners();
   }
 
@@ -99,12 +102,14 @@ class AppState extends ChangeNotifier {
     deck.removeWhere((x) => x.id == d.id);
     if (like) {
       matches.insert(0, MatchThread(d, [const ChatLine(false, 'Hej! Trevligt att matcha')]));
+      PushService.notifyMatch(d.name);
     }
     notifyListeners();
   }
 
   void send(MatchThread t, String text) {
     t.messages.add(ChatLine(true, text));
+    PushService.notifyMessage(t.dog.name);
     notifyListeners();
   }
 

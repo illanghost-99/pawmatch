@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import '../app_state.dart';
+import '../services/biometrics.dart';
 
-/// Enkel e-post + lösenord (lokal / Supabase när nycklar finns).
-/// Apple Sign In kopplas i Xcode + Supabase Auth Providers.
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key, required this.state});
   final AppState state;
@@ -12,9 +11,16 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMixin {
   bool create = false;
+  bool bioOk = false;
   final email = TextEditingController();
   final pass = TextEditingController();
   late final anim = AnimationController(vsync: this, duration: const Duration(milliseconds: 600))..forward();
+
+  @override
+  void initState() {
+    super.initState();
+    Biometrics.available().then((v) => setState(() => bioOk = v));
+  }
 
   @override
   void dispose() {
@@ -61,6 +67,17 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                   },
                   child: Text(create ? 'Skapa konto' : 'Logga in'),
                 ),
+                if (bioOk) ...[
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final ok = await Biometrics.unlock(reason: 'Logga in i PawMatch med Face ID');
+                      if (ok && mounted) widget.state.signIn(widget.state.email.isEmpty ? 'faceid@pawmatch.app' : widget.state.email);
+                    },
+                    icon: const Icon(Icons.face),
+                    label: const Text('Face ID / biometri'),
+                  ),
+                ],
                 TextButton(
                   onPressed: () => setState(() => create = !create),
                   child: Text(create ? 'Har redan konto? Logga in' : 'Ny här? Skapa konto'),
