@@ -7,18 +7,33 @@ class AppState extends ChangeNotifier {
   UserRole role = UserRole.owner;
   final Set<String> interests = {};
   bool onboarded = false;
+  bool signedIn = false;
+  String email = '';
   double lat = 59.3293;
   double lng = 18.0686;
   String locationLabel = 'Stockholm';
   String breedQuery = '';
   int ageMin = 0;
   int ageMax = 15;
-  int radiusKm = 80;
+  int radiusKm = 120;
   String area = '';
   String intentFilter = 'all';
   List<DogProfile> deck = List.of(sampleDogs);
   final List<MatchThread> matches = [];
   final Set<String> blocked = {};
+  final List<MyDog> myDogs = [];
+
+  void signIn(String e) {
+    email = e;
+    signedIn = true;
+    notifyListeners();
+  }
+
+  void signOut() {
+    signedIn = false;
+    email = '';
+    notifyListeners();
+  }
 
   void toggleInterest(String id) {
     if (!interests.add(id)) interests.remove(id);
@@ -28,6 +43,11 @@ class AppState extends ChangeNotifier {
   void finishOnboarding() {
     onboarded = true;
     applyFilters();
+    notifyListeners();
+  }
+
+  void addMyDog(MyDog d) {
+    myDogs.add(d);
     notifyListeners();
   }
 

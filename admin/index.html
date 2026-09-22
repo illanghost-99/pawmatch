@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PawMatch Admin</title>
+  <style>
+    :root { font-family: system-ui, sans-serif; color: #1a1a1a; }
+    body { max-width: 720px; margin: 40px auto; padding: 0 16px; }
+    input, button { font: inherit; padding: 10px 14px; }
+    .card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; margin: 12px 0; }
+    .hidden { display: none; }
+    .ok { color: #0a7; }
+    .warn { color: #b50; }
+  </style>
+</head>
+<body>
+  <h1>PawMatch Admin</h1>
+  <p>Enkel admin för granskning. Sätt lösenord via miljövariabel vid deploy. Inte för produktionshemligheter i klienten.</p>
+  <div id="login">
+    <label>Adminkod<br/><input id="code" type="password" placeholder="admin-kod" /></label>
+    <button id="go">Logga in</button>
+    <p id="err" class="warn"></p>
+  </div>
+  <div id="panel" class="hidden">
+    <p class="ok">Inloggad. Här granskar du stamtavlor och vacciner (koppla Supabase i nästa steg).</p>
+    <div class="card">
+      <strong>Kö: granskning</strong>
+      <p>Elsa · Golden · stamtavla pending · vaccin pending</p>
+      <button>Godkänn</button> <button>Avslå</button>
+    </div>
+    <div class="card">
+      <strong>Rapporter</strong>
+      <p>Inga öppna ärenden (demo).</p>
+    </div>
+    <button id="out">Logga ut</button>
+  </div>
+  <script>
+    // Byt ut mot server-side auth / Supabase service role i produktion.
+    const EXPECT = localStorage.getItem('pm_admin_hint') || 'pawmatch-admin';
+    const login = document.getElementById('login');
+    const panel = document.getElementById('panel');
+    document.getElementById('go').onclick = () => {
+      if (document.getElementById('code').value === EXPECT) {
+        sessionStorage.setItem('pm_admin', '1');
+        login.classList.add('hidden');
+        panel.classList.remove('hidden');
+      } else {
+        document.getElementById('err').textContent = 'Fel kod';
+      }
+    };
+    document.getElementById('out').onclick = () => {
+      sessionStorage.removeItem('pm_admin');
+      location.reload();
+    };
+    if (sessionStorage.getItem('pm_admin') === '1') {
+      login.classList.add('hidden');
+      panel.classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>
