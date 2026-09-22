@@ -16,11 +16,12 @@ class AppState extends ChangeNotifier {
   String breedQuery = '';
   int ageMin = 0;
   int ageMax = 15;
-  int radiusKm = 120;
+  int radiusKm = 250;
   String area = '';
   String intentFilter = 'all';
   List<DogProfile> deck = List.of(sampleDogs);
   final List<MatchThread> matches = [];
+  final List<DogProfile> saved = [];
   final Set<String> blocked = {};
   final List<MyDog> myDogs = [];
 
@@ -107,6 +108,17 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void saveDog(DogProfile d) {
+    if (saved.any((x) => x.id == d.id)) {
+      saved.removeWhere((x) => x.id == d.id);
+    } else {
+      saved.insert(0, d);
+    }
+    notifyListeners();
+  }
+
+  bool isSaved(DogProfile d) => saved.any((x) => x.id == d.id);
+
   void send(MatchThread t, String text) {
     t.messages.add(ChatLine(true, text));
     PushService.notifyMessage(t.dog.name);
@@ -116,6 +128,7 @@ class AppState extends ChangeNotifier {
   void block(DogProfile d) {
     blocked.add(d.id);
     matches.removeWhere((m) => m.dog.id == d.id);
+    saved.removeWhere((m) => m.id == d.id);
     applyFilters();
   }
 }
