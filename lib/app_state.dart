@@ -18,6 +18,8 @@ class AppState extends ChangeNotifier {
   bool idConsent = false;
   bool identityPending = false;
   String displayName = 'Max';
+  String ownerBio = '';
+  String photoUrl = '';
   double lat = 59.3293;
   double lng = 18.0686;
   String locationLabel = 'Stockholm';
@@ -66,6 +68,22 @@ class AppState extends ChangeNotifier {
     displayName = fullName;
     idConsent = true;
     identityPending = true;
+    notifyListeners();
+  }
+
+  void saveProfile({
+    required String first,
+    required String last,
+    required String bio,
+    required String city,
+    required String photo,
+  }) {
+    firstName = first;
+    lastName = last;
+    ownerBio = bio;
+    locationLabel = city.isEmpty ? locationLabel : city;
+    photoUrl = photo;
+    displayName = fullName;
     notifyListeners();
   }
 
@@ -237,7 +255,7 @@ class AppState extends ChangeNotifier {
   void block(DogProfile d) {
     blocked.add(d.id);
     matches.removeWhere((m) => m.dog.id == d.id);
-    incoming.removeWhere((m) => m.dog.id == d.id);
+    incoming.removeWhere((m) => m.dog.id == t.dog.id);
     saved.removeWhere((m) => m.id == d.id);
     applyFilters();
   }
