@@ -49,8 +49,6 @@ class DiscoverPage extends StatelessWidget {
                   Text('${deck.length} hundar · ${state.locationLabel}', style: const TextStyle(color: _navy)),
                   const Text('Svep höger för like, vänster för nej', style: TextStyle(fontSize: 12, color: Colors.black54)),
                   const SizedBox(height: 8),
-                  const Expanded(child: SizedBox.expand()),
-                  Expanded(flex: 0, child: const SizedBox.shrink()),
                   Expanded(child: SwipeDeck(state: state)),
                   const SizedBox(height: 16),
                   Row(
