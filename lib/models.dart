@@ -76,6 +76,12 @@ class ChatLine {
   final String text;
 }
 
+class SigPoint {
+  const SigPoint(this.x, this.y);
+  final double x;
+  final double y;
+}
+
 class BreedingDeal {
   BreedingDeal({
     required this.pricePerPuppy,
@@ -87,7 +93,8 @@ class BreedingDeal {
     required this.body,
     this.signedByMe = '',
     this.signedByOther = '',
-  });
+    List<List<SigPoint>>? signature,
+  }) : signature = signature ?? [];
   final String pricePerPuppy;
   final String expectedPups;
   final String place;
@@ -97,6 +104,7 @@ class BreedingDeal {
   final String body;
   String signedByMe;
   String signedByOther;
+  List<List<SigPoint>> signature;
   bool get fullySigned => signedByMe.isNotEmpty && signedByOther.isNotEmpty;
 }
 
