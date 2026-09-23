@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../services/biometrics.dart';
+import '../services/cloud.dart';
 
 const _coral = Color(0xFFE25C3A);
 const _ink = Color(0xFF1B2430);
@@ -16,6 +17,7 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMixin {
   bool create = false;
   bool bioOk = false;
+  bool busy = false;
   final email = TextEditingController();
   final pass = TextEditingController();
   late final paw = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))..repeat(reverse: true);
@@ -34,6 +36,19 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     email.dispose();
     pass.dispose();
     super.dispose();
+  }
+
+  Future<void> _go() async {
+    if (busy) return;
+    setState(() => busy = true);
+    final mail = email.text.trim().isEmpty ? 'du@pawmatch.app' : email.text.trim();
+    final mode = await Cloud.login(email: mail, password: pass.text, create: create);
+    if (!mounted) return;
+    widget.state.signIn(mail);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(mode == 'cloud' ? 'Konto kopplat till Supabase' : 'Fortsatte lokalt (molnet svarade inte)')),
+    );
+    if (mounted) setState(() => busy = false);
   }
 
   @override
@@ -70,7 +85,12 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 16, color: _ink.withValues(alpha: 0.7)),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 8),
+                    Text(
+                      Cloud.ready ? 'Supabase är på' : 'Kör lokalt — slå på dart-define för molnet',
+                      style: TextStyle(fontSize: 12, color: Cloud.ready ? const Color(0xFF2A9D8F) : _ink.withValues(alpha: 0.45)),
+                    ),
+                    const SizedBox(height: 24),
                     TextField(controller: email, keyboardType: TextInputType.emailAddress, decoration: _field('E-post')),
                     const SizedBox(height: 12),
                     TextField(controller: pass, obscureText: true, decoration: _field('Lösenord')),
@@ -80,10 +100,8 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                       height: 54,
                       child: FilledButton(
                         style: FilledButton.styleFrom(backgroundColor: _coral, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18))),
-                        onPressed: () {
-                          widget.state.signIn(email.text.trim().isEmpty ? 'du@pawmatch.app' : email.text.trim());
-                        },
-                        child: Text(create ? 'Skapa konto' : 'Logga in'),
+                        onPressed: busy ? null : _go,
+                        child: Text(busy ? 'Väntar...' : (create ? 'Skapa konto' : 'Logga in')),
                       ),
                     ),
                     if (bioOk) ...[
@@ -92,12 +110,14 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                         width: double.infinity,
                         height: 50,
                         child: OutlinedButton.icon(
-                          onPressed: () async {
-                            final ok = await Biometrics.unlock(reason: 'Logga in i PawMatch');
-                            if (ok && mounted) {
-                              widget.state.signIn(widget.state.email.isEmpty ? 'faceid@pawmatch.app' : widget.state.email);
-                            }
-                          },
+                          onPressed: busy
+                              ? null
+                              : () async {
+                                  final ok = await Biometrics.unlock(reason: 'Logga in i PawMatch');
+                                  if (ok && mounted) {
+                                    widget.state.signIn(widget.state.email.isEmpty ? 'faceid@pawmatch.app' : widget.state.email);
+                                  }
+                                },
                           icon: const Icon(Icons.face),
                           label: const Text('Face ID / biometri'),
                         ),
