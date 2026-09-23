@@ -17,8 +17,8 @@ class _PawMatchAppState extends State<PawMatchApp> {
 
   @override
   Widget build(BuildContext context) {
-    const navy = Color(0xFF152033);
-    const gold = Color(0xFFC9A24A);
+    const coral = Color(0xFFE25C3A);
+    const ink = Color(0xFF1B2430);
     return AnimatedBuilder(
       animation: state,
       builder: (_, __) {
@@ -33,10 +33,23 @@ class _PawMatchAppState extends State<PawMatchApp> {
           ],
           debugShowCheckedModeBanner: false,
           theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: navy, secondary: gold),
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: coral,
+              primary: coral,
+              secondary: const Color(0xFF2A9D8F),
+              surface: const Color(0xFFFFF6F1),
+            ),
             textTheme: GoogleFonts.dmSansTextTheme(),
             useMaterial3: true,
-            scaffoldBackgroundColor: const Color(0xFFF7F4EE),
+            scaffoldBackgroundColor: const Color(0xFFFFF6F1),
+            appBarTheme: const AppBarTheme(foregroundColor: ink),
+            filledButtonTheme: FilledButtonThemeData(
+              style: FilledButton.styleFrom(
+                backgroundColor: coral,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
           ),
           home: AnimatedSwitcher(
             duration: const Duration(milliseconds: 400),
