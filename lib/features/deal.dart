@@ -5,6 +5,10 @@ import '../models.dart';
 
 class DealSheet {
   static Future<void> open(BuildContext context, AppState state, MatchThread thread) async {
+    if (thread.deal != null) {
+      _showContract(context, state, thread);
+      return;
+    }
     final mine = state.myDogs.where((d) => d.availableForBreeding).toList();
     final myName = TextEditingController(text: state.displayName);
     final myDog = TextEditingController(text: mine.isNotEmpty ? mine.first.name : '');
@@ -12,7 +16,6 @@ class DealSheet {
     final pups = TextEditingController(text: '4');
     final place = TextEditingController(text: state.locationLabel);
     final notes = TextEditingController();
-    final sign = TextEditingController();
 
     await showModalBottomSheet(
       context: context,
@@ -65,9 +68,9 @@ class DealSheet {
                     body: body,
                   );
                   thread.messages.add(const ChatLine(true, 'Jag har skapat ett avelsavtal. Öppna Förhandla för att läsa och signera.'));
-                  state.notifyListeners();
+                  state.bump();
                   Navigator.pop(ctx);
-                  _showContract(context, state, thread, sign);
+                  _showContract(context, state, thread);
                 },
                 child: const Text('Skapa avtal'),
               ),
@@ -78,9 +81,10 @@ class DealSheet {
     );
   }
 
-  static void _showContract(BuildContext context, AppState state, MatchThread thread, TextEditingController sign) {
+  static void _showContract(BuildContext context, AppState state, MatchThread thread) {
     final deal = thread.deal;
     if (deal == null) return;
+    final sign = TextEditingController();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -102,9 +106,8 @@ class DealSheet {
                   onPressed: () {
                     if (sign.text.trim().isEmpty) return;
                     deal.signedByMe = sign.text.trim();
-                    deal.signedByOther = thread.dog.owner;
                     thread.messages.add(ChatLine(true, 'Avtalet är signerat av ${deal.signedByMe}.'));
-                    state.notifyListeners();
+                    state.bump();
                     setLocal(() {});
                   },
                   child: const Text('Signera'),
@@ -112,7 +115,7 @@ class DealSheet {
                 if (deal.signedByMe.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
-                    child: Text('Signerat av dig: ${deal.signedByMe}\nAndra parten bekräftar i chatten.'),
+                    child: Text('Signerat av dig: ${deal.signedByMe}'),
                   ),
                 const SizedBox(height: 8),
                 OutlinedButton.icon(
@@ -145,28 +148,6 @@ class DealSheet {
     required String notes,
   }) {
     final day = DateTime.now().toIso8601String().split('T').first;
-    return '''PAWMATCH AVELSAVTAL (utkast)
-Datum: $day
-
-Parter
-1. $partyA, ägare av $dogA
-2. $partyB, ägare av $dogB ($breed)
-
-Överenskommelse
-Parterna avser avel mellan ovan hundar. Förväntat antal valpar: $pups.
-Överenskommet pris per valp: $price kr.
-Plats: $place.
-
-Övrigt
-${notes.isEmpty ? 'Inget ytterligare angivet.' : notes}
-
-Ansvar
-PawMatch är inte part i avtalet och ger ingen veterinärrådgivning. Parterna ansvarar för hälsokontroll, stamtavla och att följa svensk lag och SKK:s rekommendationer där det är relevant.
-
-Provision
-I version 1 tar PawMatch ingen provision. En framtida avgift om 7 % per såld valp kan införas enligt då gällande villkor.
-
-Detta är en mall, inte juridisk rådgivning.
-''';
+    return '''PAWMATCH AVELSAVTAL (utkast)\nDatum: $day\n\nParter\n1. $partyA, ägare av $dogA\n2. $partyB, ägare av $dogB ($breed)\n\nÖverenskommelse\nParterna avser avel mellan ovan hundar. Förväntat antal valpar: $pups.\nÖverenskommet pris per valp: $price kr.\nPlats: $place.\n\nÖvrigt\n${notes.isEmpty ? 'Inget ytterligare angivet.' : notes}\n\nAnsvar\nPawMatch är inte part i avtalet och ger ingen veterinärrådgivning. Parterna ansvarar för hälsokontroll, stamtavla och att följa svensk lag.\n\nProvision\nI version 1 tar PawMatch ingen provision. En framtida avgift om 7 % per såld valp kan införas enligt då gällande villkor.\n\nDetta är en mall, inte juridisk rådgivning.\n''';
   }
 }
