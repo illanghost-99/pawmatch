@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'app_state.dart';
 import 'features/auth.dart';
 import 'features/identity.dart';
@@ -19,7 +18,7 @@ class _PawMatchAppState extends State<PawMatchApp> {
   @override
   Widget build(BuildContext context) {
     const coral = Color(0xFFE25C3A);
-    const ink = Color(0xFF1B2430);
+    const ink = Color(0xFF14202B);
     return AnimatedBuilder(
       animation: state,
       builder: (_, __) {
@@ -47,22 +46,30 @@ class _PawMatchAppState extends State<PawMatchApp> {
             colorScheme: ColorScheme.fromSeed(
               seedColor: coral,
               primary: coral,
-              secondary: const Color(0xFF2A9D8F),
-              surface: const Color(0xFFFFF6F1),
+              secondary: const Color(0xFF1F7A6C),
+              surface: const Color(0xFFFFF4EC),
+              onSurface: ink,
             ),
-            textTheme: GoogleFonts.dmSansTextTheme(),
             useMaterial3: true,
-            scaffoldBackgroundColor: const Color(0xFFFFF6F1),
-            appBarTheme: const AppBarTheme(foregroundColor: ink),
+            scaffoldBackgroundColor: const Color(0xFFFFF4EC),
+            appBarTheme: const AppBarTheme(
+              foregroundColor: ink,
+              titleTextStyle: TextStyle(color: ink, fontWeight: FontWeight.w800, fontSize: 20),
+            ),
+            listTileTheme: const ListTileThemeData(
+              titleTextStyle: TextStyle(color: ink, fontWeight: FontWeight.w700, fontSize: 16),
+              subtitleTextStyle: TextStyle(color: Color(0xFF3D4A57), fontSize: 13),
+            ),
             filledButtonTheme: FilledButtonThemeData(
               style: FilledButton.styleFrom(
                 backgroundColor: coral,
                 foregroundColor: Colors.white,
+                textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
             ),
           ),
-          home: AnimatedSwitcher(duration: const Duration(milliseconds: 400), child: home),
+          home: home,
         );
       },
     );
