@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../app_state.dart';
 import '../data/suggestions.dart';
-import '../models.dart';
 import '../widgets/suggest_field.dart';
+import 'swipe_deck.dart';
 
 const _navy = Color(0xFF152033);
 const _gold = Color(0xFFC9A24A);
@@ -49,19 +49,9 @@ class DiscoverPage extends StatelessWidget {
                   Text('${deck.length} hundar · ${state.locationLabel}', style: const TextStyle(color: _navy)),
                   const Text('Svep höger för like, vänster för nej', style: TextStyle(fontSize: 12, color: Colors.black54)),
                   const SizedBox(height: 8),
-                  Expanded(
-                    child: Dismissible(
-                      key: ValueKey(deck.first.id),
-                      direction: DismissDirection.horizontal,
-                      background: _swipeBg(Alignment.centerLeft, const Color(0xFF2F6B4F), Icons.thumb_up_alt_rounded, 'LIKE'),
-                      secondaryBackground: _swipeBg(Alignment.centerRight, const Color(0xFF5C6473), Icons.thumb_down_alt_rounded, 'NEJ'),
-                      onDismissed: (dir) {
-                        HapticFeedback.mediumImpact();
-                        state.swipe(deck.first, like: dir == DismissDirection.startToEnd);
-                      },
-                      child: _SwipeCard(dog: deck.first, km: state.kmTo(deck.first).round()),
-                    ),
-                  ),
+                  const Expanded(child: SizedBox.expand()),
+                  Expanded(flex: 0, child: const SizedBox.shrink()),
+                  Expanded(child: SwipeDeck(state: state)),
                   const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -102,21 +92,6 @@ class DiscoverPage extends StatelessWidget {
     );
   }
 
-  Widget _swipeBg(Alignment align, Color color, IconData icon, String text) {
-    return Container(
-      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(28)),
-      alignment: align,
-      padding: const EdgeInsets.symmetric(horizontal: 28),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: Colors.white, size: 40),
-          Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
-        ],
-      ),
-    );
-  }
-
   void _openSaved(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -144,51 +119,6 @@ class DiscoverPage extends StatelessWidget {
             ],
           );
         },
-      ),
-    );
-  }
-}
-
-class _SwipeCard extends StatelessWidget {
-  const _SwipeCard({required this.dog, required this.km});
-  final DogProfile dog;
-  final int km;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(28),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          if (dog.photoUrl.isNotEmpty)
-            Image.network(dog.photoUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: const Color(0xFF2A3344), child: const Center(child: Icon(Icons.pets, size: 72, color: _gold))))
-          else
-            Container(color: const Color(0xFF2A3344), child: const Center(child: Icon(Icons.pets, size: 72, color: _gold))),
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Colors.transparent, Color(0xCC101826)],
-              ),
-            ),
-          ),
-          Positioned(
-            left: 18,
-            right: 18,
-            bottom: 18,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('${dog.name}, ${dog.age}', style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800)),
-                Text('${dog.breed} · ${dog.city} · $km km', style: const TextStyle(color: Color(0xFFE6D5A8))),
-                const SizedBox(height: 6),
-                Text(dog.bio, style: const TextStyle(color: Colors.white70)),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
