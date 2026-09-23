@@ -75,6 +75,12 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void bump() => notifyListeners();
+
+  bool wantsBreeding(DogProfile d) => d.intent == 'puppies' || d.availableForBreeding;
+
+  bool canNegotiate(MatchThread t) => t.accepted && (wantsBreeding(t.dog) || myDogs.any((d) => d.availableForBreeding));
+
   double kmTo(DogProfile d) {
     const r = 6371.0;
     final p1 = lat * pi / 180;
@@ -155,6 +161,12 @@ class AppState extends ChangeNotifier {
     } else {
       lastNotice = '';
     }
+    notifyListeners();
+  }
+
+  void simulateAccept(MatchThread t) {
+    t.accepted = true;
+    t.messages.add(const ChatLine(false, 'Matchningen är godkänd — nu kan ni chatta.'));
     notifyListeners();
   }
 
