@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../models.dart';
+import 'deal.dart';
 
 class MatchesPage extends StatelessWidget {
   const MatchesPage({super.key, required this.state});
@@ -41,7 +42,8 @@ class MatchesPage extends StatelessWidget {
               ListTile(
                 leading: const Icon(Icons.hourglass_top),
                 title: Text(m.dog.name),
-                subtitle: Text('Skickat till ${m.dog.owner}. Förfrågan går ut efter 7 dagar.'),
+                subtitle: Text('Skickat till ${m.dog.owner}. Går ut efter 7 dagar.'),
+                trailing: TextButton(onPressed: () => state.simulateAccept(m), child: const Text('De godkände')),
               ),
             const SizedBox(height: 16),
           ],
@@ -73,10 +75,18 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     final t = widget.thread;
+    final breedChat = widget.state.canNegotiate(t);
     return Scaffold(
       appBar: AppBar(
         title: Text(t.dog.name),
-        actions: [IconButton(icon: const Icon(Icons.flag_outlined), onPressed: () { widget.state.block(t.dog); Navigator.pop(context); })],
+        actions: [
+          if (breedChat)
+            TextButton(
+              onPressed: () => DealSheet.open(context, widget.state, t).then((_) => setState(() {})),
+              child: const Text('Förhandla'),
+            ),
+          IconButton(icon: const Icon(Icons.flag_outlined), onPressed: () { widget.state.block(t.dog); Navigator.pop(context); }),
+        ],
       ),
       body: Column(
         children: [
@@ -84,6 +94,15 @@ class _ChatPageState extends State<ChatPage> {
             const Padding(
               padding: EdgeInsets.all(16),
               child: Text('Chatten öppnas när den andra ägaren godkänner matchningen.'),
+            ),
+          if (breedChat)
+            Material(
+              color: const Color(0xFFFFF0D6),
+              child: ListTile(
+                leading: const Icon(Icons.handshake_outlined),
+                title: Text(t.deal == null ? 'Avel — öppna Förhandla' : 'Avtal skapat${t.deal!.signedByMe.isEmpty ? '' : ' och signerat'}'),
+                onTap: () => DealSheet.open(context, widget.state, t).then((_) => setState(() {})),
+              ),
             ),
           Expanded(
             child: ListView(
