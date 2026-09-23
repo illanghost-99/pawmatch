@@ -255,7 +255,7 @@ class AppState extends ChangeNotifier {
   void block(DogProfile d) {
     blocked.add(d.id);
     matches.removeWhere((m) => m.dog.id == d.id);
-    incoming.removeWhere((m) => m.dog.id == t.dog.id);
+    incoming.removeWhere((m) => m.dog.id == d.id);
     saved.removeWhere((m) => m.id == d.id);
     applyFilters();
   }
