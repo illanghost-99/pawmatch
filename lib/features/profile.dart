@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_state.dart';
+import 'edit_profile.dart';
 import 'legal.dart';
 import 'my_dogs.dart';
 import 'support.dart';
@@ -10,33 +11,51 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final photo = state.photoUrl;
     return Scaffold(
       backgroundColor: const Color(0xFFFFF6F1),
       appBar: AppBar(title: const Text('Profil', style: TextStyle(fontWeight: FontWeight.w800)), backgroundColor: Colors.transparent),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [Color(0xFFE25C3A), Color(0xFFF4A261)]),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
               borderRadius: BorderRadius.circular(24),
-            ),
-            child: Row(
-              children: [
-                const CircleAvatar(radius: 28, backgroundColor: Colors.white, child: Icon(Icons.pets, color: Color(0xFFE25C3A))),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(state.fullName.isEmpty ? (state.email.isEmpty ? 'Konto' : state.email) : state.fullName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16)),
-                      Text(state.identityPending ? 'Identitet skickad — granskas' : 'Fyll i identitet under Skapa konto',
-                          style: const TextStyle(color: Colors.white70)),
-                    ],
-                  ),
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => EditProfilePage(state: state))),
+              child: Ink(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [Color(0xFFE25C3A), Color(0xFFF4A261)]),
+                  borderRadius: BorderRadius.circular(24),
                 ),
-              ],
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 28,
+                      backgroundColor: Colors.white,
+                      backgroundImage: photo.isEmpty ? null : NetworkImage(photo),
+                      child: photo.isEmpty ? const Icon(Icons.pets, color: Color(0xFFE25C3A)) : null,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(state.fullName.isEmpty ? (state.email.isEmpty ? 'Konto' : state.email) : state.fullName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16)),
+                          Text(
+                            state.ownerBio.isEmpty ? 'Tryck för att redigera profil och bio' : state.ownerBio,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Colors.white70),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.edit, color: Colors.white),
+                  ],
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 16),
