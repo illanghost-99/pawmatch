@@ -41,11 +41,13 @@ class DogProfile {
     required this.owner,
     required this.tags,
     this.photoUrl = '',
+    this.ownerPhoto = '',
     this.intent = 'friends',
     this.pedigreeStatus = ReviewStatus.none,
     this.vaccineStatus = ReviewStatus.none,
     this.availableForBreeding = false,
     this.availableForFriends = true,
+    this.reviews = const ['Trygg ägare', 'Svarar snabbt'],
   });
 
   final String id;
@@ -59,11 +61,13 @@ class DogProfile {
   final String owner;
   final List<String> tags;
   final String photoUrl;
+  final String ownerPhoto;
   final String intent;
   final ReviewStatus pedigreeStatus;
   final ReviewStatus vaccineStatus;
   final bool availableForBreeding;
   final bool availableForFriends;
+  final List<String> reviews;
 }
 
 class ChatLine {
@@ -73,9 +77,13 @@ class ChatLine {
 }
 
 class MatchThread {
-  MatchThread(this.dog, this.messages);
+  MatchThread(this.dog, this.messages, {this.accepted = false, this.outgoing = true, DateTime? createdAt}) : createdAt = createdAt ?? DateTime.now();
   final DogProfile dog;
   final List<ChatLine> messages;
+  bool accepted;
+  final bool outgoing;
+  final DateTime createdAt;
+  bool get expired => DateTime.now().difference(createdAt).inDays >= 7;
 }
 
 class MyDog {
@@ -89,6 +97,11 @@ class MyDog {
     this.availableForBreeding = false,
     this.pedigreeNote = '',
     this.vaccineNote = '',
+    this.allergyNote = '',
+    this.hasPedigree = false,
+    this.vaccinated = false,
+    this.neutered = false,
+    this.hasAllergies = false,
     this.pedigreeStatus = ReviewStatus.pending,
     this.vaccineStatus = ReviewStatus.pending,
   });
@@ -101,6 +114,11 @@ class MyDog {
   bool availableForBreeding;
   String pedigreeNote;
   String vaccineNote;
+  String allergyNote;
+  bool hasPedigree;
+  bool vaccinated;
+  bool neutered;
+  bool hasAllergies;
   ReviewStatus pedigreeStatus;
   ReviewStatus vaccineStatus;
 }
