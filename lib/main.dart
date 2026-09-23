@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
+import 'services/cloud.dart';
 import 'services/push.dart';
 
 Future<void> main() async {
@@ -12,6 +13,7 @@ Future<void> main() async {
   final resolved = pub.isNotEmpty ? pub : key;
   if (url.isNotEmpty && resolved.isNotEmpty) {
     await Supabase.initialize(url: url, publishableKey: resolved);
+    Cloud.supabase = true;
   }
 
   await PushService.init();
