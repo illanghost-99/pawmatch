@@ -10,6 +10,7 @@ class AppState extends ChangeNotifier {
   bool onboarded = false;
   bool signedIn = false;
   String email = '';
+  String displayName = 'Max';
   double lat = 59.3293;
   double lng = 18.0686;
   String locationLabel = 'Stockholm';
@@ -22,9 +23,12 @@ class AppState extends ChangeNotifier {
   String feedSort = 'forYou';
   List<DogProfile> deck = List.of(sampleDogs);
   final List<MatchThread> matches = [];
+  final List<MatchThread> incoming = [];
   final List<DogProfile> saved = [];
   final Set<String> blocked = {};
+  final Map<String, DateTime> hiddenUntil = {};
   final List<MyDog> myDogs = [];
+  String lastNotice = '';
 
   void signIn(String e) {
     email = e;
@@ -46,6 +50,9 @@ class AppState extends ChangeNotifier {
 
   void finishOnboarding() {
     onboarded = true;
+    if (incoming.isEmpty && sampleDogs.isNotEmpty) {
+      incoming.add(MatchThread(sampleDogs.first, [const ChatLine(false, 'Hej! Vi söker en lekkompis.')], accepted: false, outgoing: false));
+    }
     applyFilters();
     notifyListeners();
   }
@@ -89,6 +96,17 @@ class AppState extends ChangeNotifier {
     return s;
   }
 
+  bool _isHidden(DogProfile d) {
+    final until = hiddenUntil[d.id];
+    if (until == null) return false;
+    if (DateTime.now().isAfter(until)) {
+      hiddenUntil.remove(d.id);
+      matches.removeWhere((m) => m.dog.id == d.id && !m.accepted);
+      return false;
+    }
+    return true;
+  }
+
   List<DogProfile> get forYou {
     final list = filtered.toList();
     if (feedSort == 'nearest') {
@@ -106,6 +124,7 @@ class AppState extends ChangeNotifier {
   Iterable<DogProfile> get filtered sync* {
     for (final d in sampleDogs) {
       if (blocked.contains(d.id)) continue;
+      if (_isHidden(d)) continue;
       if (d.age < ageMin || d.age > ageMax) continue;
       if (breedQuery.isNotEmpty && !d.breed.toLowerCase().contains(breedQuery.toLowerCase())) continue;
       if (area.isNotEmpty && !d.city.toLowerCase().contains(area.toLowerCase())) continue;
@@ -127,11 +146,32 @@ class AppState extends ChangeNotifier {
   }
 
   void swipe(DogProfile d, {required bool like}) {
+    hiddenUntil[d.id] = DateTime.now().add(const Duration(days: 7));
     deck.removeWhere((x) => x.id == d.id);
     if (like) {
-      matches.insert(0, MatchThread(d, [const ChatLine(false, 'Hej! Trevligt att matcha')]));
+      matches.insert(0, MatchThread(d, [], accepted: false, outgoing: true));
+      lastNotice = 'Förfrågan skickad till ${d.owner} som äger ${d.name}. Chatt öppnas när de godkänner — annars syns hunden igen om 7 dagar.';
       PushService.notifyMatch(d.name);
+    } else {
+      lastNotice = '';
     }
+    notifyListeners();
+  }
+
+  void acceptIncoming(MatchThread t) {
+    t.accepted = true;
+    t.messages.add(const ChatLine(false, 'Matchningen är godkänd — nu kan ni chatta.'));
+    if (!matches.any((m) => m.dog.id == t.dog.id && m.accepted)) {
+      matches.insert(0, t);
+    }
+    incoming.remove(t);
+    PushService.notifyMatch(t.dog.name);
+    notifyListeners();
+  }
+
+  void declineIncoming(MatchThread t) {
+    incoming.remove(t);
+    hiddenUntil[t.dog.id] = DateTime.now().add(const Duration(days: 7));
     notifyListeners();
   }
 
@@ -147,6 +187,7 @@ class AppState extends ChangeNotifier {
   bool isSaved(DogProfile d) => saved.any((x) => x.id == d.id);
 
   void send(MatchThread t, String text) {
+    if (!t.accepted) return;
     t.messages.add(ChatLine(true, text));
     PushService.notifyMessage(t.dog.name);
     notifyListeners();
@@ -155,6 +196,7 @@ class AppState extends ChangeNotifier {
   void block(DogProfile d) {
     blocked.add(d.id);
     matches.removeWhere((m) => m.dog.id == d.id);
+    incoming.removeWhere((m) => m.dog.id == d.id);
     saved.removeWhere((m) => m.id == d.id);
     applyFilters();
   }
