@@ -19,7 +19,7 @@ class MyDogsPage extends StatelessWidget {
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: _rose,
         foregroundColor: Colors.white,
-        onPressed: () => _add(context),
+        onPressed: () => _form(context),
         label: const Text('Lägg till hund'),
         icon: const Icon(Icons.add),
       ),
@@ -43,7 +43,7 @@ class MyDogsPage extends StatelessWidget {
                   const Text('Din hund syns här', textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: _ink)),
                   const SizedBox(height: 10),
                   Text(
-                    'Lägg till namn, ras och om ni söker vänner eller avel. Stamtavla granskas innan profilen publiceras.',
+                    'Lägg till namn, ras och om ni söker vänner eller avel.',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 15, height: 1.4, color: _ink.withValues(alpha: 0.65)),
                   ),
@@ -52,11 +52,8 @@ class MyDogsPage extends StatelessWidget {
                     width: double.infinity,
                     height: 54,
                     child: FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: _rose,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                      ),
-                      onPressed: () => _add(context),
+                      style: FilledButton.styleFrom(backgroundColor: _rose, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18))),
+                      onPressed: () => _form(context),
                       icon: const Icon(Icons.add),
                       label: const Text('Lägg till din första hund'),
                     ),
@@ -83,10 +80,38 @@ class MyDogsPage extends StatelessWidget {
                     subtitle: Text(
                       '${d.city}\n'
                       '${d.availableForFriends ? 'Vänner: ja' : 'Vänner: nej'} · '
-                      '${d.availableForBreeding ? 'Avel: ja' : 'Avel: nej'}\n'
-                      'Stamtavla: ${_rev(d.pedigreeStatus)} · Vaccin: ${_rev(d.vaccineStatus)}',
+                      '${d.availableForBreeding ? 'Avel: ja' : 'Avel: nej'}',
                     ),
                     isThreeLine: true,
+                    trailing: PopupMenuButton<String>(
+                      onSelected: (v) {
+                        if (v == 'edit') _form(context, index: i);
+                        if (v == 'delete') {
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Radera hund?'),
+                              content: Text('Ta bort ${d.name} från din profil.'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Avbryt')),
+                                FilledButton(
+                                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8B3A32)),
+                                  onPressed: () {
+                                    state.removeMyDog(i);
+                                    Navigator.pop(ctx);
+                                  },
+                                  child: const Text('Radera'),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                      },
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(value: 'edit', child: Text('Redigera')),
+                        PopupMenuItem(value: 'delete', child: Text('Radera')),
+                      ],
+                    ),
                   ),
                 );
               },
@@ -94,23 +119,17 @@ class MyDogsPage extends StatelessWidget {
     );
   }
 
-  String _rev(ReviewStatus s) => switch (s) {
-        ReviewStatus.none => 'saknas',
-        ReviewStatus.pending => 'granskas',
-        ReviewStatus.approved => 'godkänd',
-        ReviewStatus.rejected => 'underkänd',
-      };
-
-  void _add(BuildContext context) {
-    final name = TextEditingController();
-    final breed = TextEditingController();
-    final city = TextEditingController();
-    final bio = TextEditingController();
-    final ped = TextEditingController();
-    final vac = TextEditingController();
-    var age = 2;
-    var friends = true;
-    var breeding = false;
+  void _form(BuildContext context, {int? index}) {
+    final existing = index != null ? state.myDogs[index] : null;
+    final name = TextEditingController(text: existing?.name ?? '');
+    final breed = TextEditingController(text: existing?.breed ?? '');
+    final city = TextEditingController(text: existing?.city ?? '');
+    final bio = TextEditingController(text: existing?.bio ?? '');
+    final ped = TextEditingController(text: existing?.pedigreeNote ?? '');
+    final vac = TextEditingController(text: existing?.vaccineNote ?? '');
+    var age = existing?.age ?? 2;
+    var friends = existing?.availableForFriends ?? true;
+    var breeding = existing?.availableForBreeding ?? false;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -123,29 +142,21 @@ class MyDogsPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(99)))),
-                const SizedBox(height: 16),
-                const Text('Ny hund', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
+                Text(index == null ? 'Ny hund' : 'Redigera hund', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 12),
                 TextField(controller: name, textCapitalization: TextCapitalization.words, decoration: const InputDecoration(labelText: 'Namn', filled: true, fillColor: Colors.white)),
                 const SizedBox(height: 8),
-                SuggestField(controller: breed, label: 'Ras', hint: 'Skriv pom — välj Pomeranian', options: kBreeds),
+                SuggestField(controller: breed, label: 'Ras', hint: 'Skriv pom', options: kBreeds),
                 const SizedBox(height: 8),
-                SuggestField(controller: city, label: 'Ort', hint: 'Skriv upplands — välj Upplands Väsby', options: kCities),
+                SuggestField(controller: city, label: 'Ort', hint: 'Skriv upplands', options: kCities),
                 Text('Ålder: $age'),
                 Slider(value: age.toDouble(), min: 0, max: 15, divisions: 15, activeColor: _rose, onChanged: (v) => setLocal(() => age = v.round())),
                 TextField(controller: bio, decoration: const InputDecoration(labelText: 'Kort beskrivning', filled: true, fillColor: Colors.white)),
                 SwitchListTile(title: const Text('Tillgänglig för hundvänner'), value: friends, activeThumbColor: _rose, onChanged: (v) => setLocal(() => friends = v)),
-                SwitchListTile(
-                  title: const Text('Tillgänglig för avel'),
-                  subtitle: const Text('Uppgifter granskas. PawMatch ger ingen veterinärrådgivning.'),
-                  value: breeding,
-                  activeThumbColor: _rose,
-                  onChanged: (v) => setLocal(() => breeding = v),
-                ),
-                TextField(controller: ped, decoration: const InputDecoration(labelText: 'Stamtavla / referens (granskas)', filled: true, fillColor: Colors.white)),
+                SwitchListTile(title: const Text('Tillgänglig för avel'), value: breeding, activeThumbColor: _rose, onChanged: (v) => setLocal(() => breeding = v)),
+                TextField(controller: ped, decoration: const InputDecoration(labelText: 'Stamtavla / referens', filled: true, fillColor: Colors.white)),
                 const SizedBox(height: 8),
-                TextField(controller: vac, decoration: const InputDecoration(labelText: 'Vaccin / hälsouppgifter (granskas)', filled: true, fillColor: Colors.white)),
+                TextField(controller: vac, decoration: const InputDecoration(labelText: 'Vaccin / hälsa', filled: true, fillColor: Colors.white)),
                 const SizedBox(height: 16),
                 SizedBox(
                   height: 54,
@@ -153,7 +164,7 @@ class MyDogsPage extends StatelessWidget {
                     style: FilledButton.styleFrom(backgroundColor: _rose, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
                     onPressed: () {
                       if (name.text.trim().isEmpty) return;
-                      state.addMyDog(MyDog(
+                      final dog = MyDog(
                         name: name.text.trim(),
                         breed: breed.text.trim().isEmpty ? 'Blandras' : breed.text.trim(),
                         age: age,
@@ -163,10 +174,15 @@ class MyDogsPage extends StatelessWidget {
                         availableForBreeding: breeding,
                         pedigreeNote: ped.text.trim(),
                         vaccineNote: vac.text.trim(),
-                      ));
+                      );
+                      if (index == null) {
+                        state.addMyDog(dog);
+                      } else {
+                        state.updateMyDog(index, dog);
+                      }
                       Navigator.pop(ctx);
                     },
-                    child: const Text('Spara & skicka till granskning'),
+                    child: Text(index == null ? 'Spara & skicka till granskning' : 'Spara ändringar'),
                   ),
                 ),
               ],
