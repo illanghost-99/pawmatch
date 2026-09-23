@@ -21,15 +21,15 @@ class ForYouPage extends StatelessWidget {
             padding: const EdgeInsets.only(right: 8),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
-                value: state.intentFilter,
+                value: state.feedSort,
                 items: const [
-                  DropdownMenuItem(value: 'all', child: Text('Alla')),
-                  DropdownMenuItem(value: 'friends', child: Text('Vänner')),
+                  DropdownMenuItem(value: 'forYou', child: Text('För dig')),
+                  DropdownMenuItem(value: 'nearest', child: Text('Närmast dig')),
+                  DropdownMenuItem(value: 'friends', child: Text('Hundvänner')),
                   DropdownMenuItem(value: 'puppies', child: Text('Avel')),
                 ],
                 onChanged: (v) {
-                  state.intentFilter = v ?? 'all';
-                  state.applyFilters();
+                  if (v != null) state.setFeedSort(v);
                 },
               ),
             ),
@@ -41,7 +41,13 @@ class ForYouPage extends StatelessWidget {
           : ListView.builder(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
               itemCount: items.length,
-              itemBuilder: (_, n) => _DogCard(dog: items[n], state: state),
+              itemBuilder: (_, n) => TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.92, end: 1),
+                duration: Duration(milliseconds: 280 + (n % 4) * 40),
+                curve: Curves.easeOutCubic,
+                builder: (context, v, child) => Opacity(opacity: v.clamp(0.4, 1), child: Transform.scale(scale: v, child: child)),
+                child: _DogCard(dog: items[n], state: state),
+              ),
             ),
     );
   }
@@ -67,11 +73,7 @@ class _DogCard extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           if (dog.photoUrl.isNotEmpty)
-            Image.network(
-              dog.photoUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _fallback(),
-            )
+            Image.network(dog.photoUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _fallback())
           else
             _fallback(),
           const DecoratedBox(
@@ -97,8 +99,7 @@ class _DogCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text('${dog.name}, ${dog.age}', style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800)),
-                Text('${dog.breed} · ${dog.city} · ${state.kmTo(dog).round()} km',
-                    style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                Text('${dog.breed} · ${dog.city} · ${state.kmTo(dog).round()} km', style: const TextStyle(color: Colors.white70, fontSize: 14)),
                 const SizedBox(height: 6),
                 Text(dog.bio, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, height: 1.3)),
                 const SizedBox(height: 12),
@@ -142,9 +143,5 @@ class _DogCard extends StatelessWidget {
     );
   }
 
-  Widget _fallback() => Container(
-        color: const Color(0xFF8B3A32),
-        alignment: Alignment.center,
-        child: const Text('🐾', style: TextStyle(fontSize: 72)),
-      );
+  Widget _fallback() => Container(color: const Color(0xFF8B3A32), alignment: Alignment.center, child: const Text('🐾', style: TextStyle(fontSize: 72)));
 }
