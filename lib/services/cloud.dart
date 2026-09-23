@@ -15,20 +15,21 @@ class Cloud {
   }
 
   static Future<String> login({required String email, required String password, required bool create}) async {
-    if (!ready) return 'local';
-    final mail = email.contains('@') ? email : 'demo@pawmatch.app';
-    final pass = password.length >= 6 ? password : 'pawmatch123';
+    if (!ready) return 'Molnet är inte startat';
+    if (!email.contains('@')) return 'Skriv en riktig e-post';
+    if (password.length < 6) return 'Lösenord minst 6 tecken';
     try {
       final auth = Supabase.instance.client.auth;
       if (create) {
-        await auth.signUp(email: mail, password: pass).timeout(const Duration(seconds: 8));
-      } else {
-        await auth.signInWithPassword(email: mail, password: pass).timeout(const Duration(seconds: 8));
+        final res = await auth.signUp(email: email.trim(), password: password).timeout(const Duration(seconds: 10));
+        if (res.user == null) return 'Inget konto skapades. Kolla Confirm email i Supabase.';
+        return 'cloud';
       }
+      await auth.signInWithPassword(email: email.trim(), password: password).timeout(const Duration(seconds: 10));
       return 'cloud';
     } catch (e) {
       debugPrint('Supabase auth: $e');
-      return 'local';
+      return e.toString();
     }
   }
 }
