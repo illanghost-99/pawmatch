@@ -19,6 +19,7 @@ class AppState extends ChangeNotifier {
   int radiusKm = 250;
   String area = '';
   String intentFilter = 'all';
+  String feedSort = 'forYou';
   List<DogProfile> deck = List.of(sampleDogs);
   final List<MatchThread> matches = [];
   final List<DogProfile> saved = [];
@@ -55,6 +56,18 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateMyDog(int index, MyDog d) {
+    if (index < 0 || index >= myDogs.length) return;
+    myDogs[index] = d;
+    notifyListeners();
+  }
+
+  void removeMyDog(int index) {
+    if (index < 0 || index >= myDogs.length) return;
+    myDogs.removeAt(index);
+    notifyListeners();
+  }
+
   double kmTo(DogProfile d) {
     const r = 6371.0;
     final p1 = lat * pi / 180;
@@ -78,7 +91,25 @@ class AppState extends ChangeNotifier {
   }
 
   List<DogProfile> get forYou {
-    final list = filtered.toList()..sort((a, b) => score(b).compareTo(score(a)));
+    final list = filtered.toList();
+    switch (feedSort) {
+      case 'nearest':
+        list.sort((a, b) => kmTo(a).compareTo(kmTo(b)));
+      case 'friends':
+        list.sort((a, b) {
+          final af = a.intent == 'friends' ? 0 : 1;
+          final bf = b.intent == 'friends' ? 0 : 1;
+          return af != bf ? af.compareTo(bf) : kmTo(a).compareTo(kmTo(b));
+        });
+      case 'puppies':
+        list.sort((a, b) {
+          final af = a.intent == 'puppies' ? 0 : 1;
+          final bf = b.intent == 'puppies' ? 0 : 1;
+          return af != bf ? af.compareTo(bf) : kmTo(a).compareTo(kmTo(b));
+        });
+      default:
+        list.sort((a, b) => score(b).compareTo(score(a)));
+    }
     return list;
   }
 
@@ -97,6 +128,16 @@ class AppState extends ChangeNotifier {
   void applyFilters() {
     deck = filtered.toList();
     notifyListeners();
+  }
+
+  void setFeedSort(String v) {
+    feedSort = v;
+    if (v == 'friends' || v == 'puppies') {
+      intentFilter = v;
+    } else {
+      intentFilter = 'all';
+    }
+    applyFilters();
   }
 
   void swipe(DogProfile d, {required bool like}) {
