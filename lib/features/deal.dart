@@ -138,20 +138,20 @@ class DealSheet {
   static void _showContract(BuildContext context, AppState state, MatchThread thread) {
     final deal = thread.deal;
     if (deal == null) return;
-    final sign = TextEditingController();
+    final name = TextEditingController(text: deal.signedByMe.isEmpty ? state.fullName : deal.signedByMe);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFFFFF6F1),
+      backgroundColor: const Color(0xFF5C4033),
       builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.viewInsetsOf(ctx).bottom + 24),
+        padding: EdgeInsets.fromLTRB(12, 12, 12, MediaQuery.viewInsetsOf(ctx).bottom + 16),
         child: StatefulBuilder(
           builder: (ctx, setLocal) => SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('Avelsavtal', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 12),
+                const Text('Avelsavtal', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFFF4E7D3), fontSize: 20, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 10),
                 Row(
                   children: [
                     Expanded(child: _OwnerChip(label: deal.partyA.isEmpty ? state.fullName : deal.partyA, color: const Color(0xFFE25C3A), onTap: () => _me(context, state))),
@@ -161,27 +161,64 @@ class DealSheet {
                 ),
                 const SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
-                  child: SelectableText(deal.body, style: const TextStyle(height: 1.4)),
+                  padding: const EdgeInsets.fromLTRB(18, 20, 18, 20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFBF6EA),
+                    borderRadius: BorderRadius.circular(6),
+                    boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 12, offset: Offset(0, 6))],
+                    border: Border.all(color: const Color(0xFFD9C8A3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Center(child: Text('PAWMATCH', style: TextStyle(letterSpacing: 4, fontWeight: FontWeight.w800, color: Color(0xFF8B3A32)))),
+                      const Center(child: Text('AVELSAVTAL', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900))),
+                      const Divider(height: 24),
+                      Text(deal.body, style: const TextStyle(height: 1.45, fontSize: 13, color: Color(0xFF2C2118))),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 16),
-                TextField(controller: sign, decoration: _dec('Skriv ditt namn som underskrift')),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: name,
+                  decoration: _dec('Fullständigt namn'),
+                ),
                 const SizedBox(height: 10),
+                GestureDetector(
+                  onTap: () async {
+                    final paths = await _signPopup(context, deal.signature);
+                    if (paths != null) {
+                      deal.signature = paths;
+                      setLocal(() {});
+                    }
+                  },
+                  child: Container(
+                    height: 56,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+                    child: deal.signature.isEmpty
+                        ? const Align(alignment: Alignment.centerLeft, child: Text('Tryck för att signera med fingret', style: TextStyle(color: Colors.black54)))
+                        : CustomPaint(painter: _SigPainter(deal.signature, preview: true), child: const SizedBox.expand()),
+                  ),
+                ),
+                const SizedBox(height: 12),
                 FilledButton(
                   style: FilledButton.styleFrom(backgroundColor: const Color(0xFF2A9D8F), minimumSize: const Size.fromHeight(52)),
                   onPressed: () {
-                    if (sign.text.trim().isEmpty) return;
-                    deal.signedByMe = sign.text.trim();
+                    if (name.text.trim().isEmpty || deal.signature.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fyll i namn och signatur.')));
+                      return;
+                    }
+                    deal.signedByMe = name.text.trim();
                     thread.messages.add(ChatLine(true, 'Avtalet är signerat av ${deal.signedByMe}.'));
                     state.bump();
                     setLocal(() {});
                   },
-                  child: const Text('Signera'),
+                  child: Text(deal.signedByMe.isEmpty ? 'Bekräfta signering' : 'Signerat av ${deal.signedByMe}'),
                 ),
                 const SizedBox(height: 8),
                 OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFE25C3A), side: const BorderSide(color: Color(0xFFE25C3A)), minimumSize: const Size.fromHeight(48)),
+                  style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFF4E7D3), side: const BorderSide(color: Color(0xFFF4E7D3)), minimumSize: const Size.fromHeight(48)),
                   onPressed: () async {
                     await Clipboard.setData(ClipboardData(text: deal.body));
                     if (context.mounted) {
@@ -194,6 +231,43 @@ class DealSheet {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  static Future<List<List<SigPoint>>?> _signPopup(BuildContext context, List<List<SigPoint>> existing) {
+    final strokes = existing.map((s) => List<SigPoint>.from(s)).toList();
+    return showDialog<List<List<SigPoint>>>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          backgroundColor: const Color(0xFFFBF6EA),
+          title: const Text('Skriv din signatur'),
+          content: SizedBox(
+            width: 320,
+            height: 220,
+            child: GestureDetector(
+              onPanStart: (d) {
+                strokes.add([SigPoint(d.localPosition.dx, d.localPosition.dy)]);
+                setLocal(() {});
+              },
+              onPanUpdate: (d) {
+                if (strokes.isEmpty) return;
+                strokes.last.add(SigPoint(d.localPosition.dx, d.localPosition.dy));
+                setLocal(() {});
+              },
+              child: Container(
+                decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFD9C8A3)), borderRadius: BorderRadius.circular(12)),
+                child: CustomPaint(painter: _SigPainter(strokes), child: const SizedBox.expand()),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () { strokes.clear(); setLocal(() {}); }, child: const Text('Rensa')),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Avbryt')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, strokes), child: const Text('Klar')),
+          ],
         ),
       ),
     );
@@ -213,8 +287,34 @@ class DealSheet {
     required String notes,
   }) {
     final day = DateTime.now().toIso8601String().split('T').first;
-    return '''PAWMATCH AVELSAVTAL\nDatum: $day\n\nParter\n1. $partyA ($mailA, $phoneA), ägare av $dogA\n2. $partyB, ägare av $dogB ($breed)\n\nÖverenskommelse\nAvel mellan ovan hundar. Förväntat antal valpar: $pups.\nPris per valp: $price kr.\nPlats: $place.\n\nÖvrigt\n${notes.isEmpty ? 'Inget ytterligare.' : notes}\n\nAvtalet kan skickas till parternas e-post.\nPawMatch är inte part och ger ingen veterinärrådgivning.\nProvision 7 % är reserverad för senare version.\nMall, inte juridisk rådgivning.\n''';
+    return 'Datum: $day\n\nParter\n1. $partyA ($mailA, $phoneA), ägare av $dogA\n2. $partyB, ägare av $dogB ($breed)\n\nÖverenskommelse\nAvel mellan ovan hundar. Förväntat antal valpar: $pups.\nPris per valp: $price kr.\nPlats: $place.\n\nÖvrigt\n${notes.isEmpty ? 'Inget ytterligare.' : notes}\n\nPawMatch är inte part och ger ingen veterinärrådgivning.\nMall, inte juridisk rådgivning.';
   }
+}
+
+class _SigPainter extends CustomPainter {
+  _SigPainter(this.strokes, {this.preview = false});
+  final List<List<SigPoint>> strokes;
+  final bool preview;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()
+      ..color = const Color(0xFF1B2430)
+      ..strokeWidth = preview ? 2 : 3
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    for (final s in strokes) {
+      if (s.length < 2) continue;
+      final path = Path()..moveTo(s.first.x, s.first.y);
+      for (final pt in s.skip(1)) {
+        path.lineTo(pt.x, pt.y);
+      }
+      canvas.drawPath(path, p);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _SigPainter old) => true;
 }
 
 class _OwnerChip extends StatelessWidget {
