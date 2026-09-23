@@ -76,6 +76,30 @@ class ChatLine {
   final String text;
 }
 
+class BreedingDeal {
+  BreedingDeal({
+    required this.pricePerPuppy,
+    required this.expectedPups,
+    required this.place,
+    required this.notes,
+    required this.partyA,
+    required this.partyB,
+    required this.body,
+    this.signedByMe = '',
+    this.signedByOther = '',
+  });
+  final String pricePerPuppy;
+  final String expectedPups;
+  final String place;
+  final String notes;
+  final String partyA;
+  final String partyB;
+  final String body;
+  String signedByMe;
+  String signedByOther;
+  bool get fullySigned => signedByMe.isNotEmpty && signedByOther.isNotEmpty;
+}
+
 class MatchThread {
   MatchThread(this.dog, this.messages, {this.accepted = false, this.outgoing = true, DateTime? createdAt}) : createdAt = createdAt ?? DateTime.now();
   final DogProfile dog;
@@ -83,6 +107,7 @@ class MatchThread {
   bool accepted;
   final bool outgoing;
   final DateTime createdAt;
+  BreedingDeal? deal;
   bool get expired => DateTime.now().difference(createdAt).inDays >= 7;
 }
 
