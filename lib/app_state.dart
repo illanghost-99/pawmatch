@@ -86,29 +86,19 @@ class AppState extends ChangeNotifier {
     final km = kmTo(d);
     if (km < 20) s += 4;
     if (km < 50) s += 2;
-    if (intentFilter != 'all' && d.intent == intentFilter) s += 2;
     return s;
   }
 
   List<DogProfile> get forYou {
     final list = filtered.toList();
-    switch (feedSort) {
-      case 'nearest':
-        list.sort((a, b) => kmTo(a).compareTo(kmTo(b)));
-      case 'friends':
-        list.sort((a, b) {
-          final af = a.intent == 'friends' ? 0 : 1;
-          final bf = b.intent == 'friends' ? 0 : 1;
-          return af != bf ? af.compareTo(bf) : kmTo(a).compareTo(kmTo(b));
-        });
-      case 'puppies':
-        list.sort((a, b) {
-          final af = a.intent == 'puppies' ? 0 : 1;
-          final bf = b.intent == 'puppies' ? 0 : 1;
-          return af != bf ? af.compareTo(bf) : kmTo(a).compareTo(kmTo(b));
-        });
-      default:
-        list.sort((a, b) => score(b).compareTo(score(a)));
+    if (feedSort == 'nearest') {
+      list.sort((a, b) => kmTo(a).compareTo(kmTo(b)));
+    } else if (feedSort == 'friends') {
+      list.sort((a, b) => (a.intent == 'friends' ? 0 : 1).compareTo(b.intent == 'friends' ? 0 : 1));
+    } else if (feedSort == 'puppies') {
+      list.sort((a, b) => (a.intent == 'puppies' ? 0 : 1).compareTo(b.intent == 'puppies' ? 0 : 1));
+    } else {
+      list.sort((a, b) => score(b).compareTo(score(a)));
     }
     return list;
   }
@@ -132,11 +122,7 @@ class AppState extends ChangeNotifier {
 
   void setFeedSort(String v) {
     feedSort = v;
-    if (v == 'friends' || v == 'puppies') {
-      intentFilter = v;
-    } else {
-      intentFilter = 'all';
-    }
+    intentFilter = (v == 'friends' || v == 'puppies') ? v : 'all';
     applyFilters();
   }
 
