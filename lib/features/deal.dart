@@ -10,7 +10,6 @@ class DealSheet {
       return;
     }
     final mine = state.myDogs.where((d) => d.availableForBreeding).toList();
-    final myName = TextEditingController(text: state.displayName);
     final myDog = TextEditingController(text: mine.isNotEmpty ? mine.first.name : '');
     final price = TextEditingController(text: '12000');
     final pups = TextEditingController(text: '4');
@@ -20,7 +19,7 @@ class DealSheet {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFFF7F4EE),
+      backgroundColor: const Color(0xFFFFF6F1),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (ctx) => Padding(
         padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.viewInsetsOf(ctx).bottom + 20),
@@ -28,27 +27,35 @@ class DealSheet {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Förhandla avel', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 6),
-              const Text('Fyll i underlaget. PawMatch skapar ett avtal ni kan signera. Ingen provision i version 1.'),
+              const Text('Förhandla avel', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
               const SizedBox(height: 12),
-              TextField(controller: myName, decoration: const InputDecoration(labelText: 'Ditt namn', filled: true, fillColor: Colors.white)),
+              Row(
+                children: [
+                  Expanded(child: _OwnerChip(label: state.fullName, color: const Color(0xFFE25C3A), onTap: () => _me(context, state))),
+                  const SizedBox(width: 8),
+                  Expanded(child: _OwnerChip(label: thread.dog.owner, color: const Color(0xFF2A9D8F), onTap: () => _them(context, thread.dog))),
+                ],
+              ),
               const SizedBox(height: 8),
-              TextField(controller: myDog, decoration: const InputDecoration(labelText: 'Din hund', filled: true, fillColor: Colors.white)),
+              Text('Avtal skickas till ${state.email.isEmpty ? 'din e-post' : state.email} när det skapats.', style: const TextStyle(fontSize: 12)),
+              const SizedBox(height: 12),
+              TextField(controller: myDog, decoration: _dec('Din hund')),
               const SizedBox(height: 8),
-              TextField(controller: price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Pris per valp (kr)', filled: true, fillColor: Colors.white)),
+              TextField(controller: price, keyboardType: TextInputType.number, decoration: _dec('Pris per valp (kr)')),
               const SizedBox(height: 8),
-              TextField(controller: pups, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Förväntat antal valpar', filled: true, fillColor: Colors.white)),
+              TextField(controller: pups, keyboardType: TextInputType.number, decoration: _dec('Förväntat antal valpar')),
               const SizedBox(height: 8),
-              TextField(controller: place, decoration: const InputDecoration(labelText: 'Plats för parning / överlämning', filled: true, fillColor: Colors.white)),
+              TextField(controller: place, decoration: _dec('Plats')),
               const SizedBox(height: 8),
-              TextField(controller: notes, maxLines: 3, decoration: const InputDecoration(labelText: 'Övrigt ni kommit överens om', filled: true, fillColor: Colors.white)),
+              TextField(controller: notes, maxLines: 3, decoration: _dec('Övrigt')),
               const SizedBox(height: 16),
               FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: const Color(0xFF152033), minimumSize: const Size.fromHeight(50)),
+                style: FilledButton.styleFrom(backgroundColor: const Color(0xFFE25C3A), minimumSize: const Size.fromHeight(54), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18))),
                 onPressed: () {
                   final body = _draft(
-                    partyA: myName.text.trim().isEmpty ? 'Part A' : myName.text.trim(),
+                    partyA: state.fullName,
+                    mailA: state.email,
+                    phoneA: state.phone,
                     dogA: myDog.text.trim().isEmpty ? 'Min hund' : myDog.text.trim(),
                     partyB: thread.dog.owner,
                     dogB: thread.dog.name,
@@ -63,19 +70,66 @@ class DealSheet {
                     expectedPups: pups.text.trim(),
                     place: place.text.trim(),
                     notes: notes.text.trim(),
-                    partyA: myName.text.trim(),
+                    partyA: state.fullName,
                     partyB: thread.dog.owner,
                     body: body,
                   );
-                  thread.messages.add(const ChatLine(true, 'Jag har skapat ett avelsavtal. Öppna Förhandla för att läsa och signera.'));
+                  thread.messages.add(ChatLine(true, 'Avtal skapat. Kopia kan skickas till ${state.email}.'));
                   state.bump();
                   Navigator.pop(ctx);
                   _showContract(context, state, thread);
                 },
-                child: const Text('Skapa avtal'),
+                child: const Text('Skapa avtal med AI-mall'),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  static InputDecoration _dec(String l) => InputDecoration(labelText: l, filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none));
+
+  static void _me(BuildContext context, AppState s) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(s.fullName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+            Text(s.identityPending ? 'Identitet: väntar på granskning' : 'Identitet ifylld'),
+            const SizedBox(height: 8),
+            Text('E-post: ${s.email}'),
+            Text('Telefon: ${s.phone.isEmpty ? '—' : s.phone}'),
+            Text('Adress: ${s.address.isEmpty ? '—' : s.address}'),
+            Text('Personnummer: ${s.personalNumber.isEmpty ? '—' : 'sparat (dolt)'}'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static void _them(BuildContext context, DogProfile d) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(d.owner, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+            Text('${d.name} · ${d.breed} · ${d.city}'),
+            const SizedBox(height: 8),
+            Text(d.bio),
+            const SizedBox(height: 8),
+            Wrap(spacing: 6, children: [for (final r in d.reviews) Chip(label: Text(r))]),
+          ],
         ),
       ),
     );
@@ -88,7 +142,7 @@ class DealSheet {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFFFF6F1),
       builder: (ctx) => Padding(
         padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.viewInsetsOf(ctx).bottom + 24),
         child: StatefulBuilder(
@@ -97,12 +151,25 @@ class DealSheet {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Text('Avelsavtal', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 10),
-                SelectableText(deal.body, style: const TextStyle(height: 1.4)),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(child: _OwnerChip(label: deal.partyA.isEmpty ? state.fullName : deal.partyA, color: const Color(0xFFE25C3A), onTap: () => _me(context, state))),
+                    const SizedBox(width: 8),
+                    Expanded(child: _OwnerChip(label: deal.partyB, color: const Color(0xFF2A9D8F), onTap: () => _them(context, thread.dog))),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
+                  child: SelectableText(deal.body, style: const TextStyle(height: 1.4)),
+                ),
                 const SizedBox(height: 16),
-                TextField(controller: sign, decoration: const InputDecoration(labelText: 'Skriv ditt namn som underskrift', border: OutlineInputBorder())),
-                const SizedBox(height: 8),
+                TextField(controller: sign, decoration: _dec('Skriv ditt namn som underskrift')),
+                const SizedBox(height: 10),
                 FilledButton(
+                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF2A9D8F), minimumSize: const Size.fromHeight(52)),
                   onPressed: () {
                     if (sign.text.trim().isEmpty) return;
                     deal.signedByMe = sign.text.trim();
@@ -112,21 +179,17 @@ class DealSheet {
                   },
                   child: const Text('Signera'),
                 ),
-                if (deal.signedByMe.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text('Signerat av dig: ${deal.signedByMe}'),
-                  ),
                 const SizedBox(height: 8),
                 OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFE25C3A), side: const BorderSide(color: Color(0xFFE25C3A)), minimumSize: const Size.fromHeight(48)),
                   onPressed: () async {
                     await Clipboard.setData(ClipboardData(text: deal.body));
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Avtalet kopierat. Klistra in i Anteckningar och spara/dela.')));
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Kopierat. Kan mejlas till ${state.email}.')));
                     }
                   },
                   icon: const Icon(Icons.download),
-                  label: const Text('Ladda ner / kopiera avtal'),
+                  label: const Text('Ladda ner / kopiera'),
                 ),
               ],
             ),
@@ -138,6 +201,8 @@ class DealSheet {
 
   static String _draft({
     required String partyA,
+    required String mailA,
+    required String phoneA,
     required String dogA,
     required String partyB,
     required String dogB,
@@ -148,6 +213,30 @@ class DealSheet {
     required String notes,
   }) {
     final day = DateTime.now().toIso8601String().split('T').first;
-    return '''PAWMATCH AVELSAVTAL (utkast)\nDatum: $day\n\nParter\n1. $partyA, ägare av $dogA\n2. $partyB, ägare av $dogB ($breed)\n\nÖverenskommelse\nParterna avser avel mellan ovan hundar. Förväntat antal valpar: $pups.\nÖverenskommet pris per valp: $price kr.\nPlats: $place.\n\nÖvrigt\n${notes.isEmpty ? 'Inget ytterligare angivet.' : notes}\n\nAnsvar\nPawMatch är inte part i avtalet och ger ingen veterinärrådgivning. Parterna ansvarar för hälsokontroll, stamtavla och att följa svensk lag.\n\nProvision\nI version 1 tar PawMatch ingen provision. En framtida avgift om 7 % per såld valp kan införas enligt då gällande villkor.\n\nDetta är en mall, inte juridisk rådgivning.\n''';
+    return '''PAWMATCH AVELSAVTAL\nDatum: $day\n\nParter\n1. $partyA ($mailA, $phoneA), ägare av $dogA\n2. $partyB, ägare av $dogB ($breed)\n\nÖverenskommelse\nAvel mellan ovan hundar. Förväntat antal valpar: $pups.\nPris per valp: $price kr.\nPlats: $place.\n\nÖvrigt\n${notes.isEmpty ? 'Inget ytterligare.' : notes}\n\nAvtalet kan skickas till parternas e-post.\nPawMatch är inte part och ger ingen veterinärrådgivning.\nProvision 7 % är reserverad för senare version.\nMall, inte juridisk rådgivning.\n''';
+  }
+}
+
+class _OwnerChip extends StatelessWidget {
+  const _OwnerChip({required this.label, required this.color, required this.onTap});
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: color.withValues(alpha: 0.12),
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(999), border: Border.all(color: color, width: 1.5)),
+          child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: TextStyle(color: color, fontWeight: FontWeight.w800)),
+        ),
+      ),
+    );
   }
 }
