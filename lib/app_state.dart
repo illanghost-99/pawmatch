@@ -10,6 +10,13 @@ class AppState extends ChangeNotifier {
   bool onboarded = false;
   bool signedIn = false;
   String email = '';
+  String firstName = '';
+  String lastName = '';
+  String personalNumber = '';
+  String address = '';
+  String phone = '';
+  bool idConsent = false;
+  bool identityPending = false;
   String displayName = 'Max';
   double lat = 59.3293;
   double lng = 18.0686;
@@ -30,6 +37,11 @@ class AppState extends ChangeNotifier {
   final List<MyDog> myDogs = [];
   String lastNotice = '';
 
+  String get fullName {
+    final n = '$firstName $lastName'.trim();
+    return n.isEmpty ? displayName : n;
+  }
+
   void signIn(String e) {
     email = e;
     signedIn = true;
@@ -37,9 +49,28 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void saveIdentity({
+    required String first,
+    required String last,
+    required String pnr,
+    required String addr,
+    required String tel,
+    required String mail,
+  }) {
+    firstName = first;
+    lastName = last;
+    personalNumber = pnr;
+    address = addr;
+    phone = tel;
+    email = mail.isEmpty ? email : mail;
+    displayName = fullName;
+    idConsent = true;
+    identityPending = true;
+    notifyListeners();
+  }
+
   void signOut() {
     signedIn = false;
-    email = '';
     notifyListeners();
   }
 
@@ -156,10 +187,8 @@ class AppState extends ChangeNotifier {
     deck.removeWhere((x) => x.id == d.id);
     if (like) {
       matches.insert(0, MatchThread(d, [], accepted: false, outgoing: true));
-      lastNotice = 'Förfrågan skickad till ${d.owner} som äger ${d.name}. Chatt öppnas när de godkänner — annars syns hunden igen om 7 dagar.';
+      lastNotice = 'Förfrågan skickad till ${d.owner} som äger ${d.name}.';
       PushService.notifyMatch(d.name);
-    } else {
-      lastNotice = '';
     }
     notifyListeners();
   }
