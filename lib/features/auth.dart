@@ -39,13 +39,19 @@ class _AuthScreenState extends State<AuthScreen> {
   Future<void> _go() async {
     if (busy) return;
     setState(() => busy = true);
-    final mail = email.text.trim().isEmpty ? 'du@pawmatch.app' : email.text.trim();
+    final mail = email.text.trim();
     final mode = await Cloud.login(email: mail, password: pass.text, create: create);
     if (!mounted) return;
-    widget.state.signIn(mail);
+    final ok = mode == 'cloud';
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(mode == 'cloud' ? 'Konto kopplat till Supabase' : 'Fortsatte lokalt (molnet svarade inte)')),
+      SnackBar(
+        duration: const Duration(seconds: 6),
+        content: Text(ok ? 'Konto kopplat till Supabase' : mode),
+      ),
     );
+    if (ok || !Cloud.ready) {
+      widget.state.signIn(mail.isEmpty ? 'du@pawmatch.app' : mail);
+    }
     if (mounted) setState(() => busy = false);
   }
 
