@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'app_state.dart';
 import 'features/auth.dart';
+import 'features/identity.dart';
 import 'features/onboarding.dart';
 import 'features/shell.dart';
 
@@ -22,6 +23,16 @@ class _PawMatchAppState extends State<PawMatchApp> {
     return AnimatedBuilder(
       animation: state,
       builder: (_, __) {
+        Widget home;
+        if (!state.signedIn) {
+          home = AuthScreen(key: const ValueKey('auth'), state: state);
+        } else if (!state.idConsent) {
+          home = IdentityScreen(key: const ValueKey('id'), state: state);
+        } else if (!state.onboarded) {
+          home = OnboardingFlow(key: const ValueKey('onboard'), state: state);
+        } else {
+          home = AppShell(key: const ValueKey('shell'), state: state);
+        }
         return MaterialApp(
           title: 'PawMatch',
           locale: const Locale('sv'),
@@ -51,14 +62,7 @@ class _PawMatchAppState extends State<PawMatchApp> {
               ),
             ),
           ),
-          home: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 400),
-            child: !state.signedIn
-                ? AuthScreen(key: const ValueKey('auth'), state: state)
-                : !state.onboarded
-                    ? OnboardingFlow(key: const ValueKey('onboard'), state: state)
-                    : AppShell(key: const ValueKey('shell'), state: state),
-          ),
+          home: AnimatedSwitcher(duration: const Duration(milliseconds: 400), child: home),
         );
       },
     );
