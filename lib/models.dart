@@ -109,12 +109,14 @@ class BreedingDeal {
 }
 
 class MatchThread {
-  MatchThread(this.dog, this.messages, {this.accepted = false, this.outgoing = true, DateTime? createdAt}) : createdAt = createdAt ?? DateTime.now();
+  MatchThread(this.dog, this.messages, {this.accepted = false, this.outgoing = true, DateTime? createdAt, this.unread = 0})
+      : createdAt = createdAt ?? DateTime.now();
   final DogProfile dog;
   final List<ChatLine> messages;
   bool accepted;
   final bool outgoing;
   final DateTime createdAt;
+  int unread;
   BreedingDeal? deal;
   bool get expired => DateTime.now().difference(createdAt).inDays >= 7;
 }
