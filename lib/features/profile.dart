@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_state.dart';
+import 'deals.dart';
 import 'edit_profile.dart';
 import 'legal.dart';
 import 'my_dogs.dart';
@@ -13,7 +14,7 @@ class ProfilePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final photo = state.photoUrl;
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF6F1),
+      backgroundColor: const Color(0xFFFFF4EC),
       appBar: AppBar(title: const Text('Profil', style: TextStyle(fontWeight: FontWeight.w800)), backgroundColor: Colors.transparent),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
@@ -61,6 +62,9 @@ class ProfilePage extends StatelessWidget {
           const SizedBox(height: 16),
           _tile(context, const Color(0xFFE25C3A), Icons.pets, 'Mina hundar', '${state.myDogs.length} sparade', () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => MyDogsPage(state: state)));
+          }),
+          _tile(context, const Color(0xFF1F7A6C), Icons.description, 'Mina avtal', '${state.deals.length} st', () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => DealsPage(state: state)));
           }),
           _tile(context, const Color(0xFF2A9D8F), Icons.support_agent, 'Kundsupport', 'AI + mejl', () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => const SupportPage()));
