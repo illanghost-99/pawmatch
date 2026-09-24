@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../services/biometrics.dart';
 import '../services/cloud.dart';
+import '../widgets/duo_dogs.dart';
 import '../widgets/paws_bg.dart';
 
 const _coral = Color(0xFFE25C3A);
@@ -60,40 +61,32 @@ class _AuthScreenState extends State<AuthScreen> {
       body: PawsBg(
         child: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
+            padding: const EdgeInsets.fromLTRB(24, 36, 24, 24),
             child: Column(
               children: [
-                Container(
-                  width: 108,
-                  height: 108,
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(colors: [Color(0xFFFF6B6B), _coral, Color(0xFFF4A261)]),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.pets, size: 50, color: Colors.white),
-                ),
-                const SizedBox(height: 18),
+                const DuoDogs(size: 196),
+                const SizedBox(height: 10),
                 const Text.rich(
                   TextSpan(
-                    style: TextStyle(fontSize: 40, fontWeight: FontWeight.w900, color: _ink, height: 1),
+                    style: TextStyle(fontSize: 38, fontWeight: FontWeight.w900, color: _ink, height: 1),
                     children: [
                       TextSpan(text: 'Paw'),
                       TextSpan(text: 'Match', style: TextStyle(color: _coral)),
                     ],
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 const Text(
-                  'Hitta vän eller avel — på dina villkor',
+                  'Stor som liten. Vän eller avel.',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF3D4A57)),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 Text(
                   Cloud.ready ? 'Supabase är på' : 'Kör lokalt',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Cloud.ready ? const Color(0xFF1F7A6C) : const Color(0xFF8B3A32)),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
                 TextField(controller: email, keyboardType: TextInputType.emailAddress, decoration: _field('E-post')),
                 const SizedBox(height: 12),
                 TextField(controller: pass, obscureText: true, decoration: _field('Lösenord')),
@@ -104,7 +97,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   child: FilledButton(
                     style: FilledButton.styleFrom(
                       backgroundColor: _coral,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                     ),
                     onPressed: busy ? null : _go,
                     child: Text(
@@ -122,7 +115,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: _ink,
                         side: const BorderSide(color: _ink, width: 1.4),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                       ),
                       onPressed: busy
                           ? null
@@ -162,7 +155,7 @@ class _AuthScreenState extends State<AuthScreen> {
         labelStyle: const TextStyle(color: _ink, fontWeight: FontWeight.w600),
         filled: true,
         fillColor: Colors.white,
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: const BorderSide(color: Color(0xFFD7C4B5), width: 1.4)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: const BorderSide(color: _coral, width: 2)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: const BorderSide(color: Color(0xFFD7C4B5), width: 1.4)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: const BorderSide(color: _coral, width: 2)),
       );
 }
