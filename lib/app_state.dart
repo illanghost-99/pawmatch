@@ -44,6 +44,10 @@ class AppState extends ChangeNotifier {
     return n.isEmpty ? displayName : n;
   }
 
+  int get chatBadge => incoming.length + matches.where((m) => m.unread > 0).length;
+
+  List<MatchThread> get deals => matches.where((m) => m.deal != null).toList();
+
   void signIn(String e) {
     email = e;
     signedIn = true;
@@ -100,7 +104,14 @@ class AppState extends ChangeNotifier {
   void finishOnboarding() {
     onboarded = true;
     if (incoming.isEmpty && sampleDogs.isNotEmpty) {
-      incoming.add(MatchThread(sampleDogs.first, [const ChatLine(false, 'Hej! Vi söker en lekkompis.')], accepted: false, outgoing: false));
+      incoming.add(MatchThread(
+        sampleDogs.first,
+        [const ChatLine(false, 'Hej! Vi söker en lekkompis.')],
+        accepted: false,
+        outgoing: false,
+        unread: 1,
+      ));
+      lastNotice = '${sampleDogs.first.owner} vill matcha med dig';
     }
     applyFilters();
     notifyListeners();
@@ -125,6 +136,11 @@ class AppState extends ChangeNotifier {
   }
 
   void bump() => notifyListeners();
+
+  void markRead(MatchThread t) {
+    t.unread = 0;
+    notifyListeners();
+  }
 
   bool wantsBreeding(DogProfile d) => d.intent == 'puppies' || d.availableForBreeding;
 
@@ -214,12 +230,15 @@ class AppState extends ChangeNotifier {
   void simulateAccept(MatchThread t) {
     t.accepted = true;
     t.messages.add(const ChatLine(false, 'Matchningen är godkänd — nu kan ni chatta.'));
+    t.unread += 1;
+    lastNotice = '${t.dog.owner} godkände matchningen';
     notifyListeners();
   }
 
   void acceptIncoming(MatchThread t) {
     t.accepted = true;
     t.messages.add(const ChatLine(false, 'Matchningen är godkänd — nu kan ni chatta.'));
+    t.unread = 1;
     if (!matches.any((m) => m.dog.id == t.dog.id && m.accepted)) {
       matches.insert(0, t);
     }
