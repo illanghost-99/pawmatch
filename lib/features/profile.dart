@@ -59,6 +59,41 @@ class ProfilePage extends StatelessWidget {
               ),
             ),
           ),
+          if (state.myDogs.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            const Text('Avel per hund', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+            const SizedBox(height: 8),
+            ...List.generate(state.myDogs.length, (i) {
+              final d = state.myDogs[i];
+              return Card(
+                color: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: SwitchListTile(
+                  title: Text(d.name, style: const TextStyle(fontWeight: FontWeight.w800)),
+                  subtitle: Text(d.availableForBreeding ? 'Ute för avel' : 'Bara vänner'),
+                  value: d.availableForBreeding,
+                  activeThumbColor: const Color(0xFFE25C3A),
+                  onChanged: (on) {
+                    if (!on) {
+                      d.availableForBreeding = false;
+                      state.bump();
+                      return;
+                    }
+                    if (d.neutered) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kastrerad hund kan inte läggas ut för avel.')));
+                      return;
+                    }
+                    if (!d.breedingReady) {
+                      openDogForm(context, state, index: i, forceBreeding: true);
+                      return;
+                    }
+                    d.availableForBreeding = true;
+                    state.bump();
+                  },
+                ),
+              );
+            }),
+          ],
           const SizedBox(height: 16),
           _tile(context, const Color(0xFFE25C3A), Icons.pets, 'Mina hundar', '${state.myDogs.length} sparade', () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => MyDogsPage(state: state)));

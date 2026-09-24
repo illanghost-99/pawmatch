@@ -128,8 +128,8 @@ class MyDog {
     required this.age,
     required this.city,
     required this.bio,
-    required this.sex,
-    required this.weightKg,
+    this.sex = '',
+    this.weightKg = 0,
     this.availableForFriends = true,
     this.availableForBreeding = false,
     this.pedigreeNote = '',
@@ -166,4 +166,6 @@ class MyDog {
   bool hasAllergies;
   ReviewStatus pedigreeStatus;
   ReviewStatus vaccineStatus;
+
+  bool get breedingReady => sex.isNotEmpty && weightKg > 0 && vaccinated;
 }
