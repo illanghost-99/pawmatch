@@ -45,8 +45,11 @@ class _AuthScreenState extends State<AuthScreen> {
     final mode = await Cloud.login(email: mail, password: pass.text, create: create);
     if (!mounted) return;
     final ok = mode == 'cloud';
+    final msg = ok
+        ? (create ? 'Konto skapat' : 'Välkommen in')
+        : (mode.contains('rate') ? 'Försök igen om en stund' : 'Kunde inte logga in. Kontrollera e-post och lösenord.');
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(duration: const Duration(seconds: 6), content: Text(ok ? 'Konto kopplat till Supabase' : mode)),
+      SnackBar(duration: const Duration(seconds: 3), content: Text(msg)),
     );
     if (ok || !Cloud.ready) {
       widget.state.signIn(mail.isEmpty ? 'du@pawmatch.app' : mail);
