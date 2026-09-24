@@ -6,7 +6,7 @@ import '../models.dart';
 class DealSheet {
   static Future<void> open(BuildContext context, AppState state, MatchThread thread) async {
     if (thread.deal != null) {
-      _showContract(context, state, thread);
+      await _showContract(context, state, thread);
       return;
     }
     final mine = state.myDogs.where((d) => d.availableForBreeding).toList();
@@ -19,7 +19,7 @@ class DealSheet {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFFFFF6F1),
+      backgroundColor: const Color(0xFFFFF4EC),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (ctx) => Padding(
         padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.viewInsetsOf(ctx).bottom + 20),
@@ -33,7 +33,7 @@ class DealSheet {
                 children: [
                   Expanded(child: _OwnerChip(label: state.fullName, color: const Color(0xFFE25C3A), onTap: () => _me(context, state))),
                   const SizedBox(width: 8),
-                  Expanded(child: _OwnerChip(label: thread.dog.owner, color: const Color(0xFF2A9D8F), onTap: () => _them(context, thread.dog))),
+                  Expanded(child: _OwnerChip(label: thread.dog.owner, color: const Color(0xFF1F7A6C), onTap: () => _them(context, thread.dog))),
                 ],
               ),
               const SizedBox(height: 8),
@@ -74,12 +74,14 @@ class DealSheet {
                     partyB: thread.dog.owner,
                     body: body,
                   );
-                  thread.messages.add(ChatLine(true, 'Avtal skapat. Kopia kan skickas till ${state.email}.'));
+                  if (thread.messages.isEmpty || !thread.messages.last.text.startsWith('Avtal skapat')) {
+                    thread.messages.add(ChatLine(true, 'Avtal skapat. Kopia kan skickas till ${state.email}.'));
+                  }
                   state.bump();
                   Navigator.pop(ctx);
                   _showContract(context, state, thread);
                 },
-                child: const Text('Skapa avtal med AI-mall'),
+                child: const Text('Skapa avtal'),
               ),
             ],
           ),
@@ -88,7 +90,12 @@ class DealSheet {
     );
   }
 
-  static InputDecoration _dec(String l) => InputDecoration(labelText: l, filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none));
+  static InputDecoration _dec(String l) => InputDecoration(
+        labelText: l,
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+      );
 
   static void _me(BuildContext context, AppState s) {
     showModalBottomSheet(
@@ -135,11 +142,11 @@ class DealSheet {
     );
   }
 
-  static void _showContract(BuildContext context, AppState state, MatchThread thread) {
+  static Future<void> _showContract(BuildContext context, AppState state, MatchThread thread) {
     final deal = thread.deal;
-    if (deal == null) return;
+    if (deal == null) return Future.value();
     final name = TextEditingController(text: deal.signedByMe.isEmpty ? state.fullName : deal.signedByMe);
-    showModalBottomSheet(
+    return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: const Color(0xFF5C4033),
@@ -150,13 +157,13 @@ class DealSheet {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('Avelsavtal', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFFF4E7D3), fontSize: 20, fontWeight: FontWeight.w800)),
+                const Text('Avelsavtal', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFFF4E7D3), fontSize: 22, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 10),
                 Row(
                   children: [
                     Expanded(child: _OwnerChip(label: deal.partyA.isEmpty ? state.fullName : deal.partyA, color: const Color(0xFFE25C3A), onTap: () => _me(context, state))),
                     const SizedBox(width: 8),
-                    Expanded(child: _OwnerChip(label: deal.partyB, color: const Color(0xFF2A9D8F), onTap: () => _them(context, thread.dog))),
+                    Expanded(child: _OwnerChip(label: deal.partyB, color: const Color(0xFF1F7A6C), onTap: () => _them(context, thread.dog))),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -164,7 +171,7 @@ class DealSheet {
                   padding: const EdgeInsets.fromLTRB(18, 20, 18, 20),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFBF6EA),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(10),
                     boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 12, offset: Offset(0, 6))],
                     border: Border.all(color: const Color(0xFFD9C8A3)),
                   ),
@@ -174,15 +181,12 @@ class DealSheet {
                       const Center(child: Text('PAWMATCH', style: TextStyle(letterSpacing: 4, fontWeight: FontWeight.w800, color: Color(0xFF8B3A32)))),
                       const Center(child: Text('AVELSAVTAL', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900))),
                       const Divider(height: 24),
-                      Text(deal.body, style: const TextStyle(height: 1.45, fontSize: 13, color: Color(0xFF2C2118))),
+                      Text(deal.body, style: const TextStyle(height: 1.45, fontSize: 14, color: Color(0xFF2C2118))),
                     ],
                   ),
                 ),
                 const SizedBox(height: 14),
-                TextField(
-                  controller: name,
-                  decoration: _dec('Fullständigt namn'),
-                ),
+                TextField(controller: name, decoration: _dec('Fullständigt namn')),
                 const SizedBox(height: 10),
                 GestureDetector(
                   onTap: () async {
@@ -203,18 +207,27 @@ class DealSheet {
                 ),
                 const SizedBox(height: 12),
                 FilledButton(
-                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF2A9D8F), minimumSize: const Size.fromHeight(52)),
-                  onPressed: () {
+                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF1F7A6C), minimumSize: const Size.fromHeight(52)),
+                  onPressed: () async {
                     if (name.text.trim().isEmpty || deal.signature.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fyll i namn och signatur.')));
                       return;
                     }
                     deal.signedByMe = name.text.trim();
-                    thread.messages.add(ChatLine(true, 'Avtalet är signerat av ${deal.signedByMe}.'));
+                    final already = thread.messages.any((m) => m.text.startsWith('Avtalet är signerat'));
+                    if (!already) {
+                      thread.messages.add(ChatLine(true, 'Avtalet är signerat av ${deal.signedByMe}.'));
+                    }
                     state.bump();
-                    setLocal(() {});
+                    if (!ctx.mounted) return;
+                    await showDialog<void>(
+                      context: ctx,
+                      barrierDismissible: false,
+                      builder: (d) => const _SignedOk(),
+                    );
+                    if (ctx.mounted) Navigator.pop(ctx);
                   },
-                  child: Text(deal.signedByMe.isEmpty ? 'Bekräfta signering' : 'Signerat av ${deal.signedByMe}'),
+                  child: Text(deal.signedByMe.isEmpty ? 'Bekräfta signering' : 'Signerat — stäng'),
                 ),
                 const SizedBox(height: 8),
                 OutlinedButton.icon(
@@ -288,6 +301,43 @@ class DealSheet {
   }) {
     final day = DateTime.now().toIso8601String().split('T').first;
     return 'Datum: $day\n\nParter\n1. $partyA ($mailA, $phoneA), ägare av $dogA\n2. $partyB, ägare av $dogB ($breed)\n\nÖverenskommelse\nAvel mellan ovan hundar. Förväntat antal valpar: $pups.\nPris per valp: $price kr.\nPlats: $place.\n\nÖvrigt\n${notes.isEmpty ? 'Inget ytterligare.' : notes}\n\nPawMatch är inte part och ger ingen veterinärrådgivning.\nMall, inte juridisk rådgivning.';
+  }
+}
+
+class _SignedOk extends StatefulWidget {
+  const _SignedOk();
+  @override
+  State<_SignedOk> createState() => _SignedOkState();
+}
+
+class _SignedOkState extends State<_SignedOk> {
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.delayed(const Duration(milliseconds: 1100), () {
+      if (mounted) Navigator.pop(context);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Material(
+        color: Colors.transparent,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircleAvatar(
+              radius: 44,
+              backgroundColor: Color(0xFF1F7A6C),
+              child: Icon(Icons.check_rounded, size: 52, color: Colors.white),
+            ),
+            SizedBox(height: 14),
+            Text('Signerat', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800)),
+          ],
+        ),
+      ),
+    );
   }
 }
 
