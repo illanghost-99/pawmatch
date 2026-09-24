@@ -128,13 +128,18 @@ class MyDog {
     required this.age,
     required this.city,
     required this.bio,
+    required this.sex,
+    required this.weightKg,
     this.availableForFriends = true,
     this.availableForBreeding = false,
     this.pedigreeNote = '',
     this.vaccineNote = '',
     this.allergyNote = '',
+    this.healthNote = '',
     this.hasPedigree = false,
     this.vaccinated = false,
+    this.dewormed = false,
+    this.chipped = false,
     this.neutered = false,
     this.hasAllergies = false,
     this.pedigreeStatus = ReviewStatus.pending,
@@ -145,13 +150,18 @@ class MyDog {
   int age;
   String city;
   String bio;
+  String sex;
+  double weightKg;
   bool availableForFriends;
   bool availableForBreeding;
   String pedigreeNote;
   String vaccineNote;
   String allergyNote;
+  String healthNote;
   bool hasPedigree;
   bool vaccinated;
+  bool dewormed;
+  bool chipped;
   bool neutered;
   bool hasAllergies;
   ReviewStatus pedigreeStatus;
