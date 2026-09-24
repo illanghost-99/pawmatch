@@ -88,11 +88,6 @@ class _AuthScreenState extends State<AuthScreen> {
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF3D4A57)),
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  'MATCHA  ·  CHATTA  ·  AVTALA',
-                  style: TextStyle(letterSpacing: 2.2, fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF8A7468)),
-                ),
                 const SizedBox(height: 10),
                 Text(
                   Cloud.ready ? 'Supabase är på' : 'Kör lokalt',
