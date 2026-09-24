@@ -3,7 +3,7 @@ import '../app_state.dart';
 import '../data/suggestions.dart';
 import '../models.dart';
 
-const _rose = Color(0xFFC23B2E);
+const _rose = Color(0xFFFF2E9A);
 const _ink = Color(0xFF1C1410);
 
 class OnboardingFlow extends StatefulWidget {
@@ -18,9 +18,19 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   final dogName = TextEditingController();
   final dogBreed = TextEditingController();
   final dogCity = TextEditingController();
+  final weight = TextEditingController();
+  final vac = TextEditingController();
+  final health = TextEditingController();
+  final allergy = TextEditingController();
+  final ped = TextEditingController();
   var dogAge = 3;
   var friends = true;
   var breeding = false;
+  var sex = 'Tik';
+  var vaccinated = false;
+  var dewormed = false;
+  var chipped = false;
+  var hasPedigree = false;
 
   static const _roles = [
     (UserRole.owner, Icons.pets, 'Hundägare', 'Matcha vänner eller avel för din hund'),
@@ -34,23 +44,52 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     dogName.dispose();
     dogBreed.dispose();
     dogCity.dispose();
+    weight.dispose();
+    vac.dispose();
+    health.dispose();
+    allergy.dispose();
+    ped.dispose();
     super.dispose();
   }
 
   void _next() {
-    if (page < 2) {
-      setState(() => page++);
+    if (page == 0) {
+      setState(() => page = 1);
+      return;
+    }
+    if (page == 1) {
+      setState(() {
+        breeding = widget.state.interests.contains('puppies');
+        page = 2;
+      });
       return;
     }
     if (dogName.text.trim().isNotEmpty) {
+      final kg = double.tryParse(weight.text.replaceAll(',', '.')) ?? 0;
+      if (breeding && (kg <= 0 || !vaccinated)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('För avel behövs vikt och att hunden är vaccinerad.')),
+        );
+        return;
+      }
       widget.state.addMyDog(MyDog(
         name: dogName.text.trim(),
         breed: dogBreed.text.trim().isEmpty ? 'Blandras' : dogBreed.text.trim(),
         age: dogAge,
         city: dogCity.text.trim().isEmpty ? widget.state.locationLabel : dogCity.text.trim(),
         bio: '',
+        sex: sex,
+        weightKg: kg,
         availableForFriends: friends,
         availableForBreeding: breeding,
+        pedigreeNote: ped.text.trim(),
+        vaccineNote: vac.text.trim(),
+        allergyNote: allergy.text.trim(),
+        healthNote: health.text.trim(),
+        hasPedigree: hasPedigree,
+        vaccinated: vaccinated,
+        dewormed: dewormed,
+        chipped: chipped,
       ));
     }
     widget.state.finishOnboarding();
@@ -63,7 +102,9 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     final subs = [
       'Välj den roll som passar bäst. Du kan ändra senare.',
       'Kryssa i intressen så anpassar PawMatch sig för dig.',
-      'Lägg till din första hund så kan andra hitta er. Du kan hoppa över.',
+      breeding
+          ? 'Eftersom du valde avel behöver vi vikt, kön och hälsa.'
+          : 'Lägg till din första hund så kan andra hitta er. Du kan hoppa över.',
     ];
     return Scaffold(
       body: DecoratedBox(
@@ -71,7 +112,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFFFFF5F3), Color(0xFFF6D5CF)],
+            colors: [Color(0xFFFFF0F7), Color(0xFFFFD2E8)],
           ),
         ),
         child: SafeArea(
@@ -142,21 +183,11 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                             : ListView(
                                 key: const ValueKey('dog'),
                                 children: [
-                                  _field(dogName, 'Hundens namn'),
+                                  _field(dogName, 'Hundens namn *'),
                                   const SizedBox(height: 12),
-                                  _suggestField(
-                                    controller: dogBreed,
-                                    label: 'Ras',
-                                    hint: 'Skriv pom — välj Pomeranian',
-                                    options: kBreeds,
-                                  ),
+                                  _suggestField(controller: dogBreed, label: 'Ras *', hint: 'Skriv pom', options: kBreeds),
                                   const SizedBox(height: 12),
-                                  _suggestField(
-                                    controller: dogCity,
-                                    label: 'Ort',
-                                    hint: 'Skriv upplands — välj Upplands Väsby',
-                                    options: kCities,
-                                  ),
+                                  _suggestField(controller: dogCity, label: 'Ort *', hint: 'Skriv upplands', options: kCities),
                                   const SizedBox(height: 16),
                                   Text('Ålder: $dogAge år', style: const TextStyle(fontWeight: FontWeight.w600)),
                                   Slider(
@@ -178,10 +209,33 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                                     contentPadding: EdgeInsets.zero,
                                     activeThumbColor: _rose,
                                     title: const Text('Öppen för avel'),
-                                    subtitle: const Text('Uppgifter granskas senare.'),
                                     value: breeding,
                                     onChanged: (v) => setState(() => breeding = v),
                                   ),
+                                  if (breeding) ...[
+                                    const SizedBox(height: 8),
+                                    const Text('Kön *', style: TextStyle(fontWeight: FontWeight.w700)),
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      children: [
+                                        Expanded(child: _sex('Tik')),
+                                        const SizedBox(width: 8),
+                                        Expanded(child: _sex('Hane')),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    _field(weight, 'Vikt (kg) *', number: true),
+                                    SwitchListTile(contentPadding: EdgeInsets.zero, activeThumbColor: _rose, title: const Text('Vaccinerad *'), value: vaccinated, onChanged: (v) => setState(() => vaccinated = v)),
+                                    SwitchListTile(contentPadding: EdgeInsets.zero, activeThumbColor: _rose, title: const Text('Avmaskad'), value: dewormed, onChanged: (v) => setState(() => dewormed = v)),
+                                    SwitchListTile(contentPadding: EdgeInsets.zero, activeThumbColor: _rose, title: const Text('Chipmärkt'), value: chipped, onChanged: (v) => setState(() => chipped = v)),
+                                    _field(vac, 'Senaste vaccination'),
+                                    const SizedBox(height: 8),
+                                    _field(health, 'Hälsotest (höft, armbåge, ögon)'),
+                                    const SizedBox(height: 8),
+                                    _field(allergy, 'Allergier'),
+                                    SwitchListTile(contentPadding: EdgeInsets.zero, activeThumbColor: _rose, title: const Text('Har stamtavla'), value: hasPedigree, onChanged: (v) => setState(() => hasPedigree = v)),
+                                    if (hasPedigree) _field(ped, 'Stamtavla / registreringsnummer'),
+                                  ],
                                 ],
                               ),
                   ),
@@ -212,11 +266,29 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     );
   }
 
-  Widget _field(TextEditingController c, String label) {
+  Widget _sex(String value) {
+    final on = sex == value;
+    return InkWell(
+      onTap: () => setState(() => sex = value),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        height: 46,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: on ? _rose : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: on ? _rose : const Color(0xFFFFB6D9)),
+        ),
+        child: Text(value, style: TextStyle(fontWeight: FontWeight.w800, color: on ? Colors.white : _ink)),
+      ),
+    );
+  }
+
+  Widget _field(TextEditingController c, String label, {bool number = false}) {
     return TextField(
       controller: c,
-      keyboardType: TextInputType.text,
-      textCapitalization: TextCapitalization.words,
+      keyboardType: number ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
+      textCapitalization: number ? TextCapitalization.none : TextCapitalization.words,
       decoration: InputDecoration(
         labelText: label,
         filled: true,
@@ -275,7 +347,7 @@ class _RoleCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
-        color: selected ? const Color(0xFFFFE8E4) : Colors.white,
+        color: selected ? const Color(0xFFFFE0F0) : Colors.white,
         borderRadius: BorderRadius.circular(20),
         child: InkWell(
           onTap: onTap,
@@ -293,7 +365,7 @@ class _RoleCard extends StatelessWidget {
                   width: 52,
                   height: 52,
                   decoration: BoxDecoration(
-                    color: selected ? _rose : const Color(0xFFF8E4E0),
+                    color: selected ? _rose : const Color(0xFFFFE0F0),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Icon(icon, color: selected ? Colors.white : _ink),
