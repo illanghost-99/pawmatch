@@ -84,11 +84,6 @@ class _AuthScreenState extends State<AuthScreen> {
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF3D4A57)),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      Cloud.ready ? 'Supabase är på' : 'Kör lokalt',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Cloud.ready ? const Color(0xFF1F7A6C) : const Color(0xFF8B3A32)),
-                    ),
                     const SizedBox(height: 16),
                     TextField(controller: email, keyboardType: TextInputType.emailAddress, decoration: _field('E-post')),
                     const SizedBox(height: 10),
