@@ -88,9 +88,10 @@ class _DuoPainter extends CustomPainter {
       black,
     );
 
-    final head = Path()
-      ..addRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: Offset(-w * 0.38, -w * 0.18), width: w * 0.42, height: w * 0.38), const Radius.circular(8)));
-    canvas.drawPath(head, black);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(Rect.fromCenter(center: Offset(-w * 0.38, -w * 0.18), width: w * 0.42, height: w * 0.38), const Radius.circular(8)),
+      black,
+    );
     canvas.drawRRect(
       RRect.fromRectAndRadius(Rect.fromCenter(center: Offset(-w * 0.56, -w * 0.10), width: w * 0.22, height: w * 0.16), const Radius.circular(5)),
       black,
@@ -109,6 +110,7 @@ class _DuoPainter extends CustomPainter {
     final coat = Paint()..color = const Color(0xFFD4923A);
     final light = Paint()..color = const Color(0xFFE8B56A);
     final dark = Paint()..color = const Color(0xFF5A3A22);
+    final white = Paint()..color = const Color(0xFFF7F1E8);
 
     canvas.drawOval(Rect.fromCenter(center: Offset(w * 0.18, 0), width: w * 1.15, height: w * 0.95), coat);
     canvas.drawOval(Rect.fromCenter(center: Offset(w * 0.42, -w * 0.08), width: w * 0.55, height: w * 0.70), light);
@@ -130,7 +132,7 @@ class _DuoPainter extends CustomPainter {
     canvas.drawOval(Rect.fromCenter(center: Offset(-w * 0.22, 0.02), width: w * 0.28, height: w * 0.18), light);
     canvas.drawCircle(Offset(-w * 0.08, -w * 0.10), 2.4, dark);
     canvas.drawCircle(Offset(-w * 0.32, 0.02), 2.0, Paint()..color = const Color(0xFF2A1A12));
-    canvas.drawCircle(Offset(-w * 0.08, -w * 0.12), 0.8, Colors.white as Paint? ?? (Paint()..color = Colors.white));
+    canvas.drawCircle(Offset(-w * 0.10, -w * 0.12), 0.7, white);
 
     canvas.drawOval(Rect.fromCenter(center: Offset(w * 0.38, w * 0.22), width: w * 0.18, height: w * 0.28), coat);
     canvas.drawOval(Rect.fromCenter(center: Offset(w * 0.18, w * 0.22), width: w * 0.16, height: w * 0.26), coat);
