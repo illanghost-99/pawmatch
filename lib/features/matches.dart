@@ -34,7 +34,9 @@ class MatchesPage extends StatelessWidget {
                   title: Text('${m.dog.owner} · ${m.dog.name}', style: const TextStyle(fontWeight: FontWeight.w700)),
                   subtitle: Text('${m.dog.breed} vill matcha. Godkänn för att chatta.'),
                   trailing: Wrap(
+                    spacing: 4,
                     children: [
+                      const Badge(label: Text('1')),
                       TextButton(onPressed: () => state.declineIncoming(m), child: const Text('Nej')),
                       FilledButton(onPressed: () => state.acceptIncoming(m), child: const Text('Godkänn')),
                     ],
@@ -62,11 +64,18 @@ class MatchesPage extends StatelessWidget {
             Card(
               color: Colors.white,
               child: ListTile(
-                leading: const CircleAvatar(backgroundColor: _coral, child: Icon(Icons.pets, color: Colors.white)),
+                leading: Badge(
+                  isLabelVisible: m.unread > 0,
+                  label: Text('${m.unread}'),
+                  child: const CircleAvatar(backgroundColor: _coral, child: Icon(Icons.pets, color: Colors.white)),
+                ),
                 title: Text(m.dog.name, style: const TextStyle(fontWeight: FontWeight.w800)),
                 subtitle: Text(m.dog.breed),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ChatPage(state: state, thread: m))),
+                onTap: () {
+                  state.markRead(m);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => ChatPage(state: state, thread: m)));
+                },
               ),
             ),
         ],
@@ -86,6 +95,12 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin {
   final c = TextEditingController();
   late final AnimationController pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))..repeat(reverse: true);
+
+  @override
+  void initState() {
+    super.initState();
+    widget.state.markRead(widget.thread);
+  }
 
   @override
   void dispose() {
@@ -172,11 +187,7 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
                       ),
                       child: Text(
                         m.text,
-                        style: TextStyle(
-                          color: m.fromMe ? Colors.white : _ink,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15,
-                        ),
+                        style: TextStyle(color: m.fromMe ? Colors.white : _ink, fontWeight: FontWeight.w600, fontSize: 15),
                       ),
                     ),
                   ),
