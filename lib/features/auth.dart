@@ -60,89 +60,103 @@ class _AuthScreenState extends State<AuthScreen> {
       backgroundColor: _cream,
       body: PawsBg(
         child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 36, 24, 24),
-            child: Column(
-              children: [
-                const DuoDogs(size: 196),
-                const SizedBox(height: 10),
-                const Text.rich(
-                  TextSpan(
-                    style: TextStyle(fontSize: 38, fontWeight: FontWeight.w900, color: _ink, height: 1),
-                    children: [
-                      TextSpan(text: 'Paw'),
-                      TextSpan(text: 'Match', style: TextStyle(color: _coral)),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Stor som liten. Vän eller avel.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF3D4A57)),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  Cloud.ready ? 'Supabase är på' : 'Kör lokalt',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Cloud.ready ? const Color(0xFF1F7A6C) : const Color(0xFF8B3A32)),
-                ),
-                const SizedBox(height: 24),
-                TextField(controller: email, keyboardType: TextInputType.emailAddress, decoration: _field('E-post')),
-                const SizedBox(height: 12),
-                TextField(controller: pass, obscureText: true, decoration: _field('Lösenord')),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: _coral,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                    ),
-                    onPressed: busy ? null : _go,
-                    child: Text(
-                      busy ? 'Väntar...' : (create ? 'Skapa konto' : 'Kom igång'),
-                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-                    ),
-                  ),
-                ),
-                if (bioOk) ...[
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: _ink,
-                        side: const BorderSide(color: _ink, width: 1.4),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(22, 18, 22, 20),
+                child: Column(
+                  children: [
+                    const DuoDogs(size: 168),
+                    const SizedBox(height: 6),
+                    const Text.rich(
+                      TextSpan(
+                        style: TextStyle(fontSize: 34, fontWeight: FontWeight.w900, color: _ink, height: 1),
+                        children: [
+                          TextSpan(text: 'Paw'),
+                          TextSpan(text: 'Match', style: TextStyle(color: _coral)),
+                        ],
                       ),
-                      onPressed: busy
-                          ? null
-                          : () async {
-                              final ok = await Biometrics.unlock(reason: 'Logga in i PawMatch');
-                              if (ok && mounted) {
-                                widget.state.signIn(widget.state.email.isEmpty ? 'faceid@pawmatch.app' : widget.state.email);
-                              }
-                            },
-                      icon: const Icon(Icons.face),
-                      label: const Text('Face ID / biometri'),
                     ),
-                  ),
-                ],
-                TextButton(
-                  onPressed: () => setState(() => create = !create),
-                  child: Text(
-                    create ? 'Har redan konto? Logga in' : 'Ny här? Skapa konto',
-                    style: const TextStyle(color: _coral, fontWeight: FontWeight.w800),
-                  ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Stor som liten. Vän eller avel.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF3D4A57)),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      Cloud.ready ? 'Supabase är på' : 'Kör lokalt',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Cloud.ready ? const Color(0xFF1F7A6C) : const Color(0xFF8B3A32)),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(controller: email, keyboardType: TextInputType.emailAddress, decoration: _field('E-post')),
+                    const SizedBox(height: 10),
+                    TextField(controller: pass, obscureText: true, decoration: _field('Lösenord')),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 58,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: const [
+                            BoxShadow(color: Color(0x55E25C3A), blurRadius: 16, offset: Offset(0, 8)),
+                          ],
+                        ),
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: _coral,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          ),
+                          onPressed: busy ? null : _go,
+                          child: Text(
+                            busy ? 'Väntar...' : (create ? 'Skapa konto' : 'Kom igång'),
+                            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (bioOk) ...[
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: _ink,
+                            side: const BorderSide(color: _ink, width: 1.4),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                          ),
+                          onPressed: busy
+                              ? null
+                              : () async {
+                                  final ok = await Biometrics.unlock(reason: 'Logga in i PawMatch');
+                                  if (ok && mounted) {
+                                    widget.state.signIn(widget.state.email.isEmpty ? 'faceid@pawmatch.app' : widget.state.email);
+                                  }
+                                },
+                          icon: const Icon(Icons.face),
+                          label: const Text('Face ID / biometri'),
+                        ),
+                      ),
+                    ],
+                    TextButton(
+                      onPressed: () => setState(() => create = !create),
+                      child: Text(
+                        create ? 'Har redan konto? Logga in' : 'Ny här? Skapa konto',
+                        style: const TextStyle(color: _coral, fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                    const Text(
+                      'Genom att fortsätta godkänner du villkor och integritetspolicy.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 12, color: Color(0xFF3D4A57)),
+                    ),
+                  ],
                 ),
-                const Text(
-                  'Genom att fortsätta godkänner du villkor och integritetspolicy.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12, color: Color(0xFF3D4A57)),
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -152,10 +166,17 @@ class _AuthScreenState extends State<AuthScreen> {
 
   InputDecoration _field(String label) => InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: _ink, fontWeight: FontWeight.w600),
+        labelStyle: const TextStyle(color: _ink, fontWeight: FontWeight.w600, fontSize: 15),
         filled: true,
         fillColor: Colors.white,
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: const BorderSide(color: Color(0xFFD7C4B5), width: 1.4)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: const BorderSide(color: _coral, width: 2)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(color: Color(0xFFE2C4B3), width: 1.6),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(color: _coral, width: 2.2),
+        ),
       );
 }
