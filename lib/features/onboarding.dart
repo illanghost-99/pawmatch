@@ -57,46 +57,58 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     setState(() => page--);
   }
 
+  void _toast(String m) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+  }
+
   void _next() {
     if (page == 0) {
       setState(() => page = 1);
       return;
     }
     if (page == 1) {
+      if (widget.state.interests.isEmpty) {
+        _toast('Välj minst ett intresse.');
+        return;
+      }
       setState(() {
         if (widget.state.interests.contains('puppies')) breeding = true;
         page = 2;
       });
       return;
     }
-    if (dogName.text.trim().isNotEmpty) {
-      final kg = double.tryParse(weight.text.replaceAll(',', '.')) ?? 0;
-      if (breeding && (kg <= 0 || !vaccinated)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('För avel behövs vikt och att hunden är vaccinerad.')),
-        );
-        return;
-      }
-      widget.state.addMyDog(MyDog(
-        name: dogName.text.trim(),
-        breed: dogBreed.text.trim().isEmpty ? 'Blandras' : dogBreed.text.trim(),
-        age: dogAge,
-        city: dogCity.text.trim().isEmpty ? widget.state.locationLabel : dogCity.text.trim(),
-        bio: '',
-        sex: sex,
-        weightKg: kg,
-        availableForFriends: friends,
-        availableForBreeding: breeding,
-        pedigreeNote: ped.text.trim(),
-        vaccineNote: vac.text.trim(),
-        allergyNote: allergy.text.trim(),
-        healthNote: health.text.trim(),
-        hasPedigree: hasPedigree,
-        vaccinated: vaccinated,
-        dewormed: dewormed,
-        chipped: chipped,
-      ));
+    if (dogName.text.trim().isEmpty || dogBreed.text.trim().isEmpty || dogCity.text.trim().isEmpty) {
+      _toast('Fyll i namn, ras och ort.');
+      return;
     }
+    if (!friends && !breeding) {
+      _toast('Välj vänner, avel eller båda.');
+      return;
+    }
+    final kg = double.tryParse(weight.text.replaceAll(',', '.')) ?? 0;
+    if (breeding && (kg <= 0 || !vaccinated || !chipped)) {
+      _toast('För avel behövs vikt, vaccin och chip.');
+      return;
+    }
+    widget.state.addMyDog(MyDog(
+      name: dogName.text.trim(),
+      breed: dogBreed.text.trim(),
+      age: dogAge,
+      city: dogCity.text.trim(),
+      bio: '',
+      sex: sex,
+      weightKg: kg,
+      availableForFriends: friends,
+      availableForBreeding: breeding,
+      pedigreeNote: ped.text.trim(),
+      vaccineNote: vac.text.trim(),
+      allergyNote: allergy.text.trim(),
+      healthNote: health.text.trim(),
+      hasPedigree: hasPedigree,
+      vaccinated: vaccinated,
+      dewormed: dewormed,
+      chipped: chipped,
+    ));
     widget.state.finishOnboarding();
   }
 
@@ -108,8 +120,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       'Välj den roll som passar bäst. Du kan ändra senare.',
       'Kryssa i intressen så anpassar PawMatch sig för dig.',
       breeding
-          ? 'Eftersom du valde avel behöver vi vikt, kön och hälsa. Scrolla ner för alla fält.'
-          : 'Lägg till din första hund så kan andra hitta er. Du kan hoppa över.',
+          ? 'Fyll i hunden. För avel behövs även vikt, kön, vaccin och chip.'
+          : 'Fyll i din hund innan du går vidare.',
     ];
     return Scaffold(
       body: DecoratedBox(
@@ -246,8 +258,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                                     const SizedBox(height: 10),
                                     _field(weight, 'Vikt (kg) *', number: true),
                                     SwitchListTile(contentPadding: EdgeInsets.zero, activeThumbColor: _rose, title: const Text('Vaccinerad *'), value: vaccinated, onChanged: (v) => setState(() => vaccinated = v)),
+                                    SwitchListTile(contentPadding: EdgeInsets.zero, activeThumbColor: _rose, title: const Text('Chipmärkt *'), value: chipped, onChanged: (v) => setState(() => chipped = v)),
                                     SwitchListTile(contentPadding: EdgeInsets.zero, activeThumbColor: _rose, title: const Text('Avmaskad'), value: dewormed, onChanged: (v) => setState(() => dewormed = v)),
-                                    SwitchListTile(contentPadding: EdgeInsets.zero, activeThumbColor: _rose, title: const Text('Chipmärkt'), value: chipped, onChanged: (v) => setState(() => chipped = v)),
                                     _field(vac, 'Senaste vaccination'),
                                     const SizedBox(height: 8),
                                     _field(health, 'Hälsotest (höft, armbåge, ögon)'),
@@ -260,11 +272,6 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                               ),
                   ),
                 ),
-                if (page == 2)
-                  TextButton(
-                    onPressed: () => widget.state.finishOnboarding(),
-                    child: const Text('Hoppa över just nu'),
-                  ),
                 SizedBox(
                   width: double.infinity,
                   height: 56,
