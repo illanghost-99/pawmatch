@@ -302,7 +302,7 @@ class _IdentityScreenState extends State<IdentityScreen> {
                       controller: localPhone,
                       keyboardType: TextInputType.phone,
                       onChanged: _formatPhone,
-                      decoration: _d(code == '+46' ? '73 928 27 55' : 'Nummer'),
+                      decoration: _d('Telefon'),
                     ),
                   ),
                 ],
