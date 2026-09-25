@@ -3,7 +3,7 @@ import '../app_state.dart';
 import '../data/suggestions.dart';
 import '../models.dart';
 
-const _rose = Color(0xFFFF2E9A);
+const _rose = Color(0xFFE25C3A);
 const _ink = Color(0xFF1C1410);
 
 class OnboardingFlow extends StatefulWidget {
@@ -52,6 +52,11 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     super.dispose();
   }
 
+  void _back() {
+    if (page == 0) return;
+    setState(() => page--);
+  }
+
   void _next() {
     if (page == 0) {
       setState(() => page = 1);
@@ -59,7 +64,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     }
     if (page == 1) {
       setState(() {
-        breeding = widget.state.interests.contains('puppies');
+        if (widget.state.interests.contains('puppies')) breeding = true;
         page = 2;
       });
       return;
@@ -103,7 +108,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       'Välj den roll som passar bäst. Du kan ändra senare.',
       'Kryssa i intressen så anpassar PawMatch sig för dig.',
       breeding
-          ? 'Eftersom du valde avel behöver vi vikt, kön och hälsa.'
+          ? 'Eftersom du valde avel behöver vi vikt, kön och hälsa. Scrolla ner för alla fält.'
           : 'Lägg till din första hund så kan andra hitta er. Du kan hoppa över.',
     ];
     return Scaffold(
@@ -112,31 +117,45 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFFFFF0F7), Color(0xFFFFD2E8)],
+            colors: [Color(0xFFFFF4EC), Color(0xFFFFE0D2)],
           ),
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(22, 16, 22, 20),
+            padding: const EdgeInsets.fromLTRB(22, 8, 22, 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  children: List.generate(3, (i) {
-                    return Expanded(
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 280),
-                        margin: EdgeInsets.only(right: i < 2 ? 8 : 0),
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: i <= page ? _rose : _ink.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(99),
-                        ),
+                  children: [
+                    if (page > 0)
+                      IconButton(
+                        onPressed: _back,
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                        color: _ink,
+                      )
+                    else
+                      const SizedBox(width: 48),
+                    Expanded(
+                      child: Row(
+                        children: List.generate(3, (i) {
+                          return Expanded(
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 280),
+                              margin: EdgeInsets.only(right: i < 2 ? 8 : 0),
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: i <= page ? _rose : _ink.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(99),
+                              ),
+                            ),
+                          );
+                        }),
                       ),
-                    );
-                  }),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
                 Text(titles[page], style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: _ink)),
                 const SizedBox(height: 8),
                 Text(subs[page], style: TextStyle(fontSize: 16, color: _ink.withValues(alpha: 0.7), height: 1.35)),
@@ -173,7 +192,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                                         ),
                                         selected: s.interests.contains(i.id),
                                         showCheckmark: false,
-                                        selectedColor: _rose.withValues(alpha: 0.18),
+                                        selectedColor: const Color(0xFFFFD8C8),
                                         backgroundColor: Colors.white,
                                         onSelected: (_) => setState(() => s.toggleInterest(i.id)),
                                       ),
@@ -182,6 +201,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                               )
                             : ListView(
                                 key: const ValueKey('dog'),
+                                padding: const EdgeInsets.only(bottom: 24),
                                 children: [
                                   _field(dogName, 'Hundens namn *'),
                                   const SizedBox(height: 12),
@@ -277,7 +297,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         decoration: BoxDecoration(
           color: on ? _rose : Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: on ? _rose : const Color(0xFFFFB6D9)),
+          border: Border.all(color: on ? _rose : const Color(0xFFE2C4B3)),
         ),
         child: Text(value, style: TextStyle(fontWeight: FontWeight.w800, color: on ? Colors.white : _ink)),
       ),
@@ -347,7 +367,7 @@ class _RoleCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
-        color: selected ? const Color(0xFFFFE0F0) : Colors.white,
+        color: selected ? const Color(0xFFFFE8E0) : Colors.white,
         borderRadius: BorderRadius.circular(20),
         child: InkWell(
           onTap: onTap,
@@ -365,7 +385,7 @@ class _RoleCard extends StatelessWidget {
                   width: 52,
                   height: 52,
                   decoration: BoxDecoration(
-                    color: selected ? _rose : const Color(0xFFFFE0F0),
+                    color: selected ? _rose : const Color(0xFFFFE8E0),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Icon(icon, color: selected ? Colors.white : _ink),
