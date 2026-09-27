@@ -22,7 +22,7 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
   @override
   void initState() {
     super.initState();
-    fly = AnimationController(vsync: this, duration: const Duration(milliseconds: 420));
+    fly = AnimationController(vsync: this, duration: const Duration(milliseconds: 520));
   }
 
   @override
@@ -34,7 +34,7 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
   Future<void> _animateTo(Offset target, {required VoidCallback? onDone}) async {
     flying = true;
     final start = drag;
-    fly.duration = Duration(milliseconds: target == Offset.zero ? 380 : 460);
+    fly.duration = Duration(milliseconds: target == Offset.zero ? 420 : 520);
     fly.reset();
     late void Function() tick;
     tick = () {
@@ -51,13 +51,13 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
   void _end() {
     if (flying) return;
     final w = MediaQuery.sizeOf(context).width;
-    if (drag.dx.abs() > w * 0.26) {
+    if (drag.dx.abs() > w * 0.24) {
       final like = drag.dx > 0;
       HapticFeedback.lightImpact();
       final current = dog;
       if (current == null) return;
       _animateTo(
-        Offset(like ? w * 1.35 : -w * 1.35, drag.dy * 0.35 + 28),
+        Offset(like ? w * 1.4 : -w * 1.4, drag.dy * 0.28 + 18),
         onDone: () {
           widget.state.swipe(current, like: like);
           if (mounted) setState(() => drag = Offset.zero);
@@ -74,18 +74,18 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
     if (current == null) {
       return const Center(child: Text('Inga fler kort. Ändra filter eller titta under Sparade.'));
     }
-    final angle = drag.dx / 1400;
+    final angle = drag.dx / 1600;
     final likeOpacity = (drag.dx / 160).clamp(0.0, 1.0);
     final noOpacity = (-drag.dx / 160).clamp(0.0, 1.0);
     final next = widget.state.deck.length > 1 ? widget.state.deck[1] : null;
-    final pull = (drag.dx.abs() / 280).clamp(0.0, 1.0);
+    final pull = (drag.dx.abs() / 320).clamp(0.0, 1.0);
 
     return Stack(
       children: [
         if (next != null)
           Transform.scale(
-            scale: 0.94 + (0.04 * pull),
-            child: Opacity(opacity: 0.55 + (0.35 * pull), child: _photo(next, widget.state.kmTo(next).round())),
+            scale: 0.93 + (0.07 * pull),
+            child: Opacity(opacity: 0.5 + (0.5 * pull), child: _photo(next, widget.state.kmTo(next).round())),
           ),
         GestureDetector(
           onPanUpdate: (d) {
@@ -101,16 +101,8 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
                 fit: StackFit.expand,
                 children: [
                   _photo(current, widget.state.kmTo(current).round()),
-                  Positioned(
-                    top: 28,
-                    left: 22,
-                    child: Opacity(opacity: likeOpacity, child: _stamp('LIKE', const Color(0xFF2F6B4F))),
-                  ),
-                  Positioned(
-                    top: 28,
-                    right: 22,
-                    child: Opacity(opacity: noOpacity, child: _stamp('NEJ', const Color(0xFF8B3A32))),
-                  ),
+                  Positioned(top: 28, left: 22, child: Opacity(opacity: likeOpacity, child: _stamp('LIKE', const Color(0xFF2F6B4F)))),
+                  Positioned(top: 28, right: 22, child: Opacity(opacity: noOpacity, child: _stamp('NEJ', const Color(0xFF8B3A32)))),
                 ],
               ),
             ),
@@ -125,14 +117,17 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
       angle: -0.25,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          border: Border.all(color: color, width: 3),
-          borderRadius: BorderRadius.circular(8),
-        ),
+        decoration: BoxDecoration(border: Border.all(color: color, width: 3), borderRadius: BorderRadius.circular(8)),
         child: Text(text, style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 28, letterSpacing: 1.2)),
       ),
     );
   }
+
+  Widget _chip(String t) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(99)),
+        child: Text(t, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
+      );
 
   Widget _photo(DogProfile d, int km) {
     return ClipRRect(
@@ -156,14 +151,25 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
           Positioned(
             left: 18,
             right: 18,
-            bottom: 18,
+            bottom: 16,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${d.name}, ${d.age}', style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800)),
-                Text('${d.breed} · ${d.city} · $km km', style: const TextStyle(color: Color(0xFFE6D5A8))),
-                const SizedBox(height: 6),
-                Text(d.bio, style: const TextStyle(color: Colors.white70)),
+                Text('${d.name}', style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    _chip('${d.age} år'),
+                    _chip(d.breed),
+                    _chip(d.city),
+                    _chip('$km km'),
+                    _chip(d.intent == 'puppies' ? 'Avel' : 'Vän'),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(d.bio, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70)),
               ],
             ),
           ),
