@@ -74,6 +74,6 @@ String _fold(String s) => s
 
 List<String> suggest(String query, List<String> source) {
   final q = _fold(query.trim());
-  if (q.isEmpty) return source.take(8).toList();
+  if (q.length < 2) return const [];
   return source.where((s) => _fold(s).contains(q)).take(8).toList();
 }
