@@ -41,13 +41,7 @@ class ForYouPage extends StatelessWidget {
           : ListView.builder(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
               itemCount: items.length,
-              itemBuilder: (_, n) => TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.92, end: 1),
-                duration: Duration(milliseconds: 280 + (n % 4) * 40),
-                curve: Curves.easeOutCubic,
-                builder: (context, v, child) => Opacity(opacity: v.clamp(0.4, 1), child: Transform.scale(scale: v, child: child)),
-                child: _DogCard(dog: items[n], state: state),
-              ),
+              itemBuilder: (_, n) => _DogCard(dog: items[n], state: state),
             ),
     );
   }
@@ -63,7 +57,7 @@ class _DogCard extends StatelessWidget {
     final intent = dog.intent == 'puppies' ? 'Söker avel' : 'Söker vän';
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
-      height: 420,
+      height: 460,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.16), blurRadius: 18, offset: const Offset(0, 8))],
@@ -102,6 +96,9 @@ class _DogCard extends StatelessWidget {
                 Text('${dog.breed} · ${dog.city} · ${state.kmTo(dog).round()} km', style: const TextStyle(color: Colors.white70, fontSize: 14)),
                 const SizedBox(height: 6),
                 Text(dog.bio, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, height: 1.3)),
+                Text('Ägare: ${dog.owner}', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                if (dog.reviews.isNotEmpty)
+                  Text(dog.reviews.join(' · '), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFFFD8C8), fontSize: 12, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 12),
                 Row(
                   children: [
