@@ -40,20 +40,28 @@ class _AuthScreenState extends State<AuthScreen> {
 
   Future<void> _go() async {
     if (busy) return;
-    setState(() => busy = true);
     final mail = email.text.trim();
+    if (!mail.contains('@') || pass.text.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Skriv e-post och lösenord (minst 6 tecken).')),
+      );
+      return;
+    }
+    setState(() => busy = true);
     final mode = await Cloud.login(email: mail, password: pass.text, create: create);
     if (!mounted) return;
     final ok = mode == 'cloud';
-    final msg = ok
-        ? (create ? 'Konto skapat' : 'Välkommen in')
-        : (mode.contains('rate') ? 'Försök igen om en stund' : 'Kunde inte logga in. Kontrollera e-post och lösenord.');
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(duration: const Duration(seconds: 3), content: Text(msg)),
+      SnackBar(
+        duration: const Duration(seconds: 3),
+        content: Text(
+          ok
+              ? (create ? 'Konto skapat' : 'Välkommen in')
+              : (mode.contains('rate') ? 'Försök igen om en stund' : 'Kunde inte logga in. $mode'),
+        ),
+      ),
     );
-    if (ok || !Cloud.ready) {
-      widget.state.signIn(mail.isEmpty ? 'du@pawmatch.app' : mail);
-    }
+    if (ok) widget.state.signIn(mail);
     if (mounted) setState(() => busy = false);
   }
 
@@ -95,24 +103,15 @@ class _AuthScreenState extends State<AuthScreen> {
                     SizedBox(
                       width: double.infinity,
                       height: 58,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: const [
-                            BoxShadow(color: Color(0x55E25C3A), blurRadius: 16, offset: Offset(0, 8)),
-                          ],
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: _coral,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                         ),
-                        child: FilledButton(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: _coral,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                          ),
-                          onPressed: busy ? null : _go,
-                          child: Text(
-                            busy ? 'Väntar...' : (create ? 'Skapa konto' : 'Kom igång'),
-                            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-                          ),
+                        onPressed: busy ? null : _go,
+                        child: Text(
+                          busy ? 'Väntar...' : (create ? 'Skapa konto' : 'Logga in'),
+                          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
                         ),
                       ),
                     ),
@@ -131,12 +130,16 @@ class _AuthScreenState extends State<AuthScreen> {
                               ? null
                               : () async {
                                   final ok = await Biometrics.unlock(reason: 'Logga in i PawMatch');
-                                  if (ok && mounted) {
-                                    widget.state.signIn(widget.state.email.isEmpty ? 'faceid@pawmatch.app' : widget.state.email);
+                                  if (ok && mounted && widget.state.email.contains('@')) {
+                                    widget.state.signIn(widget.state.email);
+                                  } else if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Logga in med e-post först. Face ID låser upp nästa gång.')),
+                                    );
                                   }
                                 },
                           icon: const Icon(Icons.face),
-                          label: const Text('Face ID / biometri'),
+                          label: const Text('Logga in med Face ID'),
                         ),
                       ),
                     ],
