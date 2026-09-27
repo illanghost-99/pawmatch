@@ -44,6 +44,17 @@ class AppState extends ChangeNotifier {
     return n.isEmpty ? displayName : n;
   }
 
+  String get mySex {
+    if (myDogs.isEmpty) return '';
+    return myDogs.first.sex;
+  }
+
+  String get oppositeSex {
+    if (mySex == 'hane') return 'tik';
+    if (mySex == 'tik') return 'hane';
+    return '';
+  }
+
   int get chatBadge => incoming.length + matches.where((m) => m.unread > 0).length;
 
   List<MatchThread> get deals => matches.where((m) => m.deal != null).toList();
@@ -120,19 +131,19 @@ class AppState extends ChangeNotifier {
   void addMyDog(MyDog d) {
     myDogs.add(d);
     PushService.notifyLive(d.name);
-    notifyListeners();
+    applyFilters();
   }
 
   void updateMyDog(int index, MyDog d) {
     if (index < 0 || index >= myDogs.length) return;
     myDogs[index] = d;
-    notifyListeners();
+    applyFilters();
   }
 
   void removeMyDog(int index) {
     if (index < 0 || index >= myDogs.length) return;
     myDogs.removeAt(index);
-    notifyListeners();
+    applyFilters();
   }
 
   void bump() => notifyListeners();
@@ -193,9 +204,11 @@ class AppState extends ChangeNotifier {
   }
 
   Iterable<DogProfile> get filtered sync* {
+    final want = oppositeSex;
     for (final d in sampleDogs) {
       if (blocked.contains(d.id)) continue;
       if (_isHidden(d)) continue;
+      if (want.isNotEmpty && d.sex.isNotEmpty && d.sex != want) continue;
       if (d.age < ageMin || d.age > ageMax) continue;
       if (breedQuery.isNotEmpty && !d.breed.toLowerCase().contains(breedQuery.toLowerCase())) continue;
       if (area.isNotEmpty && !d.city.toLowerCase().contains(area.toLowerCase())) continue;
