@@ -142,6 +142,17 @@ class DealSheet {
     );
   }
 
+  static Widget _sigBox(List<List<SigPoint>> strokes, String empty) {
+    return Container(
+      height: 88,
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+      child: strokes.isEmpty
+          ? Align(alignment: Alignment.centerLeft, child: Text(empty, style: const TextStyle(color: Colors.black54)))
+          : CustomPaint(painter: _SigPainter(strokes, fit: true), child: const SizedBox.expand()),
+    );
+  }
+
   static Future<void> _showContract(BuildContext context, AppState state, MatchThread thread) {
     final deal = thread.deal;
     if (deal == null) return Future.value();
@@ -153,97 +164,148 @@ class DealSheet {
       builder: (ctx) => Padding(
         padding: EdgeInsets.fromLTRB(12, 12, 12, MediaQuery.viewInsetsOf(ctx).bottom + 16),
         child: StatefulBuilder(
-          builder: (ctx, setLocal) => SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text('Avelsavtal', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFFF4E7D3), fontSize: 22, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(child: _OwnerChip(label: deal.partyA.isEmpty ? state.fullName : deal.partyA, color: const Color(0xFFE25C3A), onTap: () => _me(context, state))),
-                    const SizedBox(width: 8),
-                    Expanded(child: _OwnerChip(label: deal.partyB, color: const Color(0xFF1F7A6C), onTap: () => _them(context, thread.dog))),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.fromLTRB(18, 20, 18, 20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFBF6EA),
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 12, offset: Offset(0, 6))],
-                    border: Border.all(color: const Color(0xFFD9C8A3)),
+          builder: (ctx, setLocal) {
+            final waiting = deal.signedByMe.isNotEmpty && !deal.fullySigned;
+            return SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text('Avelsavtal', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFFF4E7D3), fontSize: 22, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 8),
+                  Text(
+                    deal.fullySigned
+                        ? 'Signerat av båda parter'
+                        : waiting
+                            ? 'Du har signerat. Väntar på ${deal.partyB}.'
+                            : 'Båda måste signera innan avtalet är klart.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Color(0xFFF4E7D3)),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(height: 10),
+                  Row(
                     children: [
-                      const Center(child: Text('PAWMATCH', style: TextStyle(letterSpacing: 4, fontWeight: FontWeight.w800, color: Color(0xFF8B3A32)))),
-                      const Center(child: Text('AVELSAVTAL', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900))),
-                      const Divider(height: 24),
-                      Text(deal.body, style: const TextStyle(height: 1.45, fontSize: 14, color: Color(0xFF2C2118))),
+                      Expanded(child: _OwnerChip(label: deal.partyA.isEmpty ? state.fullName : deal.partyA, color: const Color(0xFFE25C3A), onTap: () => _me(context, state))),
+                      const SizedBox(width: 8),
+                      Expanded(child: _OwnerChip(label: deal.partyB, color: const Color(0xFF1F7A6C), onTap: () => _them(context, thread.dog))),
                     ],
                   ),
-                ),
-                const SizedBox(height: 14),
-                TextField(controller: name, decoration: _dec('Fullständigt namn')),
-                const SizedBox(height: 10),
-                GestureDetector(
-                  onTap: () async {
-                    final paths = await _signPopup(context, deal.signature);
-                    if (paths != null) {
-                      deal.signature = paths;
-                      setLocal(() {});
-                    }
-                  },
-                  child: Container(
-                    height: 56,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-                    child: deal.signature.isEmpty
-                        ? const Align(alignment: Alignment.centerLeft, child: Text('Tryck för att signera med fingret', style: TextStyle(color: Colors.black54)))
-                        : CustomPaint(painter: _SigPainter(deal.signature, preview: true), child: const SizedBox.expand()),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(18, 20, 18, 20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFBF6EA),
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 12, offset: Offset(0, 6))],
+                      border: Border.all(color: const Color(0xFFD9C8A3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Center(child: Text('PAWMATCH', style: TextStyle(letterSpacing: 4, fontWeight: FontWeight.w800, color: Color(0xFF8B3A32)))),
+                        const Center(child: Text('AVELSAVTAL', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900))),
+                        const Divider(height: 24),
+                        Text(deal.body, style: const TextStyle(height: 1.45, fontSize: 14, color: Color(0xFF2C2118))),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                FilledButton(
-                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF1F7A6C), minimumSize: const Size.fromHeight(52)),
-                  onPressed: () async {
-                    if (name.text.trim().isEmpty || deal.signature.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fyll i namn och signatur.')));
-                      return;
-                    }
-                    deal.signedByMe = name.text.trim();
-                    final already = thread.messages.any((m) => m.text.startsWith('Avtalet är signerat'));
-                    if (!already) {
-                      thread.messages.add(ChatLine(true, 'Avtalet är signerat av ${deal.signedByMe}.'));
-                    }
-                    state.bump();
-                    if (!ctx.mounted) return;
-                    await showDialog<void>(
-                      context: ctx,
-                      barrierDismissible: false,
-                      builder: (d) => const _SignedOk(),
-                    );
-                    if (ctx.mounted) Navigator.pop(ctx);
-                  },
-                  child: Text(deal.signedByMe.isEmpty ? 'Bekräfta signering' : 'Signerat — stäng'),
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFF4E7D3), side: const BorderSide(color: Color(0xFFF4E7D3)), minimumSize: const Size.fromHeight(48)),
-                  onPressed: () async {
-                    await Clipboard.setData(ClipboardData(text: deal.body));
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Kopierat. Kan mejlas till ${state.email}.')));
-                    }
-                  },
-                  icon: const Icon(Icons.download),
-                  label: const Text('Ladda ner / kopiera'),
-                ),
-              ],
-            ),
-          ),
+                  const SizedBox(height: 14),
+                  if (deal.signedByMe.isEmpty) ...[
+                    TextField(controller: name, decoration: _dec('Fullständigt namn')),
+                    const SizedBox(height: 10),
+                    GestureDetector(
+                      onTap: () async {
+                        final paths = await _signPopup(context, deal.signature);
+                        if (paths != null) {
+                          deal.signature = paths;
+                          setLocal(() {});
+                        }
+                      },
+                      child: _sigBox(deal.signature, 'Tryck för att signera med fingret'),
+                    ),
+                  ] else
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(deal.signedByMe, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFFF4E7D3), fontWeight: FontWeight.w700)),
+                              const SizedBox(height: 6),
+                              _sigBox(deal.signature, '—'),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(deal.fullySigned ? deal.signedByOther : deal.partyB, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFFF4E7D3), fontWeight: FontWeight.w700)),
+                              const SizedBox(height: 6),
+                              _sigBox(deal.signatureOther, 'Inväntas'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  const SizedBox(height: 12),
+                  FilledButton(
+                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFF1F7A6C), minimumSize: const Size.fromHeight(52)),
+                    onPressed: () async {
+                      if (deal.signedByMe.isNotEmpty) {
+                        Navigator.pop(ctx);
+                        return;
+                      }
+                      if (name.text.trim().isEmpty || deal.signature.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fyll i namn och signatur.')));
+                        return;
+                      }
+                      deal.signedByMe = name.text.trim();
+                      thread.messages.add(ChatLine(true, 'Du har signerat. Väntar på ${deal.partyB}.'));
+                      state.bump();
+                      setLocal(() {});
+                      if (!ctx.mounted) return;
+                      await showDialog<void>(
+                        context: ctx,
+                        barrierDismissible: false,
+                        builder: (d) => const _SignedOk(label: 'Din del är signerad'),
+                      );
+                    },
+                    child: Text(deal.fullySigned
+                        ? 'Avtalet klart — stäng'
+                        : deal.signedByMe.isEmpty
+                            ? 'Bekräfta min signering'
+                            : 'Stäng — väntar på motpart'),
+                  ),
+                  if (waiting)
+                    TextButton(
+                      onPressed: () {
+                        deal.signedByOther = deal.partyB;
+                        deal.signatureOther = [
+                          [const SigPoint(12, 50), const SigPoint(40, 62), const SigPoint(70, 40), const SigPoint(110, 58), const SigPoint(150, 36)],
+                        ];
+                        thread.messages.add(ChatLine(false, '${deal.partyB} har signerat avtalet.'));
+                        state.bump();
+                        setLocal(() {});
+                      },
+                      child: Text('Simulera ${deal.partyB}s signering (demo)', style: const TextStyle(color: Color(0xFFF4E7D3))),
+                    ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFF4E7D3), side: const BorderSide(color: Color(0xFFF4E7D3)), minimumSize: const Size.fromHeight(48)),
+                    onPressed: () async {
+                      await Clipboard.setData(ClipboardData(text: deal.body));
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Kopierat. Kan mejlas till ${state.email}.')));
+                      }
+                    },
+                    icon: const Icon(Icons.download),
+                    label: const Text('Ladda ner / kopiera'),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
@@ -305,7 +367,8 @@ class DealSheet {
 }
 
 class _SignedOk extends StatefulWidget {
-  const _SignedOk();
+  const _SignedOk({this.label = 'Signerat'});
+  final String label;
   @override
   State<_SignedOk> createState() => _SignedOkState();
 }
@@ -321,19 +384,19 @@ class _SignedOkState extends State<_SignedOk> {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Material(
         color: Colors.transparent,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircleAvatar(
+            const CircleAvatar(
               radius: 44,
               backgroundColor: Color(0xFF1F7A6C),
               child: Icon(Icons.check_rounded, size: 52, color: Colors.white),
             ),
-            SizedBox(height: 14),
-            Text('Signerat', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 14),
+            Text(widget.label, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
           ],
         ),
       ),
@@ -342,24 +405,38 @@ class _SignedOkState extends State<_SignedOk> {
 }
 
 class _SigPainter extends CustomPainter {
-  _SigPainter(this.strokes, {this.preview = false});
+  _SigPainter(this.strokes, {this.fit = false});
   final List<List<SigPoint>> strokes;
-  final bool preview;
+  final bool fit;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final p = Paint()
+    final pts = strokes.expand((s) => s);
+    if (pts.isEmpty) return;
+    var minX = pts.first.x, maxX = pts.first.x, minY = pts.first.y, maxY = pts.first.y;
+    for (final p in pts) {
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
+    }
+    final w = (maxX - minX).clamp(8, 4000);
+    final h = (maxY - minY).clamp(8, 4000);
+    final scale = fit ? ((size.width - 16) / w < (size.height - 16) / h ? (size.width - 16) / w : (size.height - 16) / h) : 1.0;
+    final dx = fit ? (size.width - w * scale) / 2 - minX * scale : 0.0;
+    final dy = fit ? (size.height - h * scale) / 2 - minY * scale : 0.0;
+    final paint = Paint()
       ..color = const Color(0xFF1B2430)
-      ..strokeWidth = preview ? 2 : 3
+      ..strokeWidth = fit ? 2.4 : 3
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
     for (final s in strokes) {
       if (s.length < 2) continue;
-      final path = Path()..moveTo(s.first.x, s.first.y);
+      final path = Path()..moveTo(s.first.x * scale + dx, s.first.y * scale + dy);
       for (final pt in s.skip(1)) {
-        path.lineTo(pt.x, pt.y);
+        path.lineTo(pt.x * scale + dx, pt.y * scale + dy);
       }
-      canvas.drawPath(path, p);
+      canvas.drawPath(path, paint);
     }
   }
 
