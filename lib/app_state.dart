@@ -207,6 +207,9 @@ class AppState extends ChangeNotifier {
 
   void applyFilters() {
     deck = filtered.toList();
+    if (feedSort == 'nearest') {
+      deck.sort((a, b) => kmTo(a).compareTo(kmTo(b)));
+    }
     notifyListeners();
   }
 
