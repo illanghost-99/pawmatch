@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../services/biometrics.dart';
 import '../services/cloud.dart';
-import '../widgets/duo_dogs.dart';
 import '../widgets/paws_bg.dart';
+import '../widgets/welcome_hero.dart';
 
 const _coral = Color(0xFFE25C3A);
 const _ink = Color(0xFF14202B);
@@ -75,11 +75,11 @@ class _AuthScreenState extends State<AuthScreen> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(22, 18, 22, 20),
+                padding: const EdgeInsets.fromLTRB(22, 12, 22, 20),
                 child: Column(
                   children: [
-                    const DuoDogs(size: 168),
-                    const SizedBox(height: 6),
+                    const WelcomeHero(size: 176),
+                    const SizedBox(height: 8),
                     const Text.rich(
                       TextSpan(
                         style: TextStyle(fontSize: 34, fontWeight: FontWeight.w900, color: _ink, height: 1),
@@ -95,18 +95,18 @@ class _AuthScreenState extends State<AuthScreen> {
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF3D4A57)),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
                     TextField(controller: email, keyboardType: TextInputType.emailAddress, decoration: _field('E-post')),
                     const SizedBox(height: 10),
                     TextField(controller: pass, obscureText: true, decoration: _field('Lösenord')),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
-                      height: 58,
+                      height: 54,
                       child: FilledButton(
                         style: FilledButton.styleFrom(
                           backgroundColor: _coral,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         ),
                         onPressed: busy ? null : _go,
                         child: Text(
@@ -116,15 +116,26 @@ class _AuthScreenState extends State<AuthScreen> {
                       ),
                     ),
                     if (bioOk) ...[
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 14),
+                      const Row(
+                        children: [
+                          Expanded(child: Divider()),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 10),
+                            child: Text('eller', style: TextStyle(color: Color(0xFF8A7A70), fontWeight: FontWeight.w600)),
+                          ),
+                          Expanded(child: Divider()),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
                       SizedBox(
                         width: double.infinity,
-                        height: 50,
-                        child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: _ink,
-                            side: const BorderSide(color: _ink, width: 1.4),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                        height: 52,
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: _ink,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           ),
                           onPressed: busy
                               ? null
@@ -138,8 +149,14 @@ class _AuthScreenState extends State<AuthScreen> {
                                     );
                                   }
                                 },
-                          icon: const Icon(Icons.face),
-                          label: const Text('Logga in med Face ID'),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.face_retouching_natural, size: 22),
+                              SizedBox(width: 8),
+                              Text('Face ID', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                            ],
+                          ),
                         ),
                       ),
                     ],
