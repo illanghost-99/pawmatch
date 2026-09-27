@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../app_state.dart';
 import '../models.dart';
+import 'dog_detail.dart';
 
 const _gold = Color(0xFFC9A24A);
 
@@ -68,6 +69,11 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
     }
   }
 
+  void _open(DogProfile d) {
+    if (drag.distance > 8 || flying) return;
+    Navigator.push(context, MaterialPageRoute(builder: (_) => DogDetailPage(state: widget.state, dog: d)));
+  }
+
   @override
   Widget build(BuildContext context) {
     final current = dog;
@@ -88,6 +94,7 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
             child: Opacity(opacity: 0.5 + (0.5 * pull), child: _photo(next, widget.state.kmTo(next).round())),
           ),
         GestureDetector(
+          onTap: () => _open(current),
           onPanUpdate: (d) {
             if (flying) return;
             setState(() => drag += d.delta);
@@ -155,13 +162,14 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${d.name}', style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800)),
+                Text(d.name, style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
                   children: [
                     _chip('${d.age} år'),
+                    if (d.sexLabel.isNotEmpty) _chip(d.sexLabel),
                     _chip(d.breed),
                     _chip(d.city),
                     _chip('$km km'),
