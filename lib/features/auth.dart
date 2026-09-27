@@ -131,10 +131,10 @@ class _AuthScreenState extends State<AuthScreen> {
                       SizedBox(
                         width: double.infinity,
                         height: 52,
-                        child: FilledButton(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: _ink,
-                            foregroundColor: Colors.white,
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: _ink,
+                            side: const BorderSide(color: _ink, width: 1.4),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           ),
                           onPressed: busy
@@ -149,14 +149,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                     );
                                   }
                                 },
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.face_retouching_natural, size: 22),
-                              SizedBox(width: 8),
-                              Text('Face ID', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                            ],
-                          ),
+                          child: const Text('Logga in med Face ID', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                         ),
                       ),
                     ],
