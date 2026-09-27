@@ -217,9 +217,9 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                                 children: [
                                   _field(dogName, 'Hundens namn *'),
                                   const SizedBox(height: 12),
-                                  _suggestField(controller: dogBreed, label: 'Ras *', hint: 'Skriv pom', options: kBreeds),
+                                  _suggestField(controller: dogBreed, label: 'Ras *', options: kBreeds),
                                   const SizedBox(height: 12),
-                                  _suggestField(controller: dogCity, label: 'Ort *', hint: 'Skriv upplands', options: kCities),
+                                  _suggestField(controller: dogCity, label: 'Ort *', options: kCities),
                                   const SizedBox(height: 16),
                                   Text('Ålder: $dogAge år', style: const TextStyle(fontWeight: FontWeight.w600)),
                                   Slider(
@@ -328,7 +328,6 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   Widget _suggestField({
     required TextEditingController controller,
     required String label,
-    required String hint,
     required List<String> options,
   }) {
     return Autocomplete<String>(
@@ -344,7 +343,6 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           textCapitalization: TextCapitalization.words,
           decoration: InputDecoration(
             labelText: label,
-            hintText: hint,
             filled: true,
             fillColor: Colors.white,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
