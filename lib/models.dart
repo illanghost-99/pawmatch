@@ -94,7 +94,9 @@ class BreedingDeal {
     this.signedByMe = '',
     this.signedByOther = '',
     List<List<SigPoint>>? signature,
-  }) : signature = signature ?? [];
+    List<List<SigPoint>>? signatureOther,
+  })  : signature = signature ?? [],
+        signatureOther = signatureOther ?? [];
   final String pricePerPuppy;
   final String expectedPups;
   final String place;
@@ -105,6 +107,7 @@ class BreedingDeal {
   String signedByMe;
   String signedByOther;
   List<List<SigPoint>> signature;
+  List<List<SigPoint>> signatureOther;
   bool get fullySigned => signedByMe.isNotEmpty && signedByOther.isNotEmpty;
 }
 

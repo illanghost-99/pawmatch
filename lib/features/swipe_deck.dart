@@ -14,9 +14,16 @@ class SwipeDeck extends StatefulWidget {
 
 class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMixin {
   Offset drag = Offset.zero;
-  late final fly = AnimationController(vsync: this, duration: const Duration(milliseconds: 280));
+  bool flying = false;
+  late final AnimationController fly;
 
   DogProfile? get dog => widget.state.deck.isEmpty ? null : widget.state.deck.first;
+
+  @override
+  void initState() {
+    super.initState();
+    fly = AnimationController(vsync: this, duration: const Duration(milliseconds: 420));
+  }
 
   @override
   void dispose() {
@@ -24,21 +31,40 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
     super.dispose();
   }
 
+  Future<void> _animateTo(Offset target, {required VoidCallback? onDone}) async {
+    flying = true;
+    final start = drag;
+    fly.duration = Duration(milliseconds: target == Offset.zero ? 380 : 460);
+    fly.reset();
+    late void Function() tick;
+    tick = () {
+      final t = Curves.easeOutCubic.transform(fly.value);
+      setState(() => drag = Offset.lerp(start, target, t)!);
+    };
+    fly.addListener(tick);
+    await fly.forward();
+    fly.removeListener(tick);
+    flying = false;
+    onDone?.call();
+  }
+
   void _end() {
+    if (flying) return;
     final w = MediaQuery.sizeOf(context).width;
-    if (drag.dx.abs() > w * 0.28) {
+    if (drag.dx.abs() > w * 0.26) {
       final like = drag.dx > 0;
-      HapticFeedback.mediumImpact();
+      HapticFeedback.lightImpact();
       final current = dog;
       if (current == null) return;
-      setState(() => drag = Offset(like ? w * 1.4 : -w * 1.4, drag.dy + 40));
-      Future.delayed(const Duration(milliseconds: 180), () {
-        if (!mounted) return;
-        widget.state.swipe(current, like: like);
-        setState(() => drag = Offset.zero);
-      });
+      _animateTo(
+        Offset(like ? w * 1.35 : -w * 1.35, drag.dy * 0.35 + 28),
+        onDone: () {
+          widget.state.swipe(current, like: like);
+          if (mounted) setState(() => drag = Offset.zero);
+        },
+      );
     } else {
-      setState(() => drag = Offset.zero);
+      _animateTo(Offset.zero, onDone: null);
     }
   }
 
@@ -48,48 +74,45 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
     if (current == null) {
       return const Center(child: Text('Inga fler kort. Ändra filter eller titta under Sparade.'));
     }
-    final angle = drag.dx / 900;
-    final likeOpacity = (drag.dx / 140).clamp(0.0, 1.0);
-    final noOpacity = (-drag.dx / 140).clamp(0.0, 1.0);
+    final angle = drag.dx / 1400;
+    final likeOpacity = (drag.dx / 160).clamp(0.0, 1.0);
+    final noOpacity = (-drag.dx / 160).clamp(0.0, 1.0);
     final next = widget.state.deck.length > 1 ? widget.state.deck[1] : null;
+    final pull = (drag.dx.abs() / 280).clamp(0.0, 1.0);
 
     return Stack(
       children: [
         if (next != null)
           Transform.scale(
-            scale: 0.96,
-            child: Opacity(opacity: 0.7, child: _photo(next, widget.state.kmTo(next).round())),
+            scale: 0.94 + (0.04 * pull),
+            child: Opacity(opacity: 0.55 + (0.35 * pull), child: _photo(next, widget.state.kmTo(next).round())),
           ),
         GestureDetector(
-          onPanUpdate: (d) => setState(() => drag += d.delta),
+          onPanUpdate: (d) {
+            if (flying) return;
+            setState(() => drag += d.delta);
+          },
           onPanEnd: (_) => _end(),
-          child: AnimatedContainer(
-            duration: drag == Offset.zero ? const Duration(milliseconds: 240) : Duration.zero,
-            curve: Curves.easeOutBack,
-            transform: Matrix4.identity()
-              ..translate(drag.dx, drag.dy)
-              ..rotateZ(angle),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                _photo(current, widget.state.kmTo(current).round()),
-                Positioned(
-                  top: 28,
-                  left: 22,
-                  child: Opacity(
-                    opacity: likeOpacity,
-                    child: _stamp('LIKE', const Color(0xFF2F6B4F)),
+          child: Transform.translate(
+            offset: drag,
+            child: Transform.rotate(
+              angle: angle,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _photo(current, widget.state.kmTo(current).round()),
+                  Positioned(
+                    top: 28,
+                    left: 22,
+                    child: Opacity(opacity: likeOpacity, child: _stamp('LIKE', const Color(0xFF2F6B4F))),
                   ),
-                ),
-                Positioned(
-                  top: 28,
-                  right: 22,
-                  child: Opacity(
-                    opacity: noOpacity,
-                    child: _stamp('NEJ', const Color(0xFF8B3A32)),
+                  Positioned(
+                    top: 28,
+                    right: 22,
+                    child: Opacity(opacity: noOpacity, child: _stamp('NEJ', const Color(0xFF8B3A32))),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
