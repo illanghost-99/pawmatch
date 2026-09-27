@@ -41,6 +41,9 @@ class DogProfile {
     required this.owner,
     required this.tags,
     this.photoUrl = '',
+    this.photos = const [],
+    this.sex = '',
+    this.weightKg = 0,
     this.ownerPhoto = '',
     this.intent = 'friends',
     this.pedigreeStatus = ReviewStatus.none,
@@ -61,6 +64,9 @@ class DogProfile {
   final String owner;
   final List<String> tags;
   final String photoUrl;
+  final List<String> photos;
+  final String sex;
+  final double weightKg;
   final String ownerPhoto;
   final String intent;
   final ReviewStatus pedigreeStatus;
@@ -68,6 +74,17 @@ class DogProfile {
   final bool availableForBreeding;
   final bool availableForFriends;
   final List<String> reviews;
+
+  List<String> get gallery {
+    final all = <String>[if (photoUrl.isNotEmpty) photoUrl, ...photos];
+    return all.toSet().toList();
+  }
+
+  String get sexLabel {
+    if (sex == 'hane') return 'Hane';
+    if (sex == 'tik') return 'Tik';
+    return '';
+  }
 }
 
 class ChatLine {
