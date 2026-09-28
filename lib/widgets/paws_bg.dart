@@ -2,7 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 class PawsBg extends StatefulWidget {
-  const PawsBg({super.key, this.child, this.color = const Color(0x33E25C3A)});
+  const PawsBg({super.key, this.child, this.color = const Color(0x55C2185B)});
   final Widget? child;
   final Color color;
   @override
