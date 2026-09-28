@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../data/suggestions.dart';
 import '../models.dart';
+import '../widgets/photo_slots.dart';
 
 const _rose = Color(0xFFE25C3A);
 const _ink = Color(0xFF1C1410);
@@ -31,6 +32,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   var dewormed = false;
   var chipped = false;
   var hasPedigree = false;
+  var photos = <String>[];
 
   static const _roles = [
     (UserRole.owner, Icons.pets, 'Hundägare', 'Matcha vänner eller avel för din hund'),
@@ -81,6 +83,10 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       _toast('Fyll i namn, ras och ort.');
       return;
     }
+    if (photos.where((p) => p.isNotEmpty).length < 2) {
+      _toast('Lägg in minst två bilder på hunden.');
+      return;
+    }
     if (!friends && !breeding) {
       _toast('Välj vänner, avel eller båda.');
       return;
@@ -96,8 +102,9 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       age: dogAge,
       city: dogCity.text.trim(),
       bio: '',
-      sex: sex,
+      sex: sex.toLowerCase() == 'hane' ? 'hane' : 'tik',
       weightKg: kg,
+      photos: List.of(photos),
       availableForFriends: friends,
       availableForBreeding: breeding,
       pedigreeNote: ped.text.trim(),
@@ -215,6 +222,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                                 key: const ValueKey('dog'),
                                 padding: const EdgeInsets.only(bottom: 24),
                                 children: [
+                                  PhotoSlots(paths: photos, onChanged: (v) => setState(() => photos = v)),
+                                  const SizedBox(height: 16),
                                   _field(dogName, 'Hundens namn *'),
                                   const SizedBox(height: 12),
                                   _suggestField(controller: dogBreed, label: 'Ras *', options: kBreeds),
