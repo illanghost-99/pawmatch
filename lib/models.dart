@@ -81,8 +81,9 @@ class DogProfile {
   }
 
   String get sexLabel {
-    if (sex == 'hane') return 'Hane';
-    if (sex == 'tik') return 'Tik';
+    final s = sex.toLowerCase();
+    if (s == 'hane') return 'Hane';
+    if (s == 'tik') return 'Tik';
     return '';
   }
 }
@@ -150,6 +151,7 @@ class MyDog {
     required this.bio,
     this.sex = '',
     this.weightKg = 0,
+    this.photos = const [],
     this.availableForFriends = true,
     this.availableForBreeding = false,
     this.pedigreeNote = '',
@@ -172,6 +174,7 @@ class MyDog {
   String bio;
   String sex;
   double weightKg;
+  List<String> photos;
   bool availableForFriends;
   bool availableForBreeding;
   String pedigreeNote;
