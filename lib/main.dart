@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'services/cloud.dart';
+import 'services/fcm.dart';
 import 'services/push.dart';
 
 Future<void> main() async {
@@ -34,6 +35,8 @@ Future<void> main() async {
   } catch (e) {
     debugPrint('Push startades inte: $e');
   }
+
+  await Fcm.start();
 
   runApp(const PawMatchApp());
 }
