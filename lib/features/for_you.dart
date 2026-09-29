@@ -18,6 +18,18 @@ class ForYouPage extends StatelessWidget {
         backgroundColor: Colors.transparent,
         title: const Text('För dig', style: TextStyle(fontWeight: FontWeight.w800)),
         actions: [
+          IconButton(
+            tooltip: 'Använd min plats',
+            onPressed: () async {
+              final ok = await state.locate();
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(ok ? 'Plats på — visar hundar närmast dig' : 'Tillåt plats i Inställningar')),
+              );
+              if (ok) state.setFeedSort('nearest');
+            },
+            icon: Icon(state.gpsOn ? Icons.my_location : Icons.location_searching),
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: DropdownButtonHideUnderline(
