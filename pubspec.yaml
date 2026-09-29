@@ -1,7 +1,7 @@
 name: pawmatch
 description: Sveriges sociala app för hundägare.
 publish_to: "none"
-version: 1.0.0+8
+version: 1.0.0+9
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -21,6 +21,7 @@ dependencies:
   image_picker: ^1.1.2
   shared_preferences: ^2.5.3
   sign_in_with_apple: ^6.1.4
+  flutter_local_notifications: ^18.0.1
 
 dev_dependencies:
   flutter_test:
