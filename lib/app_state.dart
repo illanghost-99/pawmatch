@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'data/sample_dogs.dart';
 import 'models.dart';
+import 'services/location.dart';
 import 'services/push.dart';
 import 'services/session.dart';
 
@@ -11,6 +12,7 @@ class AppState extends ChangeNotifier {
   bool onboarded = false;
   bool signedIn = false;
   bool sessionReady = false;
+  bool gpsOn = false;
   String email = '';
   String firstName = '';
   String lastName = '';
@@ -48,7 +50,7 @@ class AppState extends ChangeNotifier {
 
   String get mySex {
     if (myDogs.isEmpty) return '';
-    return myDogs.first.sex;
+    return myDogs.first.sex.toLowerCase();
   }
 
   String get oppositeSex {
@@ -70,7 +72,10 @@ class AppState extends ChangeNotifier {
     idConsent = s['idConsent'] == 'true';
     signedIn = s['signedIn'] == 'true' && email.contains('@');
     sessionReady = true;
-    if (signedIn) PushService.init();
+    if (signedIn) {
+      PushService.init();
+      locate();
+    }
     notifyListeners();
   }
 
@@ -85,11 +90,29 @@ class AppState extends ChangeNotifier {
     );
   }
 
+  Future<bool> locate() async {
+    final pos = await Locator.current();
+    if (pos == null) {
+      gpsOn = false;
+      notifyListeners();
+      return false;
+    }
+    lat = pos.$1;
+    lng = pos.$2;
+    gpsOn = true;
+    if (locationLabel.isEmpty || locationLabel == 'Stockholm') {
+      locationLabel = 'Min plats';
+    }
+    applyFilters();
+    return true;
+  }
+
   void signIn(String e) {
     email = e;
     signedIn = true;
     PushService.init();
     persist();
+    locate();
     notifyListeners();
   }
 
@@ -156,6 +179,7 @@ class AppState extends ChangeNotifier {
     }
     applyFilters();
     persist();
+    locate();
     notifyListeners();
   }
 
@@ -239,7 +263,7 @@ class AppState extends ChangeNotifier {
     for (final d in sampleDogs) {
       if (blocked.contains(d.id)) continue;
       if (_isHidden(d)) continue;
-      if (want.isNotEmpty && d.sex.isNotEmpty && d.sex != want) continue;
+      if (want.isNotEmpty && d.sex.isNotEmpty && d.sex.toLowerCase() != want) continue;
       if (d.age < ageMin || d.age > ageMax) continue;
       if (breedQuery.isNotEmpty && !d.breed.toLowerCase().contains(breedQuery.toLowerCase())) continue;
       if (area.isNotEmpty && !d.city.toLowerCase().contains(area.toLowerCase())) continue;
