@@ -64,6 +64,7 @@ class Network {
               lng: (r['lng'] as num?)?.toDouble() ?? 18.07,
               bio: r['bio'] as String? ?? '',
               owner: r['owner_name'] as String? ?? 'Ägare',
+              ownerEmail: r['owner_email'] as String? ?? '',
               tags: const ['friends'],
               photos: List<String>.from(r['photos'] ?? const []),
               photoUrl: (List<String>.from(r['photos'] ?? const [])).isEmpty
@@ -88,7 +89,7 @@ class Network {
         'from_email': fromEmail.toLowerCase(),
         'to_email': toEmail.toLowerCase(),
         'dog_id': dogId,
-      }, onConflict: 'from_email,to_email,dog_id');
+      });
       final back = await c
           .from('pm_likes')
           .select()
@@ -108,14 +109,16 @@ class Network {
   }) async {
     final c = _c;
     if (c == null) return null;
+    final aa = a.toLowerCase();
+    final bb = b.toLowerCase();
     try {
-      final existing = await c.from('pm_matches').select().or(
-            'and(user_a.eq.${a.toLowerCase()},user_b.eq.${b.toLowerCase()}),and(user_a.eq.${b.toLowerCase()},user_b.eq.${a.toLowerCase()})',
-          );
-      if (existing.isNotEmpty) return existing.first['id'] as String?;
+      final one = await c.from('pm_matches').select().eq('user_a', aa).eq('user_b', bb);
+      if (one.isNotEmpty) return one.first['id'] as String?;
+      final two = await c.from('pm_matches').select().eq('user_a', bb).eq('user_b', aa);
+      if (two.isNotEmpty) return two.first['id'] as String?;
       final row = await c.from('pm_matches').insert({
-        'user_a': a.toLowerCase(),
-        'user_b': b.toLowerCase(),
+        'user_a': aa,
+        'user_b': bb,
         'dog_json': dogJson,
         'accepted': true,
       }).select().single();
@@ -151,32 +154,6 @@ class Network {
       ];
     } catch (e) {
       debugPrint('messages $e');
-      return [];
-    }
-  }
-
-  static Future<List<Map<String, dynamic>>> myMatches(String email) async {
-    final c = _c;
-    if (c == null) return [];
-    try {
-      final a = await c.from('pm_matches').select().eq('user_a', email.toLowerCase());
-      final b = await c.from('pm_matches').select().eq('user_b', email.toLowerCase());
-      return [...a, ...b];
-    } catch (e) {
-      debugPrint('myMatches $e');
-      return [];
-    }
-  }
-
-  static Future<List<Map<String, dynamic>>> incomingLikes(String email) async {
-    final c = _c;
-    if (c == null) return [];
-    try {
-      return List<Map<String, dynamic>>.from(
-        await c.from('pm_likes').select().eq('to_email', email.toLowerCase()),
-      );
-    } catch (e) {
-      debugPrint('incomingLikes $e');
       return [];
     }
   }
