@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models.dart';
@@ -13,6 +15,61 @@ class Network {
     }
   }
 
+  static Future<String?> uploadPhoto(String path) async {
+    if (path.startsWith('http')) return path;
+    final c = _c;
+    if (c == null || path.isEmpty) return null;
+    try {
+      final file = File(path);
+      if (!file.existsSync()) return null;
+      final bytes = await file.readAsBytes();
+      final name = 'dogs/${DateTime.now().microsecondsSinceEpoch}.jpg';
+      await c.storage.from('dog-photos').uploadBinary(
+            name,
+            bytes,
+            fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: true),
+          );
+      return c.storage.from('dog-photos').getPublicUrl(name);
+    } catch (e) {
+      debugPrint('uploadPhoto $e');
+      return null;
+    }
+  }
+
+  static Future<List<String>> publicPhotos(List<String> photos) async {
+    final out = <String>[];
+    for (final p in photos) {
+      final url = await uploadPhoto(p);
+      if (url != null && url.startsWith('http')) out.add(url);
+    }
+    return out;
+  }
+
+  static DogProfile dogFromRow(Map<String, dynamic> r) {
+    final photos = <String>[
+      for (final p in List<String>.from(r['photos'] ?? const []))
+        if (p.startsWith('http')) p,
+    ];
+    return DogProfile(
+      id: r['id'] as String? ?? '',
+      name: r['name'] as String? ?? '',
+      breed: r['breed'] as String? ?? '',
+      age: (r['age'] as num?)?.toInt() ?? 1,
+      city: r['city'] as String? ?? '',
+      lat: (r['lat'] as num?)?.toDouble() ?? 59.33,
+      lng: (r['lng'] as num?)?.toDouble() ?? 18.07,
+      bio: r['bio'] as String? ?? '',
+      owner: r['owner_name'] as String? ?? 'Ägare',
+      ownerEmail: r['owner_email'] as String? ?? '',
+      tags: const ['friends'],
+      photos: photos,
+      photoUrl: photos.isEmpty ? '' : photos.first,
+      sex: r['sex'] as String? ?? '',
+      intent: r['intent'] as String? ?? 'friends',
+      availableForBreeding: (r['intent'] as String? ?? '') == 'puppies',
+    );
+  }
+
   static Future<void> upsertDog({
     required String email,
     required String owner,
@@ -24,6 +81,8 @@ class Network {
     if (c == null || !email.contains('@')) return;
     final id = '${email.toLowerCase()}-${dog.name.toLowerCase()}';
     try {
+      final urls = await publicPhotos(dog.photos);
+      if (urls.isNotEmpty) dog.photos = urls;
       await c.from('pm_dogs').upsert({
         'id': id,
         'owner_email': email.toLowerCase(),
@@ -35,7 +94,7 @@ class Network {
         'city': dog.city,
         'intent': dog.availableForBreeding ? 'puppies' : 'friends',
         'bio': dog.bio,
-        'photos': dog.photos,
+        'photos': urls,
         'lat': lat,
         'lng': lng,
         'updated_at': DateTime.now().toIso8601String(),
@@ -53,30 +112,25 @@ class Network {
       final mine = myEmail.toLowerCase();
       return [
         for (final r in rows)
-          if ((r['owner_email'] as String? ?? '').toLowerCase() != mine)
-            DogProfile(
-              id: r['id'] as String? ?? '',
-              name: r['name'] as String? ?? '',
-              breed: r['breed'] as String? ?? '',
-              age: (r['age'] as num?)?.toInt() ?? 1,
-              city: r['city'] as String? ?? '',
-              lat: (r['lat'] as num?)?.toDouble() ?? 59.33,
-              lng: (r['lng'] as num?)?.toDouble() ?? 18.07,
-              bio: r['bio'] as String? ?? '',
-              owner: r['owner_name'] as String? ?? 'Ägare',
-              ownerEmail: r['owner_email'] as String? ?? '',
-              tags: const ['friends'],
-              photos: List<String>.from(r['photos'] ?? const []),
-              photoUrl: (List<String>.from(r['photos'] ?? const [])).isEmpty
-                  ? ''
-                  : List<String>.from(r['photos']).first,
-              sex: r['sex'] as String? ?? '',
-              intent: r['intent'] as String? ?? 'friends',
-              availableForBreeding: (r['intent'] as String? ?? '') == 'puppies',
-            ),
+          if ((r['owner_email'] as String? ?? '').toLowerCase() != mine) dogFromRow(Map<String, dynamic>.from(r as Map)),
       ];
     } catch (e) {
       debugPrint('liveDogs $e');
+      return [];
+    }
+  }
+
+  static Future<List<String>> likersOf(String email) async {
+    final c = _c;
+    if (c == null || !email.contains('@')) return [];
+    try {
+      final rows = await c.from('pm_likes').select('from_email').eq('to_email', email.toLowerCase());
+      return [
+        for (final r in rows)
+          if (((r['from_email'] as String?) ?? '').contains('@')) (r['from_email'] as String).toLowerCase(),
+      ];
+    } catch (e) {
+      debugPrint('likersOf $e');
       return [];
     }
   }
