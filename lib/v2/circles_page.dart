@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_state.dart';
-import '../models.dart';
+import 'circle_models.dart';
 import 'premium_page.dart';
 
 class CirclesPage extends StatelessWidget {
