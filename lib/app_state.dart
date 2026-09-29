@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'data/sample_dogs.dart';
@@ -49,6 +50,8 @@ class AppState extends ChangeNotifier {
   final Map<String, DateTime> hiddenUntil = {};
   final List<MyDog> myDogs = [];
   String lastNotice = '';
+  Timer? _inbox;
+  final Set<String> _seenLikes = {};
 
   static const freeSwipesPerDay = 12;
 
@@ -119,6 +122,7 @@ class AppState extends ChangeNotifier {
       PushService.init();
       locate();
       syncCloud();
+      _watchInbox();
     }
     notifyListeners();
   }
@@ -141,7 +145,51 @@ class AppState extends ChangeNotifier {
       await Network.upsertDog(email: email, owner: fullName, dog: d, lat: lat, lng: lng);
     }
     applyFilters();
+    await pullInbox();
     notifyListeners();
+  }
+
+  void _watchInbox() {
+    _inbox?.cancel();
+    _inbox = Timer.periodic(const Duration(seconds: 6), (_) => pullInbox());
+    pullInbox();
+  }
+
+  Future<void> pullInbox() async {
+    if (!email.contains('@')) return;
+    final froms = await Network.likersOf(email);
+    var changed = false;
+    for (final from in froms) {
+      if (matches.any((m) => m.accepted && m.peerEmail.toLowerCase() == from)) continue;
+      if (incoming.any((m) => m.peerEmail.toLowerCase() == from)) continue;
+      DogProfile? dog;
+      for (final d in liveDogs) {
+        if (d.ownerEmail.toLowerCase() == from) {
+          dog = d;
+          break;
+        }
+      }
+      dog ??= DogProfile(
+        id: 'like-$from',
+        name: 'Hund',
+        breed: '',
+        age: 1,
+        city: '',
+        lat: lat,
+        lng: lng,
+        bio: 'Vill matcha med dig',
+        owner: from,
+        tags: const [],
+        ownerEmail: from,
+      );
+      incoming.insert(0, MatchThread(dog, [], accepted: false, outgoing: false, peerEmail: from));
+      changed = true;
+      if (_seenLikes.add(from)) {
+        PushService.notifyMatch(dog.name);
+        lastNotice = '${dog.owner} vill matcha med dig';
+      }
+    }
+    if (changed) notifyListeners();
   }
 
   Future<void> refreshChat(MatchThread t) async {
@@ -179,6 +227,7 @@ class AppState extends ChangeNotifier {
     persist();
     locate();
     syncCloud();
+    _watchInbox();
     notifyListeners();
   }
 
@@ -360,7 +409,6 @@ class AppState extends ChangeNotifier {
       final thread = MatchThread(d, [], accepted: false, outgoing: true, peerEmail: d.ownerEmail);
       matches.insert(0, thread);
       lastNotice = 'Förfrågan skickad till ${d.owner} som äger ${d.name}.';
-      PushService.notifyMatch(d.name);
       _cloudLike(thread, d);
     }
     notifyListeners();
