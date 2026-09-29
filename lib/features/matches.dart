@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../models.dart';
@@ -52,8 +53,7 @@ class MatchesPage extends StatelessWidget {
               ListTile(
                 leading: const CircleAvatar(backgroundColor: Color(0xFFFFE0D4), child: Icon(Icons.hourglass_top, color: _coral)),
                 title: Text(m.dog.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                subtitle: Text('Skickat till ${m.dog.owner}. Går ut efter 7 dagar.'),
-                trailing: TextButton(onPressed: () => state.simulateAccept(m), child: const Text('De godkände')),
+                subtitle: Text('Skickat till ${m.dog.owner}.'),
               ),
             const SizedBox(height: 16),
           ],
@@ -94,16 +94,23 @@ class ChatPage extends StatefulWidget {
 
 class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin {
   final c = TextEditingController();
+  Timer? poll;
   late final AnimationController pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))..repeat(reverse: true);
 
   @override
   void initState() {
     super.initState();
     widget.state.markRead(widget.thread);
+    widget.state.refreshChat(widget.thread);
+    poll = Timer.periodic(const Duration(seconds: 4), (_) async {
+      await widget.state.refreshChat(widget.thread);
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
+    poll?.cancel();
     pulse.dispose();
     c.dispose();
     super.dispose();
@@ -152,7 +159,7 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
           if (!t.accepted)
             const Padding(
               padding: EdgeInsets.all(16),
-              child: Text('Chatten öppnas när den andra ägaren godkänner matchningen.'),
+              child: Text('Chatten öppnas när den andra ägaren också swipear ja.'),
             ),
           if (breedChat)
             Material(
@@ -204,7 +211,7 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
                     controller: c,
                     enabled: t.accepted,
                     decoration: InputDecoration(
-                      hintText: t.accepted ? 'Skriv ett meddelande' : 'Väntar på godkännande',
+                      hintText: t.accepted ? 'Skriv ett meddelande' : 'Väntar på match',
                       filled: true,
                       fillColor: _cream,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
