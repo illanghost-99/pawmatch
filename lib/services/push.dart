@@ -1,48 +1,68 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-/// Push via Firebase Cloud Messaging (FCM) + APNs på iOS.
-///
-/// Setup (du gör en gång):
-/// 1. Lägg GoogleService-Info.plist i ios/Runner/ (committas INTE)
-/// 2. flutter pub add firebase_core firebase_messaging
-/// 3. flutterfire configure  (eller manuellt)
-/// 4. APNs .p8 i Firebase Console → Cloud Messaging
-/// 5. Xcode: Push Notifications capability
-///
-/// Tills FCM är inkopplat loggar vi bara — appen kraschar inte.
 class PushService {
+  static final _plugin = FlutterLocalNotificationsPlugin();
   static bool ready = false;
+  static int _id = 1;
 
   static Future<void> init() async {
+    if (kIsWeb || ready) return;
     try {
-      // När du lagt till paketen, avkommentera:
-      // await Firebase.initializeApp();
-      // final messaging = FirebaseMessaging.instance;
-      // await messaging.requestPermission(alert: true, badge: true, sound: true);
-      // final token = await messaging.getToken();
-      // debugPrint('[FCM] token=$token');
-      // // Spara token till Supabase profiles.fcm_token
-      ready = false;
-      debugPrint('[Push] Klar för FCM — lägg plist + firebase_core/messaging');
+      const ios = DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      );
+      const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+      await _plugin.initialize(
+        const InitializationSettings(iOS: ios, android: android),
+      );
+      await _plugin
+          .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
+          ?.requestPermissions(alert: true, badge: true, sound: true);
+      ready = true;
     } catch (e) {
-      debugPrint('[Push] init skip: $e');
+      debugPrint('[Push] init: $e');
     }
   }
 
-  static Future<void> notifyMatch(String dogName) async {
-    debugPrint('[Push] Ny match med $dogName');
-    // FCM: skicka via backend/Edge Function till mottagarens token
+  static Future<void> _show(String title, String body) async {
+    if (!ready) await init();
+    if (!ready) return;
+    try {
+      await _plugin.show(
+        _id++,
+        title,
+        body,
+        const NotificationDetails(
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+          android: AndroidNotificationDetails(
+            'pawmatch',
+            'PawMatch',
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint('[Push] show: $e');
+    }
   }
 
-  static Future<void> notifyMessage(String from) async {
-    debugPrint('[Push] Nytt meddelande från $from');
-  }
+  static Future<void> notifyMatch(String dogName) =>
+      _show('Ny match', 'Någon vill matcha med $dogName');
 
-  static Future<void> notifyApproved(String dogName) async {
-    debugPrint('[Push] $dogName godkänd och synlig');
-  }
+  static Future<void> notifyMessage(String from) =>
+      _show('Nytt meddelande', '$from har skrivit till dig');
 
-  static Future<void> notifyLive(String dogName) async {
-    debugPrint('[Push] $dogName publicerad');
-  }
+  static Future<void> notifyApproved(String dogName) =>
+      _show('Godkänd', '$dogName är godkänd och synlig');
+
+  static Future<void> notifyLive(String dogName) =>
+      _show('Publicerad', '$dogName syns nu i PawMatch');
 }
