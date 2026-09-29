@@ -51,6 +51,7 @@ class DogProfile {
     this.availableForBreeding = false,
     this.availableForFriends = true,
     this.reviews = const ['Trygg ägare', 'Svarar snabbt'],
+    this.ownerEmail = '',
   });
 
   final String id;
@@ -74,6 +75,7 @@ class DogProfile {
   final bool availableForBreeding;
   final bool availableForFriends;
   final List<String> reviews;
+  final String ownerEmail;
 
   List<String> get gallery {
     final all = <String>[if (photoUrl.isNotEmpty) photoUrl, ...photos];
@@ -130,8 +132,16 @@ class BreedingDeal {
 }
 
 class MatchThread {
-  MatchThread(this.dog, this.messages, {this.accepted = false, this.outgoing = true, DateTime? createdAt, this.unread = 0})
-      : createdAt = createdAt ?? DateTime.now();
+  MatchThread(
+    this.dog,
+    this.messages, {
+    this.accepted = false,
+    this.outgoing = true,
+    DateTime? createdAt,
+    this.unread = 0,
+    this.cloudMatchId = '',
+    this.peerEmail = '',
+  }) : createdAt = createdAt ?? DateTime.now();
   final DogProfile dog;
   final List<ChatLine> messages;
   bool accepted;
@@ -139,6 +149,8 @@ class MatchThread {
   final DateTime createdAt;
   int unread;
   BreedingDeal? deal;
+  String cloudMatchId;
+  String peerEmail;
   bool get expired => DateTime.now().difference(createdAt).inDays >= 7;
 }
 
