@@ -3,12 +3,14 @@ import 'package:flutter/foundation.dart';
 import 'data/sample_dogs.dart';
 import 'models.dart';
 import 'services/push.dart';
+import 'services/session.dart';
 
 class AppState extends ChangeNotifier {
   UserRole role = UserRole.owner;
   final Set<String> interests = {};
   bool onboarded = false;
   bool signedIn = false;
+  bool sessionReady = false;
   String email = '';
   String firstName = '';
   String lastName = '';
@@ -59,10 +61,35 @@ class AppState extends ChangeNotifier {
 
   List<MatchThread> get deals => matches.where((m) => m.deal != null).toList();
 
+  Future<void> restore() async {
+    final s = await Session.read();
+    email = s['email'] ?? '';
+    firstName = s['firstName'] ?? '';
+    lastName = s['lastName'] ?? '';
+    onboarded = s['onboarded'] == 'true';
+    idConsent = s['idConsent'] == 'true';
+    signedIn = s['signedIn'] == 'true' && email.contains('@');
+    sessionReady = true;
+    if (signedIn) PushService.init();
+    notifyListeners();
+  }
+
+  Future<void> persist() async {
+    await Session.write(
+      signedIn: signedIn,
+      onboarded: onboarded,
+      idConsent: idConsent,
+      email: email,
+      firstName: firstName,
+      lastName: lastName,
+    );
+  }
+
   void signIn(String e) {
     email = e;
     signedIn = true;
     PushService.init();
+    persist();
     notifyListeners();
   }
 
@@ -83,6 +110,7 @@ class AppState extends ChangeNotifier {
     displayName = fullName;
     idConsent = true;
     identityPending = true;
+    persist();
     notifyListeners();
   }
 
@@ -99,11 +127,13 @@ class AppState extends ChangeNotifier {
     locationLabel = city.isEmpty ? locationLabel : city;
     photoUrl = photo;
     displayName = fullName;
+    persist();
     notifyListeners();
   }
 
   void signOut() {
     signedIn = false;
+    persist();
     notifyListeners();
   }
 
@@ -125,6 +155,7 @@ class AppState extends ChangeNotifier {
       lastNotice = '${sampleDogs.first.owner} vill matcha med dig';
     }
     applyFilters();
+    persist();
     notifyListeners();
   }
 
@@ -290,7 +321,7 @@ class AppState extends ChangeNotifier {
   void block(DogProfile d) {
     blocked.add(d.id);
     matches.removeWhere((m) => m.dog.id == d.id);
-    incoming.removeWhere((m) => m.dog.id == d.id);
+    incoming.removeWhere((m) => m.dog.id == t.dog.id);
     saved.removeWhere((m) => m.id == d.id);
     applyFilters();
   }
