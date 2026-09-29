@@ -164,6 +164,8 @@ class MyDog {
     this.chipped = false,
     this.neutered = false,
     this.hasAllergies = false,
+    this.pedigreeDoc = '',
+    this.vaccineDoc = '',
     this.pedigreeStatus = ReviewStatus.pending,
     this.vaccineStatus = ReviewStatus.pending,
   });
@@ -187,6 +189,8 @@ class MyDog {
   bool chipped;
   bool neutered;
   bool hasAllergies;
+  String pedigreeDoc;
+  String vaccineDoc;
   ReviewStatus pedigreeStatus;
   ReviewStatus vaccineStatus;
 
