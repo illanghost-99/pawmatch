@@ -16,6 +16,12 @@ class _PawMatchAppState extends State<PawMatchApp> {
   final state = AppState();
 
   @override
+  void initState() {
+    super.initState();
+    state.restore();
+  }
+
+  @override
   Widget build(BuildContext context) {
     const coral = Color(0xFFE25C3A);
     const ink = Color(0xFF14202B);
@@ -23,7 +29,9 @@ class _PawMatchAppState extends State<PawMatchApp> {
       animation: state,
       builder: (_, __) {
         Widget home;
-        if (!state.signedIn) {
+        if (!state.sessionReady) {
+          home = const Scaffold(body: Center(child: CircularProgressIndicator()));
+        } else if (!state.signedIn) {
           home = AuthScreen(key: const ValueKey('auth'), state: state);
         } else if (!state.idConsent) {
           home = IdentityScreen(key: const ValueKey('id'), state: state);
