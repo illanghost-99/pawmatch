@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'data/sample_dogs.dart';
 import 'models.dart';
 import 'services/location.dart';
+import 'services/network.dart';
 import 'services/push.dart';
 import 'services/session.dart';
 import 'v2/circle_models.dart';
@@ -39,6 +40,7 @@ class AppState extends ChangeNotifier {
   String area = '';
   String intentFilter = 'all';
   String feedSort = 'forYou';
+  List<DogProfile> liveDogs = [];
   List<DogProfile> deck = List.of(sampleDogs);
   final List<MatchThread> matches = [];
   final List<MatchThread> incoming = [];
@@ -102,6 +104,8 @@ class AppState extends ChangeNotifier {
 
   List<MatchThread> get deals => matches.where((m) => m.deal != null).toList();
 
+  List<DogProfile> get _pool => liveDogs.isEmpty ? sampleDogs : [...liveDogs, ...sampleDogs];
+
   Future<void> restore() async {
     final s = await Session.read();
     email = s['email'] ?? '';
@@ -114,6 +118,7 @@ class AppState extends ChangeNotifier {
     if (signedIn) {
       PushService.init();
       locate();
+      syncCloud();
     }
     notifyListeners();
   }
@@ -127,6 +132,27 @@ class AppState extends ChangeNotifier {
       firstName: firstName,
       lastName: lastName,
     );
+  }
+
+  Future<void> syncCloud() async {
+    if (!email.contains('@')) return;
+    liveDogs = await Network.liveDogs(email);
+    for (final d in myDogs) {
+      await Network.upsertDog(email: email, owner: fullName, dog: d, lat: lat, lng: lng);
+    }
+    applyFilters();
+    notifyListeners();
+  }
+
+  Future<void> refreshChat(MatchThread t) async {
+    if (t.cloudMatchId.isEmpty) return;
+    final lines = await Network.messages(t.cloudMatchId, email);
+    if (lines.length != t.messages.length) {
+      t.messages
+        ..clear()
+        ..addAll(lines);
+      notifyListeners();
+    }
   }
 
   Future<bool> locate() async {
@@ -152,6 +178,7 @@ class AppState extends ChangeNotifier {
     PushService.init();
     persist();
     locate();
+    syncCloud();
     notifyListeners();
   }
 
@@ -206,31 +233,24 @@ class AppState extends ChangeNotifier {
 
   void finishOnboarding() {
     onboarded = true;
-    if (incoming.isEmpty && sampleDogs.isNotEmpty) {
-      incoming.add(MatchThread(
-        sampleDogs.first,
-        [const ChatLine(false, 'Hej! Vi söker en lekkompis.')],
-        accepted: false,
-        outgoing: false,
-        unread: 1,
-      ));
-      lastNotice = '${sampleDogs.first.owner} vill matcha med dig';
-    }
     applyFilters();
     persist();
     locate();
+    syncCloud();
     notifyListeners();
   }
 
   void addMyDog(MyDog d) {
     myDogs.add(d);
     PushService.notifyLive(d.name);
+    Network.upsertDog(email: email, owner: fullName, dog: d, lat: lat, lng: lng);
     applyFilters();
   }
 
   void updateMyDog(int index, MyDog d) {
     if (index < 0 || index >= myDogs.length) return;
     myDogs[index] = d;
+    Network.upsertDog(email: email, owner: fullName, dog: d, lat: lat, lng: lng);
     applyFilters();
   }
 
@@ -299,7 +319,7 @@ class AppState extends ChangeNotifier {
 
   Iterable<DogProfile> get filtered sync* {
     final want = oppositeSex;
-    for (final d in sampleDogs) {
+    for (final d in _pool) {
       if (blocked.contains(d.id)) continue;
       if (_isHidden(d)) continue;
       if (want.isNotEmpty && d.sex.isNotEmpty && d.sex.toLowerCase() != want) continue;
@@ -337,12 +357,32 @@ class AppState extends ChangeNotifier {
     hiddenUntil[d.id] = DateTime.now().add(const Duration(days: 7));
     deck.removeWhere((x) => x.id == d.id);
     if (like) {
-      matches.insert(0, MatchThread(d, [], accepted: false, outgoing: true));
+      final thread = MatchThread(d, [], accepted: false, outgoing: true, peerEmail: d.ownerEmail);
+      matches.insert(0, thread);
       lastNotice = 'Förfrågan skickad till ${d.owner} som äger ${d.name}.';
       PushService.notifyMatch(d.name);
+      _cloudLike(thread, d);
     }
     notifyListeners();
     return true;
+  }
+
+  Future<void> _cloudLike(MatchThread thread, DogProfile d) async {
+    final peer = d.ownerEmail;
+    if (!email.contains('@') || !peer.contains('@')) return;
+    final mutual = await Network.like(fromEmail: email, toEmail: peer, dogId: d.id);
+    if (!mutual) return;
+    final id = await Network.ensureMatch(
+      a: email,
+      b: peer,
+      dogJson: {'name': d.name, 'breed': d.breed, 'owner': d.owner, 'id': d.id, 'owner_email': peer},
+    );
+    thread.accepted = true;
+    thread.cloudMatchId = id ?? '';
+    thread.messages.add(const ChatLine(false, 'Ni matchade — nu kan ni chatta.'));
+    lastNotice = '${d.owner} matchade också!';
+    PushService.notifyMatch(d.name);
+    notifyListeners();
   }
 
   void simulateAccept(MatchThread t) {
@@ -362,6 +402,18 @@ class AppState extends ChangeNotifier {
     }
     incoming.remove(t);
     PushService.notifyMatch(t.dog.name);
+    if (t.peerEmail.contains('@')) {
+      Network.like(fromEmail: email, toEmail: t.peerEmail, dogId: t.dog.id).then((_) {
+        Network.ensureMatch(
+          a: email,
+          b: t.peerEmail,
+          dogJson: {'name': t.dog.name, 'id': t.dog.id, 'owner_email': t.peerEmail},
+        ).then((id) {
+          t.cloudMatchId = id ?? t.cloudMatchId;
+          notifyListeners();
+        });
+      });
+    }
     notifyListeners();
   }
 
@@ -385,6 +437,9 @@ class AppState extends ChangeNotifier {
   void send(MatchThread t, String text) {
     if (!t.accepted) return;
     t.messages.add(ChatLine(true, text));
+    if (t.cloudMatchId.isNotEmpty) {
+      Network.sendMessage(t.cloudMatchId, email, text);
+    }
     PushService.notifyMessage(t.dog.name);
     notifyListeners();
   }
