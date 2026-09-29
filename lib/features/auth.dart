@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../app_state.dart';
 import '../services/biometrics.dart';
 import '../services/cloud.dart';
@@ -26,6 +27,7 @@ class _AuthScreenState extends State<AuthScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.state.email.contains('@')) email.text = widget.state.email;
     Biometrics.available().then((v) {
       if (mounted) setState(() => bioOk = v);
     });
@@ -62,6 +64,40 @@ class _AuthScreenState extends State<AuthScreen> {
       ),
     );
     if (ok) widget.state.signIn(mail);
+    if (mounted) setState(() => busy = false);
+  }
+
+  Future<void> _face() async {
+    final ok = await Biometrics.unlock(reason: 'Logga in i PawMatch');
+    if (!mounted) return;
+    final saved = widget.state.email;
+    if (ok && saved.contains('@')) {
+      widget.state.signIn(saved);
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Första gången: logga in med e-post eller Apple. Face ID fungerar nästa gång.')),
+      );
+    }
+  }
+
+  Future<void> _apple() async {
+    setState(() => busy = true);
+    try {
+      final cred = await SignInWithApple.getAppleIDCredential(
+        scopes: [AppleIDAuthorizationScopes.email, AppleIDAuthorizationScopes.fullName],
+      );
+      final mail = cred.email ?? widget.state.email;
+      final used = (mail != null && mail.contains('@')) ? mail : 'apple-${cred.userIdentifier ?? 'user'}@pawmatch.app';
+      if (cred.givenName != null) widget.state.firstName = cred.givenName!;
+      if (cred.familyName != null) widget.state.lastName = cred.familyName!;
+      widget.state.signIn(used);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Apple-inloggning kräver Sign in with Apple i Xcode. $e')),
+        );
+      }
+    }
     if (mounted) setState(() => busy = false);
   }
 
@@ -115,19 +151,32 @@ class _AuthScreenState extends State<AuthScreen> {
                         ),
                       ),
                     ),
-                    if (bioOk) ...[
-                      const SizedBox(height: 14),
-                      const Row(
-                        children: [
-                          Expanded(child: Divider()),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 10),
-                            child: Text('eller', style: TextStyle(color: Color(0xFF8A7A70), fontWeight: FontWeight.w600)),
-                          ),
-                          Expanded(child: Divider()),
-                        ],
+                    const SizedBox(height: 14),
+                    const Row(
+                      children: [
+                        Expanded(child: Divider()),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 10),
+                          child: Text('eller', style: TextStyle(color: Color(0xFF8A7A70), fontWeight: FontWeight.w600)),
+                        ),
+                        Expanded(child: Divider()),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: _ink,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        onPressed: busy ? null : _apple,
+                        child: const Text('Logga in med Apple', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
                       ),
-                      const SizedBox(height: 14),
+                    ),
+                    if (bioOk) ...[
+                      const SizedBox(height: 10),
                       SizedBox(
                         width: double.infinity,
                         height: 52,
@@ -137,19 +186,8 @@ class _AuthScreenState extends State<AuthScreen> {
                             side: const BorderSide(color: _ink, width: 1.4),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           ),
-                          onPressed: busy
-                              ? null
-                              : () async {
-                                  final ok = await Biometrics.unlock(reason: 'Logga in i PawMatch');
-                                  if (ok && mounted && widget.state.email.contains('@')) {
-                                    widget.state.signIn(widget.state.email);
-                                  } else if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Logga in med e-post först. Face ID låser upp nästa gång.')),
-                                    );
-                                  }
-                                },
-                          child: const Text('Logga in med Face ID', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                          onPressed: busy ? null : _face,
+                          child: const Text('Face ID', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                         ),
                       ),
                     ],
