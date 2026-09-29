@@ -1,7 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../data/suggestions.dart';
 import '../models.dart';
+import '../services/media.dart';
+import '../widgets/photo_slots.dart';
 import '../widgets/suggest_field.dart';
 
 const _rose = Color(0xFFC23B2E);
@@ -19,7 +22,7 @@ void openDogForm(BuildContext context, AppState state, {int? index, bool forceBr
   final health = TextEditingController(text: existing?.healthNote ?? '');
   final allergy = TextEditingController(text: existing?.allergyNote ?? '');
   var age = existing?.age ?? 2;
-  var sex = existing?.sex.isNotEmpty == true ? existing!.sex : 'Tik';
+  var sex = existing?.sex.isNotEmpty == true ? existing!.sex : 'tik';
   var friends = existing?.availableForFriends ?? true;
   var breeding = forceBreeding || (existing?.availableForBreeding ?? false);
   var vaccinated = existing?.vaccinated ?? false;
@@ -27,6 +30,9 @@ void openDogForm(BuildContext context, AppState state, {int? index, bool forceBr
   var chipped = existing?.chipped ?? false;
   var neutered = existing?.neutered ?? false;
   var hasPedigree = existing?.hasPedigree ?? false;
+  var photos = List<String>.from(existing?.photos ?? const []);
+  var pedigreeDoc = existing?.pedigreeDoc ?? '';
+  var vaccineDoc = existing?.vaccineDoc ?? '';
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -41,11 +47,13 @@ void openDogForm(BuildContext context, AppState state, {int? index, bool forceBr
             children: [
               Text(index == null ? 'Ny hund' : 'Redigera hund', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
               const SizedBox(height: 12),
+              PhotoSlots(paths: photos, onChanged: (v) => setLocal(() => photos = v)),
+              const SizedBox(height: 12),
               TextField(controller: name, textCapitalization: TextCapitalization.words, decoration: _dec('Namn *')),
               const SizedBox(height: 8),
-              SuggestField(controller: breed, label: 'Ras *', hint: 'Skriv pom', options: kBreeds),
+              SuggestField(controller: breed, label: 'Ras *', hint: '', options: kBreeds),
               const SizedBox(height: 8),
-              SuggestField(controller: city, label: 'Ort *', hint: 'Skriv upplands', options: kCities),
+              SuggestField(controller: city, label: 'Ort *', hint: '', options: kCities),
               Text('Ålder: $age år', style: const TextStyle(fontWeight: FontWeight.w700)),
               Slider(value: age.toDouble(), min: 0, max: 15, divisions: 15, activeColor: _rose, onChanged: (v) => setLocal(() => age = v.round())),
               TextField(controller: bio, decoration: _dec('Kort beskrivning')),
@@ -64,9 +72,9 @@ void openDogForm(BuildContext context, AppState state, {int? index, bool forceBr
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    Expanded(child: _sexChip(current: sex, value: 'Tik', onTap: () => setLocal(() => sex = 'Tik'))),
+                    Expanded(child: _sexChip(current: sex, value: 'tik', label: 'Tik', onTap: () => setLocal(() => sex = 'tik'))),
                     const SizedBox(width: 8),
-                    Expanded(child: _sexChip(current: sex, value: 'Hane', onTap: () => setLocal(() => sex = 'Hane'))),
+                    Expanded(child: _sexChip(current: sex, value: 'hane', label: 'Hane', onTap: () => setLocal(() => sex = 'hane'))),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -89,11 +97,29 @@ void openDogForm(BuildContext context, AppState state, {int? index, bool forceBr
                 ),
                 TextField(controller: vac, decoration: _dec('Senaste vaccination')),
                 const SizedBox(height: 8),
+                _DocTile(
+                  title: vaccineDoc.isEmpty ? 'Ladda upp vaccinationsintyg' : 'Vaccinationsintyg tillagt',
+                  onTap: () async {
+                    final p = await Media.choose(ctx, title: 'Vaccinationsintyg');
+                    if (p != null) setLocal(() => vaccineDoc = p);
+                  },
+                ),
+                const SizedBox(height: 8),
                 TextField(controller: health, decoration: _dec('Hälsotest (höft, armbåge, ögon)')),
                 const SizedBox(height: 8),
                 TextField(controller: allergy, decoration: _dec('Allergier')),
                 SwitchListTile(title: const Text('Har stamtavla'), value: hasPedigree, activeThumbColor: _rose, onChanged: (v) => setLocal(() => hasPedigree = v)),
-                if (hasPedigree) TextField(controller: ped, decoration: _dec('Stamtavla / registreringsnummer')),
+                if (hasPedigree) ...[
+                  TextField(controller: ped, decoration: _dec('Stamtavla / registreringsnummer')),
+                  const SizedBox(height: 8),
+                  _DocTile(
+                    title: pedigreeDoc.isEmpty ? 'Ladda upp stamtavla' : 'Stamtavla tillagd',
+                    onTap: () async {
+                      final p = await Media.choose(ctx, title: 'Stamtavla');
+                      if (p != null) setLocal(() => pedigreeDoc = p);
+                    },
+                  ),
+                ],
               ],
               const SizedBox(height: 16),
               SizedBox(
@@ -103,6 +129,10 @@ void openDogForm(BuildContext context, AppState state, {int? index, bool forceBr
                   onPressed: () {
                     if (name.text.trim().isEmpty || breed.text.trim().isEmpty || city.text.trim().isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fyll i namn, ras och ort.')));
+                      return;
+                    }
+                    if (photos.where((p) => p.isNotEmpty).length < 2) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lägg in minst två bilder.')));
                       return;
                     }
                     final kg = double.tryParse(weight.text.replaceAll(',', '.')) ?? existing?.weightKg ?? 0;
@@ -118,8 +148,9 @@ void openDogForm(BuildContext context, AppState state, {int? index, bool forceBr
                       age: age,
                       city: city.text.trim(),
                       bio: bio.text.trim(),
-                      sex: sex,
+                      sex: sex.toLowerCase() == 'hane' ? 'hane' : 'tik',
                       weightKg: kg,
+                      photos: List.of(photos),
                       availableForFriends: friends,
                       availableForBreeding: breeding && !neutered,
                       pedigreeNote: ped.text.trim().isEmpty ? (existing?.pedigreeNote ?? '') : ped.text.trim(),
@@ -131,6 +162,8 @@ void openDogForm(BuildContext context, AppState state, {int? index, bool forceBr
                       dewormed: dewormed,
                       chipped: chipped,
                       neutered: neutered,
+                      pedigreeDoc: pedigreeDoc,
+                      vaccineDoc: vaccineDoc,
                     );
                     if (index == null) {
                       state.addMyDog(dog);
@@ -150,8 +183,27 @@ void openDogForm(BuildContext context, AppState state, {int? index, bool forceBr
   );
 }
 
-Widget _sexChip({required String current, required String value, required VoidCallback onTap}) {
-  final on = current == value;
+class _DocTile extends StatelessWidget {
+  const _DocTile({required this.title, required this.onTap});
+  final String title;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: ListTile(
+        leading: const Icon(Icons.upload_file, color: _rose),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: onTap,
+      ),
+    );
+  }
+}
+
+Widget _sexChip({required String current, required String value, required String label, required VoidCallback onTap}) {
+  final on = current.toLowerCase() == value;
   return InkWell(
     onTap: onTap,
     borderRadius: BorderRadius.circular(16),
@@ -163,7 +215,7 @@ Widget _sexChip({required String current, required String value, required VoidCa
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: on ? _rose : const Color(0xFFE2C4B3)),
       ),
-      child: Text(value, style: TextStyle(fontWeight: FontWeight.w800, color: on ? Colors.white : _ink)),
+      child: Text(label, style: TextStyle(fontWeight: FontWeight.w800, color: on ? Colors.white : _ink)),
     ),
   );
 }
@@ -206,7 +258,7 @@ class MyDogsPage extends StatelessWidget {
                   const Text('Din hund syns här', textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: _ink)),
                   const SizedBox(height: 10),
                   Text(
-                    'Börja med namn, ras och ort. Avelsuppgifter fylls i bara om ni söker avel.',
+                    'Börja med bilder, namn, ras och ort.',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 15, height: 1.4, color: _ink.withValues(alpha: 0.65)),
                   ),
@@ -229,6 +281,7 @@ class MyDogsPage extends StatelessWidget {
               itemCount: state.myDogs.length,
               itemBuilder: (_, i) {
                 final d = state.myDogs[i];
+                final pic = d.photos.isNotEmpty ? d.photos.first : '';
                 return Card(
                   color: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -237,7 +290,8 @@ class MyDogsPage extends StatelessWidget {
                     leading: CircleAvatar(
                       radius: 28,
                       backgroundColor: const Color(0xFFFFE4DF),
-                      child: Text(d.name.isEmpty ? '?' : d.name[0].toUpperCase(), style: const TextStyle(color: _rose, fontWeight: FontWeight.w800)),
+                      backgroundImage: pic.isEmpty ? null : FileImage(File(pic)),
+                      child: pic.isEmpty ? Text(d.name.isEmpty ? '?' : d.name[0].toUpperCase(), style: const TextStyle(color: _rose, fontWeight: FontWeight.w800)) : null,
                     ),
                     title: Text('${d.name} · ${d.breed}', style: const TextStyle(fontWeight: FontWeight.w800)),
                     subtitle: Text(
