@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 import '../app_state.dart';
+import '../v2/ai_vet_page.dart';
+import '../v2/community_page.dart';
+import '../v2/health_page.dart';
+import '../v2/pedigree_page.dart';
+import '../v2/premium_page.dart';
+import '../v2/verify_page.dart';
 import 'deals.dart';
 import 'edit_profile.dart';
 import 'legal.dart';
@@ -97,6 +103,24 @@ class ProfilePage extends StatelessWidget {
           const SizedBox(height: 16),
           _tile(context, const Color(0xFFE25C3A), Icons.pets, 'Mina hundar', '${state.myDogs.length} sparade', () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => MyDogsPage(state: state)));
+          }),
+          _tile(context, const Color(0xFF1F7A6C), Icons.monitor_heart_outlined, 'Hälsotidslinje', 'Vaccin, vikt, besök', () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const HealthPage()));
+          }),
+          _tile(context, const Color(0xFF6B4C9A), Icons.account_tree_outlined, 'Stamtavla', 'Uppladdning + SKK-länkar', () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const PedigreePage()));
+          }),
+          _tile(context, const Color(0xFF2A9D8F), Icons.groups_2_outlined, 'Community', 'Promenader och träffar', () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const CommunityPage()));
+          }),
+          _tile(context, const Color(0xFF3D5A80), Icons.health_and_safety_outlined, 'AI Vet', 'Sammanfattar — inte veterinär', () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const AiVetPage()));
+          }),
+          _tile(context, const Color(0xFF14202B), Icons.verified_outlined, 'Verifiering', 'Nivå 1–5', () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const VerifyPage()));
+          }),
+          _tile(context, const Color(0xFFF4A261), Icons.workspace_premium_outlined, 'PawMatch Plus', 'Kommer via Apple', () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const PremiumPage()));
           }),
           _tile(context, const Color(0xFF1F7A6C), Icons.description, 'Mina avtal', '${state.deals.length} st', () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => DealsPage(state: state)));
