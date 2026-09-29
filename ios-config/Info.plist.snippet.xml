@@ -1,6 +1,14 @@
-<!-- Lägg in i ios/Runner/Info.plist när flutter create . är kört -->
+<!-- Lägg in i ios/Runner/Info.plist -->
 <key>NSFaceIDUsageDescription</key>
 <string>PawMatch använder Face ID för snabb och säker inloggning.</string>
+<key>NSCameraUsageDescription</key>
+<string>PawMatch använder kameran för profilbild, hundbilder och dokument.</string>
+<key>NSPhotoLibraryUsageDescription</key>
+<string>PawMatch behöver tillgång till dina bilder för att lägga upp hundar och dokument.</string>
+<key>NSPhotoLibraryAddUsageDescription</key>
+<string>PawMatch kan spara bilder du tar i appen.</string>
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>PawMatch använder din plats för att visa hundar i närheten.</string>
 <key>UIBackgroundModes</key>
 <array>
   <string>remote-notification</string>
