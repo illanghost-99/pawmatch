@@ -5,6 +5,7 @@ import 'models.dart';
 import 'services/location.dart';
 import 'services/push.dart';
 import 'services/session.dart';
+import 'v2/circle_models.dart';
 
 class AppState extends ChangeNotifier {
   UserRole role = UserRole.owner;
@@ -13,6 +14,10 @@ class AppState extends ChangeNotifier {
   bool signedIn = false;
   bool sessionReady = false;
   bool gpsOn = false;
+  DateTime? premiumUntil;
+  int swipesToday = 0;
+  DateTime swipeDay = DateTime.now();
+  final List<WalkCircle> circles = [];
   String email = '';
   String firstName = '';
   String lastName = '';
@@ -42,6 +47,40 @@ class AppState extends ChangeNotifier {
   final Map<String, DateTime> hiddenUntil = {};
   final List<MyDog> myDogs = [];
   String lastNotice = '';
+
+  static const freeSwipesPerDay = 12;
+
+  bool get isPremium => premiumUntil != null && premiumUntil!.isAfter(DateTime.now());
+
+  int get swipesLeft {
+    _rollSwipes();
+    if (isPremium) return 999;
+    return (freeSwipesPerDay - swipesToday).clamp(0, freeSwipesPerDay);
+  }
+
+  void _rollSwipes() {
+    final n = DateTime.now();
+    if (swipeDay.day != n.day || swipeDay.month != n.month) {
+      swipeDay = n;
+      swipesToday = 0;
+    }
+  }
+
+  void startLaunchOffer() {
+    premiumUntil = DateTime.now().add(const Duration(days: 150));
+    notifyListeners();
+  }
+
+  void addCircle(String name) {
+    if (!isPremium) return;
+    circles.insert(0, WalkCircle(id: DateTime.now().millisecondsSinceEpoch.toString(), name: name));
+    notifyListeners();
+  }
+
+  void sendCircle(WalkCircle c, String text) {
+    c.messages.add(ChatLine(true, text));
+    notifyListeners();
+  }
 
   String get fullName {
     final n = '$firstName $lastName'.trim();
@@ -287,7 +326,14 @@ class AppState extends ChangeNotifier {
     applyFilters();
   }
 
-  void swipe(DogProfile d, {required bool like}) {
+  bool swipe(DogProfile d, {required bool like}) {
+    _rollSwipes();
+    if (!isPremium && swipesToday >= freeSwipesPerDay) {
+      lastNotice = 'Dagens swipes är slut. Premium ger obegränsat.';
+      notifyListeners();
+      return false;
+    }
+    swipesToday += 1;
     hiddenUntil[d.id] = DateTime.now().add(const Duration(days: 7));
     deck.removeWhere((x) => x.id == d.id);
     if (like) {
@@ -296,6 +342,7 @@ class AppState extends ChangeNotifier {
       PushService.notifyMatch(d.name);
     }
     notifyListeners();
+    return true;
   }
 
   void simulateAccept(MatchThread t) {
