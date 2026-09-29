@@ -1,16 +1,23 @@
 # Face ID och push
 
-## Face ID / biometri
-- Paket: `local_auth`
-- iOS: lägg `NSFaceIDUsageDescription` i Info.plist
-- Anrop: `Biometrics.unlock()` vid återkomst till appen eller känsliga lägen
+## Notiser i v1 (klart i koden)
+Appen visar en notis på telefonen när:
+- någon matchar
+- någon skriver
+- en hund publiceras
 
-## Push (match, chatt, godkännande)
-1. Skapa Firebase-projekt (gratis)
-2. Lägg till iOS-app + ladda upp APNs-nyckel (kräver Apple Developer + Mac)
-3. `flutterfire configure`
-4. Byt `PushService` till FirebaseMessaging
-5. Spara FCM-token i Supabase `profiles.fcm_token`
-6. Edge Function skickar notis vid: ny match, nytt meddelande, pedigree/vaccine approved
+Det är **lokala notiser**. De funkar när appen är öppen eller i bakgrunden på samma telefon.
 
-Tills APNs finns fungerar lokala debugPrint + in-app banners.
+## Xcode — gör en gång
+1. TARGETS → Runner → Signing & Capabilities
+2. + Capability → **Push Notifications**
+3. Spara
+
+Telefonen frågar om tillåtelse första gången du öppnar den nya builden. Tryck Tillåt.
+
+## Riktig push när appen är avstängd (senare)
+Kräver APNs-nyckel (.p8) + Firebase Cloud Messaging.
+1. developer.apple.com → Keys → Create APNs key
+2. Ladda upp .p8 i Firebase → Cloud Messaging
+3. Lägg GoogleService-Info.plist i ios/Runner/
+4. Då kan en server skicka notis till en annan användares iPhone
