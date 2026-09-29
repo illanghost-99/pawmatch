@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../v2/ai_vet_page.dart';
@@ -15,6 +16,12 @@ import 'support.dart';
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key, required this.state});
   final AppState state;
+
+  ImageProvider? _photo(String photo) {
+    if (photo.isEmpty) return null;
+    if (photo.startsWith('http')) return NetworkImage(photo);
+    return FileImage(File(photo));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +48,7 @@ class ProfilePage extends StatelessWidget {
                     CircleAvatar(
                       radius: 28,
                       backgroundColor: Colors.white,
-                      backgroundImage: photo.isEmpty ? null : NetworkImage(photo),
+                      backgroundImage: _photo(photo),
                       child: photo.isEmpty ? const Icon(Icons.pets, color: Color(0xFFE25C3A)) : null,
                     ),
                     const SizedBox(width: 14),
