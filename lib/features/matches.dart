@@ -255,18 +255,36 @@ class ChatPage extends StatefulWidget {
 
 class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin {
   final c = TextEditingController();
+  final scroll = ScrollController();
   Timer? poll;
+  bool _nearBottom = true;
+  double _inset = 0;
   late final AnimationController pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))..repeat(reverse: true);
 
   @override
   void initState() {
     super.initState();
+    scroll.addListener(() {
+      if (!scroll.hasClients) return;
+      final gap = scroll.position.maxScrollExtent - scroll.position.pixels;
+      _nearBottom = gap < 120;
+    });
     widget.state.markRead(widget.thread);
     widget.state.refreshChat(widget.thread, markSeen: true);
     poll = Timer.periodic(const Duration(seconds: 1), (_) async {
       await widget.state.refreshChat(widget.thread, markSeen: true);
       widget.state.markRead(widget.thread);
       if (mounted) setState(() {});
+      _follow();
+    });
+    _follow(force: true);
+  }
+
+  void _follow({bool force = false}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !scroll.hasClients) return;
+      if (!force && !_nearBottom) return;
+      scroll.jumpTo(scroll.position.maxScrollExtent);
     });
   }
 
@@ -274,6 +292,7 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
   void dispose() {
     poll?.cancel();
     pulse.dispose();
+    scroll.dispose();
     c.dispose();
     super.dispose();
   }
@@ -300,6 +319,11 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
   Widget build(BuildContext context) {
     final t = widget.thread;
     final breedChat = widget.state.canNegotiate(t);
+    final inset = MediaQuery.viewInsetsOf(context).bottom;
+    if (inset != _inset) {
+      _inset = inset;
+      _follow();
+    }
     return Scaffold(
       backgroundColor: _cream,
       appBar: AppBar(
@@ -360,10 +384,10 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
             ),
           Expanded(
             child: ListView(
-              reverse: true,
-              padding: const EdgeInsets.all(16),
+              controller: scroll,
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               children: [
-                for (final m in t.messages.reversed)
+                for (final m in t.messages)
                   TalkBubble(
                     line: m,
                     otherName: _personName(t),
@@ -399,6 +423,7 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
                           widget.state.send(t, c.text.trim());
                           c.clear();
                           setState(() {});
+                          _follow(force: true);
                         },
                 ),
               ],
@@ -532,6 +557,7 @@ class _GroupChatPageState extends State<GroupChatPage> {
     super.initState();
     widget.state.markGroupRead(g);
     widget.state.refreshGroup(g);
+    _jump();
     poll = Timer.periodic(const Duration(seconds: 1), (_) async {
       await widget.state.refreshGroup(g);
       widget.state.markGroupRead(g);
@@ -570,10 +596,10 @@ class _GroupChatPageState extends State<GroupChatPage> {
         children: [
           Expanded(
             child: ListView(
-              reverse: true,
-              padding: const EdgeInsets.all(16),
+              controller: scroll,
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               children: [
-                for (final m in group.messages.reversed)
+                for (final m in group.messages)
                   TalkBubble(line: m, otherName: m.senderName.isEmpty ? 'Hundägaren' : m.senderName),
               ],
             ),
