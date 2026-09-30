@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../models.dart';
+import '../widgets/verified_mark.dart';
 
 const _ink = Color(0xFF14202B);
 const _cream = Color(0xFFFFF4EC);
@@ -72,7 +73,12 @@ class _DogDetailPageState extends State<DogDetailPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('${d.name}, ${d.age}', style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: _ink)),
+                    Row(
+                      children: [
+                        Flexible(child: Text('${d.name}, ${d.age}', style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: _ink))),
+                        VerifiedMark(owner: d.ownerVerified, dog: d.dogVerified, size: 26),
+                      ],
+                    ),
                     const SizedBox(height: 6),
                     Text('${d.breed} · ${d.city} · ${widget.state.kmTo(d).round()} km', style: const TextStyle(fontSize: 16, color: Color(0xFF3D4A57))),
                     const SizedBox(height: 12),
