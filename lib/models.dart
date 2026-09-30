@@ -62,6 +62,8 @@ class DogProfile {
     this.healthNote = '',
     this.vaccineNote = '',
     this.pedigreeNote = '',
+    this.ownerVerified = false,
+    this.dogVerified = false,
   });
 
   final String id;
@@ -96,6 +98,8 @@ class DogProfile {
   final String healthNote;
   final String vaccineNote;
   final String pedigreeNote;
+  final bool ownerVerified;
+  final bool dogVerified;
 
   List<String> get gallery {
     final all = <String>[if (photoUrl.isNotEmpty) photoUrl, ...photos];
