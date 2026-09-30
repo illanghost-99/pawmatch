@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../models.dart';
 import '../v2/premium_page.dart';
+import '../widgets/verified_mark.dart';
 import 'deal.dart';
 
 const _coral = Color(0xFFE25C3A);
@@ -121,8 +122,6 @@ class MatchesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pending = state.matches.where((m) => !m.accepted).toList();
-    final open = state.matches.where((m) => m.accepted).toList();
     return Scaffold(
       backgroundColor: _cream,
       appBar: AppBar(
@@ -140,100 +139,115 @@ class MatchesPage extends StatelessWidget {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          if (state.incoming.isNotEmpty) ...[
-            const Text('Vill matcha med dig', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: _ink)),
-            const SizedBox(height: 8),
-            for (final m in state.incoming)
-              Card(
-                color: Colors.white,
-                child: ListTile(
-                  title: Text('${m.dog.owner} · ${m.dog.name}', style: const TextStyle(fontWeight: FontWeight.w700)),
-                  subtitle: Text('${m.dog.breed} vill matcha. Godkänn för att chatta.'),
-                  trailing: Wrap(
-                    spacing: 4,
-                    children: [
-                      TextButton(onPressed: () => state.declineIncoming(m), child: const Text('Nej')),
-                      FilledButton(onPressed: () => state.acceptIncoming(m), child: const Text('Godkänn')),
-                    ],
-                  ),
-                ),
-              ),
-            const SizedBox(height: 16),
-          ],
-          if (pending.isNotEmpty) ...[
-            const Text('Väntar på svar', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: _ink)),
-            const SizedBox(height: 8),
-            for (final m in pending)
-              ListTile(
-                leading: const CircleAvatar(backgroundColor: Color(0xFFFFE0D4), child: Icon(Icons.hourglass_top, color: _coral)),
-                title: Text(m.dog.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                subtitle: Text('Skickat till ${m.dog.owner}.'),
-              ),
-            const SizedBox(height: 16),
-          ],
-          if (state.groups.isNotEmpty) ...[
-            const Text('Grupper', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: _ink)),
-            const SizedBox(height: 8),
-            for (final g in state.groups)
-              Card(
-                color: Colors.white,
-                child: ListTile(
-                  leading: Badge(
-                    isLabelVisible: g.unread > 0,
-                    label: Text('${g.unread}'),
-                    child: const CircleAvatar(backgroundColor: Color(0xFF1F7A6C), child: Icon(Icons.groups, color: Colors.white)),
-                  ),
-                  title: Text(g.name, style: const TextStyle(fontWeight: FontWeight.w800)),
-                  subtitle: Text(_groupPreview(g), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    state.markGroupRead(g);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => GroupChatPage(state: state, group: g)));
-                  },
-                ),
-              ),
-            const SizedBox(height: 16),
-          ],
-          const Text('Aktiva chattar', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: _ink)),
-          const SizedBox(height: 6),
-          const Text('Svep åt sidan för att radera. Chatten finns kvar hos den andra.', style: TextStyle(color: Color(0xFF3D4A57), fontSize: 13)),
-          const SizedBox(height: 8),
-          if (open.isEmpty) const Text('Inga godkända matcher än.', style: TextStyle(color: Color(0xFF3D4A57))),
-          for (final m in open)
-            Dismissible(
-              key: ValueKey(m.cloudMatchId.isEmpty ? m.dog.id : m.cloudMatchId),
-              direction: DismissDirection.endToStart,
-              background: Container(
-                alignment: Alignment.centerRight,
-                padding: const EdgeInsets.only(right: 20),
-                color: const Color(0xFF8B3A32),
-                child: const Icon(Icons.delete_outline, color: Colors.white),
-              ),
-              confirmDismiss: (_) => _confirmDelete(context, m.dog.name),
-              onDismissed: (_) => state.deleteThread(m),
-              child: Card(
-                color: Colors.white,
-                child: ListTile(
-                  leading: Badge(
-                    isLabelVisible: m.unread > 0,
-                    label: Text('${m.unread}'),
-                    child: const CircleAvatar(backgroundColor: _coral, child: Icon(Icons.pets, color: Colors.white)),
-                  ),
-                  title: Text(m.dog.name, style: const TextStyle(fontWeight: FontWeight.w800)),
-                  subtitle: Text(_preview(m), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    state.markRead(m);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => ChatPage(state: state, thread: m)));
-                  },
-                ),
+      body: _Inbox(state: state),
+    );
+  }
+}
+
+class _Inbox extends StatelessWidget {
+  const _Inbox({required this.state});
+  final AppState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final pending = state.matches.where((m) => !m.accepted).toList();
+    final open = state.matches.where((m) => m.accepted).toList();
+    final items = <Widget>[
+      if (state.incoming.isNotEmpty) ...[
+        const Text('Vill matcha med dig', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: _ink)),
+        const SizedBox(height: 8),
+        for (final m in state.incoming)
+          Card(
+            color: Colors.white,
+            child: ListTile(
+              title: Text('${m.dog.owner} · ${m.dog.name}', style: const TextStyle(fontWeight: FontWeight.w700)),
+              subtitle: Text('${m.dog.breed} vill matcha. Godkänn för att chatta.'),
+              trailing: Wrap(
+                spacing: 4,
+                children: [
+                  TextButton(onPressed: () => state.declineIncoming(m), child: const Text('Nej')),
+                  FilledButton(onPressed: () => state.acceptIncoming(m), child: const Text('Godkänn')),
+                ],
               ),
             ),
-        ],
-      ),
+          ),
+        const SizedBox(height: 16),
+      ],
+      if (pending.isNotEmpty) ...[
+        const Text('Väntar på svar', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: _ink)),
+        const SizedBox(height: 8),
+        for (final m in pending)
+          ListTile(
+            leading: const CircleAvatar(backgroundColor: Color(0xFFFFE0D4), child: Icon(Icons.hourglass_top, color: _coral)),
+            title: Text(m.dog.name, style: const TextStyle(fontWeight: FontWeight.w700)),
+            subtitle: Text('Skickat till ${m.dog.owner}.'),
+          ),
+        const SizedBox(height: 16),
+      ],
+      if (state.groups.isNotEmpty) ...[
+        const Text('Grupper', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: _ink)),
+        const SizedBox(height: 8),
+        for (final g in state.groups)
+          Card(
+            color: Colors.white,
+            margin: const EdgeInsets.only(bottom: 8),
+            child: ListTile(
+              leading: Badge(
+                isLabelVisible: g.unread > 0,
+                label: Text('${g.unread}'),
+                child: const CircleAvatar(backgroundColor: Color(0xFF1F7A6C), child: Icon(Icons.groups, color: Colors.white)),
+              ),
+              title: Text(g.name, style: const TextStyle(fontWeight: FontWeight.w800)),
+              subtitle: Text(_groupPreview(g), maxLines: 1, overflow: TextOverflow.ellipsis),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                state.markGroupRead(g);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => GroupChatPage(state: state, group: g)));
+              },
+            ),
+          ),
+        const SizedBox(height: 8),
+      ],
+      const Text('Aktiva chattar', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: _ink)),
+      const SizedBox(height: 6),
+      const Text('Tryck för att öppna. Papperskorgen raderar bara hos dig.', style: TextStyle(color: Color(0xFF3D4A57), fontSize: 13)),
+      const SizedBox(height: 8),
+      if (open.isEmpty) const Text('Inga godkända matcher än.', style: TextStyle(color: Color(0xFF3D4A57))),
+      for (final m in open)
+        Card(
+          color: Colors.white,
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            onTap: () {
+              state.markRead(m);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => ChatPage(state: state, thread: m)));
+            },
+            leading: Badge(
+              isLabelVisible: m.unread > 0,
+              label: Text('${m.unread}'),
+              child: const CircleAvatar(backgroundColor: _coral, child: Icon(Icons.pets, color: Colors.white)),
+            ),
+            title: Row(
+              children: [
+                Flexible(child: Text(m.dog.name, style: const TextStyle(fontWeight: FontWeight.w800), overflow: TextOverflow.ellipsis)),
+                VerifiedMark(owner: m.dog.ownerVerified, dog: m.dog.dogVerified, size: 18),
+              ],
+            ),
+            subtitle: Text(_preview(m), maxLines: 1, overflow: TextOverflow.ellipsis),
+            trailing: IconButton(
+              icon: const Icon(Icons.delete_outline, color: Color(0xFF8B3A32)),
+              onPressed: () async {
+                if (await _confirmDelete(context, m.dog.name)) state.deleteThread(m);
+              },
+            ),
+          ),
+        ),
+    ];
+    return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+      itemCount: items.length,
+      itemBuilder: (_, i) => items[i],
     );
   }
 }
