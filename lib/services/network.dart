@@ -318,4 +318,131 @@ class Network {
       debugPrint('hideMatch $e');
     }
   }
+
+  static Future<List<Map<String, dynamic>>?> myGroups(String email) async {
+    final c = _c;
+    if (c == null || !email.contains('@')) return null;
+    try {
+      final mine = await c.from('pm_group_members').select('group_id').eq('email', email.toLowerCase());
+      final ids = <String>[
+        for (final r in mine)
+          if ('${r['group_id']}'.isNotEmpty) '${r['group_id']}',
+      ];
+      if (ids.isEmpty) return [];
+      final groups = await c.from('pm_groups').select().inFilter('id', ids);
+      final members = await c.from('pm_group_members').select().inFilter('group_id', ids);
+      return [
+        for (final g in groups)
+          {
+            ...Map<String, dynamic>.from(g as Map),
+            'members': [
+              for (final m in members)
+                if ('${m['group_id']}' == '${g['id']}') Map<String, dynamic>.from(m as Map),
+            ],
+          },
+      ];
+    } catch (e) {
+      debugPrint('myGroups $e');
+      return null;
+    }
+  }
+
+  static Future<String?> createGroup({
+    required String name,
+    required String ownerEmail,
+    required String ownerName,
+    required List<GroupMember> members,
+  }) async {
+    final c = _c;
+    if (c == null) return null;
+    try {
+      final row = await c.from('pm_groups').insert({
+        'name': name,
+        'owner_email': ownerEmail.toLowerCase(),
+      }).select('id').single();
+      final id = '${row['id']}';
+      await c.from('pm_group_members').insert([
+        {'group_id': id, 'email': ownerEmail.toLowerCase(), 'display_name': ownerName},
+        for (final m in members) {'group_id': id, 'email': m.email.toLowerCase(), 'display_name': m.name},
+      ]);
+      await c.from('pm_group_messages').insert({
+        'group_id': id,
+        'sender': ownerEmail.toLowerCase(),
+        'text': 'Gruppen är skapad. Nu kan ni planera promenaden.',
+      });
+      return id;
+    } catch (e) {
+      debugPrint('createGroup $e');
+      return null;
+    }
+  }
+
+  static Future<List<ChatLine>?> groupMessages(String groupId, String me, Map<String, String> names) async {
+    final c = _c;
+    if (c == null || groupId.isEmpty) return null;
+    try {
+      final rows = await c.from('pm_group_messages').select().eq('group_id', groupId).order('created_at');
+      return [
+        for (final r in rows)
+          ChatLine(
+            (r['sender'] as String? ?? '').toLowerCase() == me.toLowerCase(),
+            r['text'] as String? ?? '',
+            id: '${r['id']}',
+            recalled: r['recalled'] == true,
+            senderName: names[(r['sender'] as String? ?? '').toLowerCase()] ?? '',
+          ),
+      ];
+    } catch (e) {
+      debugPrint('groupMessages $e');
+      return null;
+    }
+  }
+
+  static Future<void> sendGroupMessage(String groupId, String sender, String text) async {
+    final c = _c;
+    if (c == null || groupId.isEmpty) return;
+    try {
+      await c.from('pm_group_messages').insert({
+        'group_id': groupId,
+        'sender': sender.toLowerCase(),
+        'text': text,
+      });
+    } catch (e) {
+      debugPrint('sendGroupMessage $e');
+    }
+  }
+
+  static Future<void> addGroupMember(String groupId, GroupMember member) async {
+    final c = _c;
+    if (c == null || groupId.isEmpty) return;
+    try {
+      await c.from('pm_group_members').upsert({
+        'group_id': groupId,
+        'email': member.email.toLowerCase(),
+        'display_name': member.name,
+      });
+    } catch (e) {
+      debugPrint('addGroupMember $e');
+    }
+  }
+
+  static Future<void> removeGroupMember(String groupId, String email) async {
+    final c = _c;
+    if (c == null || groupId.isEmpty) return;
+    try {
+      await c.from('pm_group_members').delete().eq('group_id', groupId).eq('email', email.toLowerCase());
+    } catch (e) {
+      debugPrint('removeGroupMember $e');
+    }
+  }
+
+  static Future<void> deleteGroup(String groupId) async {
+    final c = _c;
+    if (c == null || groupId.isEmpty) return;
+    try {
+      await c.from('pm_groups').delete().eq('id', groupId);
+    } catch (e) {
+      debugPrint('deleteGroup $e');
+    }
+  }
 }
