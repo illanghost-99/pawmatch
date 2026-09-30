@@ -39,6 +39,8 @@ class _PawMatchAppState extends State<PawMatchApp> {
           home = AuthScreen(key: const ValueKey('auth'), state: state);
         } else if (!state.idConsent) {
           home = IdentityScreen(key: const ValueKey('id'), state: state);
+        } else if (state.banNote.isNotEmpty) {
+          home = _ClosedAccount(state: state);
         } else if (!state.onboarded) {
           home = OnboardingFlow(key: const ValueKey('onboard'), state: state);
         } else {
@@ -84,6 +86,35 @@ class _PawMatchAppState extends State<PawMatchApp> {
           home: home,
         );
       },
+    );
+  }
+}
+
+class _ClosedAccount extends StatelessWidget {
+  const _ClosedAccount({required this.state});
+  final AppState state;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFFFF4EC),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.lock_outline, size: 48, color: Color(0xFF8B3A32)),
+              const SizedBox(height: 16),
+              const Text('Kontot är avstängt', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 10),
+              Text(state.banNote, textAlign: TextAlign.center, style: const TextStyle(height: 1.4, fontSize: 16)),
+              const SizedBox(height: 20),
+              FilledButton(onPressed: state.signOut, child: const Text('Logga ut')),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
