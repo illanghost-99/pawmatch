@@ -18,19 +18,19 @@ class LegalPage extends StatelessWidget {
 }
 
 const kTerms = '''
-Användarvillkor — PawMatch (Sverige, v1)
+Användarvillkor — PawMatch
 
 1. Tjänsten
 PawMatch är en social app där hundägare kan hitta vänner till sina hundar eller komma i kontakt kring seriös avel. PawMatch förmedlar kontakt. Vi säljer inte hundar, ger inte veterinärråd och är inte part i avtal mellan användare.
 
 2. Konto
-Du måste ange korrekta uppgifter och vara myndig. Ett konto per person. Du ansvarar för inloggningen. Du kan radera kontot i appen (Profil).
+Du måste ange korrekta uppgifter och vara myndig. Ett konto per person. Du ansvarar för inloggningen. Du kan radera kontot i appen under Profil.
 
 3. Hundprofiler
 Du ansvarar för att bilder och uppgifter stämmer. Stamtavla, vaccin och hälsouppgifter kan granskas av oss. Ett godkännande i appen är inte ett veterinärintyg och inte en garanti.
 
 4. Avel och valpar
-Avel och eventuell försäljning sker mellan användarna. Följ djurskyddslagen, Jordbruksverkets regler och rasorganisationers krav. PawMatch tar i version 1 ingen provision och hanterar inga betalningar.
+Avel och eventuell försäljning sker mellan användarna. Följ djurskyddslagen, Jordbruksverkets regler och rasorganisationers krav. PawMatch tar ingen provision på avtal mellan användare. Sådan betalning sker direkt mellan er. Abonnemang i PawMatch betalas via Apple.
 
 5. Förbjudet
 Trakasserier, bedrägeri, förfalskade intyg, olagligt innehåll, sexuellt innehåll, djurplågeri och att locka minderåriga. Brott anmäls och kontot stängs.
@@ -39,43 +39,51 @@ Trakasserier, bedrägeri, förfalskade intyg, olagligt innehåll, sexuellt inneh
 Vi kan ta bort innehåll och stänga konton. Du kan överklaga till support@pawmatch.app.
 
 7. App Store
-Appen följer Apples App Review Guidelines: konto kan raderas i appen, integritetspolicy finns, och känsliga uppgifter begärs bara när de behövs för tjänsten.
+Appen följer Apples riktlinjer. Kontot kan raderas i appen, integritetspolicyn finns i appen, och känsliga uppgifter begärs bara när de behövs för tjänsten.
 
 8. Ansvar
-Tjänsten lämnas i befintligt skick. Vi ansvarar inte för möten, avelsresultat eller skador mellan användare.
+Tjänsten tillhandahålls i befintligt skick. Vi ansvarar inte för möten, avelsresultat eller skador mellan användare.
+
+9. Ändringar
+Vi kan uppdatera villkoren. De aktuella villkoren finns alltid i appen. Fortsätter du använda PawMatch efter en uppdatering gäller de nya villkoren.
 
 Kontakt: support@pawmatch.app
+Senast uppdaterad: 30 september 2026
 ''';
 
 const kPrivacy = '''
-Integritetspolicy — PawMatch (GDPR / Apple)
+Integritetspolicy — PawMatch
 
-Personuppgiftsansvarig: PawMatch, kontakt support@pawmatch.app.
+Personuppgiftsansvarig: PawMatch.
+Kontakt: support@pawmatch.app.
 
 Vad vi samlar in
 • E-post och inloggning
+• Namn och telefonnummer
 • Profil och roll (hundägare, kennel, veterinär, intresserad)
 • Hunduppgifter du själv lägger in
 • Ungefärlig plats för att visa hundar i närheten
 • Chatt efter match
-• Enhetsuppgifter för push och felrapporter
+• Uppgifter som behövs för notiser och för att hålla appen stabil
 
-Vi samlar inte in BankID i version 1. Vi säljer inte dina uppgifter.
+Vi säljer inte dina uppgifter och använder dem inte för annonsspårning.
 
 Varför
-Avtal (leverera appen), berättigat intresse (säkerhet och missbruk) och samtycke när det krävs (notiser, plats).
+Avtal (för att leverera appen), berättigat intresse (säkerhet och att motverka missbruk) och samtycke när det krävs (notiser och plats).
 
 Lagring
-Så länge kontot finns. Vid radering tar vi bort profil och hundar. Viss logg kan sparas om lagen kräver det.
+Så länge kontot finns. När du raderar kontot tar vi bort profil och hundar. Viss information kan sparas om lagen kräver det.
 
 Dina rättigheter
-Registerutdrag, rättelse, radering, invändning och klagomål till IMY. Radering finns i appen under Profil.
+Du har rätt till registerutdrag, rättelse, radering och invändning, samt att klaga hos Integritetsskyddsmyndigheten (IMY). Radering finns i appen under Profil.
 
-Apple Privacy Nutrition Labels
-Kontaktuppgifter, användarinnehåll, plats (ungefärlig), identifierare för konto och notiser. Ingen spårning för annonser i v1.
+Köp
+Abonnemang betalas via Apple. Apple hanterar betalningen. PawMatch ser inte ditt kortnummer.
 
 Leverantörer
-Moln inom EU när det är möjligt (t.ex. databas och notiser).
+Uppgifter kan behandlas av leverantörer som driftar databasen och skickar notiser. Vi väljer moln inom EU när det är möjligt.
+
+Senast uppdaterad: 30 september 2026
 ''';
 
 const kCommunity = '''
