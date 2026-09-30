@@ -109,15 +109,37 @@ class _ReportsState extends State<_Reports> {
   @override
   Widget build(BuildContext context) {
     if (loading) return const Center(child: CircularProgressIndicator(color: _coral));
-    if (rows.isEmpty) return const Center(child: Text('Inga rapporter än.'));
+    final waiting = rows.where((r) => ('${r['reply'] ?? ''}').trim().isEmpty).length;
+    final done = rows.length - waiting;
+    final chats = rows.where((r) => '${r['kind'] ?? ''}' == 'chatt' || '${r['kind'] ?? ''}' == 'grupp').length;
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        itemCount: rows.length,
+        itemCount: rows.length + 1,
         itemBuilder: (_, i) {
-          final r = rows[i];
+          if (i == 0) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    _Stat(label: 'Väntar', value: waiting, color: _coral, delay: 0),
+                    const SizedBox(width: 8),
+                    _Stat(label: 'Besvarade', value: done, color: const Color(0xFF1F8A4C), delay: 120),
+                    const SizedBox(width: 8),
+                    _Stat(label: 'Chattar', value: chats, color: const Color(0xFF2F80ED), delay: 240),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Text('Tryck på ett ärende. Då ser du vad som hänt och hela chatten.', style: TextStyle(color: Color(0xFF3D4A57), height: 1.35)),
+                const SizedBox(height: 8),
+                if (rows.isEmpty) const Padding(padding: EdgeInsets.only(top: 24), child: Text('Inga rapporter än.')),
+              ],
+            );
+          }
+          final r = rows[i - 1];
           final number = r['case_no'] ?? r['id'];
           final answered = ('${r['reply'] ?? ''}').trim().isNotEmpty;
           return Card(
@@ -125,7 +147,14 @@ class _ReportsState extends State<_Reports> {
             child: ListTile(
               title: Text('Ärende $number', style: const TextStyle(fontWeight: FontWeight.w800)),
               subtitle: Text('${r['kind'] ?? 'problem'} · ${r['body'] ?? ''}', maxLines: 2, overflow: TextOverflow.ellipsis),
-              trailing: Icon(answered ? Icons.mark_email_read : Icons.mark_email_unread, color: answered ? const Color(0xFF1F8A4C) : _coral),
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: answered ? const Color(0xFFE5F6EC) : const Color(0xFFFFE0D4),
+                  borderRadius: BorderRadius.circular(99),
+                ),
+                child: Text(answered ? 'Klar' : 'Ny', style: TextStyle(color: answered ? const Color(0xFF1F8A4C) : _coral, fontWeight: FontWeight.w800, fontSize: 12)),
+              ),
               onTap: () async {
                 await Navigator.push(context, MaterialPageRoute(builder: (_) => CasePage(row: r)));
                 _load();
@@ -266,6 +295,36 @@ class _DogsState extends State<_Dogs> {
   }
 }
 
+class _Stat extends StatelessWidget {
+  const _Stat({required this.label, required this.value, required this.color, required this.delay});
+  final String label;
+  final int value;
+  final Color color;
+  final int delay;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0, end: 1),
+        duration: Duration(milliseconds: 500 + delay),
+        curve: Curves.easeOutBack,
+        builder: (context, t, child) => Opacity(opacity: t.clamp(0, 1), child: Transform.translate(offset: Offset(0, 12 * (1 - t)), child: child)),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
+          child: Column(
+            children: [
+              Text('$value', style: TextStyle(color: color, fontSize: 26, fontWeight: FontWeight.w900)),
+              Text(label, style: const TextStyle(color: Color(0xFF3D4A57), fontSize: 12, fontWeight: FontWeight.w700)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class CasePage extends StatefulWidget {
   const CasePage({super.key, required this.row});
   final Map<String, dynamic> row;
@@ -277,13 +336,22 @@ class _CasePageState extends State<CasePage> {
   final reply = TextEditingController();
   List<({String email, String text})> log = [];
   String note = '';
+  String suggestion = '';
   bool loading = true;
+
+  String get _reporter => '${widget.row['from_email'] ?? ''}'.toLowerCase();
+
+  String _suggestionFor(String agentNote) {
+    return Moderation.suggestReply(reason: '${widget.row['body'] ?? ''}', note: agentNote);
+  }
 
   @override
   void initState() {
     super.initState();
-    reply.text = '${widget.row['reply'] ?? ''}';
     note = '${widget.row['agent_note'] ?? ''}';
+    suggestion = _suggestionFor(note);
+    final sent = '${widget.row['reply'] ?? ''}'.trim();
+    reply.text = sent.isEmpty ? suggestion : sent;
     _load();
   }
 
@@ -305,7 +373,20 @@ class _CasePageState extends State<CasePage> {
       final length = await Network.sanction(decision.email, decision.note, permanentNow: decision.permanent);
       if (length.isNotEmpty) text = '$text Åtgärd: $length.';
     }
-    if (mounted) setState(() => note = text);
+    final next = _suggestionFor(text);
+    if (!mounted) return;
+    setState(() {
+      if (reply.text.trim().isEmpty || reply.text.trim() == suggestion) reply.text = next;
+      note = text;
+      suggestion = next;
+    });
+  }
+
+  String _who(String email) {
+    if (email == _reporter) return 'Den som rapporterade';
+    if (email.isEmpty) return 'Okänd';
+    final name = email.split('@').first;
+    return name.isEmpty ? email : name;
   }
 
   @override
@@ -318,20 +399,40 @@ class _CasePageState extends State<CasePage> {
   Widget build(BuildContext context) {
     final number = widget.row['case_no'] ?? widget.row['id'];
     final reported = '${widget.row['reported_email'] ?? ''}';
+    final calm = note.contains('inget tydligt') || note.isEmpty;
     return Scaffold(
       backgroundColor: _cream,
       appBar: AppBar(title: Text('Ärende $number', style: const TextStyle(fontWeight: FontWeight.w800)), backgroundColor: Colors.transparent),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
         children: [
-          Text('Från ${widget.row['from_name'] ?? widget.row['from_email']}', style: const TextStyle(fontWeight: FontWeight.w800)),
-          Text('${widget.row['body'] ?? ''}', style: const TextStyle(height: 1.35)),
-          if (reported.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 6), child: Text('Gäller $reported')),
-          if (note.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Text(note, style: const TextStyle(fontWeight: FontWeight.w700, height: 1.35)),
-          ],
-          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${widget.row['kind'] ?? 'Ärende'} · ${widget.row['body'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                const SizedBox(height: 6),
+                Text('Rapporterat av ${widget.row['from_name'] ?? _reporter}', style: const TextStyle(color: Color(0xFF3D4A57))),
+                if (reported.isNotEmpty) Text('Gäller $reported', style: const TextStyle(color: Color(0xFF3D4A57))),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: calm ? const Color(0xFFE5F6EC) : const Color(0xFFFFE0D4),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Text(
+              note.isEmpty ? 'Assistenten har inte läst chatten än.' : note,
+              style: const TextStyle(fontWeight: FontWeight.w700, height: 1.35, color: _ink),
+            ),
+          ),
+          const SizedBox(height: 10),
           Wrap(
             spacing: 8,
             children: [
@@ -339,31 +440,52 @@ class _CasePageState extends State<CasePage> {
               if (reported.contains('@')) TextButton(onPressed: () => Network.liftBan(reported), child: const Text('Häv avstängning')),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           const Text('Chatten', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
+          const Text('Vänster är den som rapporterade. Höger är den andra.', style: TextStyle(color: Color(0xFF3D4A57), fontSize: 13)),
           const SizedBox(height: 8),
           if (loading) const LinearProgressIndicator(),
-          if (!loading && log.isEmpty) const Text('Ingen chatt är kopplad till det här ärendet.'),
+          if (!loading && log.isEmpty) const Text('Det här ärendet har ingen chatt kopplad.'),
           for (final line in log)
-            Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(line.email, style: const TextStyle(fontSize: 12, color: Color(0xFF5C6B78), fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 2),
-                  Text(line.text, style: const TextStyle(color: _ink, height: 1.3)),
-                ],
+            Align(
+              alignment: line.email == _reporter ? Alignment.centerLeft : Alignment.centerRight,
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                constraints: const BoxConstraints(maxWidth: 280),
+                decoration: BoxDecoration(
+                  color: line.email == _reporter ? Colors.white : _coral,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_who(line.email), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: line.email == _reporter ? const Color(0xFF5C6B78) : Colors.white70)),
+                    const SizedBox(height: 2),
+                    Text(line.text, style: TextStyle(color: line.email == _reporter ? _ink : Colors.white, height: 1.3)),
+                  ],
+                ),
               ),
             ),
+          const SizedBox(height: 16),
+          const Text('Svar till den som rapporterade', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
+          const SizedBox(height: 4),
+          const Text('Förslaget ligger redan i rutan. Skicka det, eller skriv om det först.', style: TextStyle(color: Color(0xFF3D4A57), height: 1.35)),
           const SizedBox(height: 8),
           TextField(
             controller: reply,
-            minLines: 2,
-            maxLines: 5,
-            decoration: const InputDecoration(labelText: 'Svar till den som rapporterade', filled: true, fillColor: Colors.white),
+            minLines: 3,
+            maxLines: 6,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+            ),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: () => setState(() => reply.text = suggestion),
+            child: const Text('Lägg tillbaka förslaget'),
           ),
           const SizedBox(height: 8),
           FilledButton(
@@ -372,11 +494,12 @@ class _CasePageState extends State<CasePage> {
               await Network.replyReport('${widget.row['id']}', reply.text.trim());
               if (context.mounted) Navigator.pop(context);
             },
-            child: const Text('Skicka svar'),
+            child: const Text('Skicka svaret'),
           ),
         ],
       ),
     );
   }
 }
+
 
