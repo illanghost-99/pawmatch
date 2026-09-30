@@ -22,6 +22,7 @@ class AppState extends ChangeNotifier {
   DateTime swipeDay = DateTime.now();
   final List<WalkCircle> circles = [];
   String email = '';
+  String banNote = '';
   String firstName = '';
   String lastName = '';
   String personalNumber = '';
@@ -121,11 +122,14 @@ class AppState extends ChangeNotifier {
     signedIn = s['signedIn'] == 'true' && email.contains('@');
     sessionReady = true;
     if (signedIn) {
-      PushService.init();
-      _armPush();
-      locate();
-      syncCloud();
-      _watchInbox();
+      await refreshBan();
+      if (banNote.isEmpty) {
+        PushService.init();
+        _armPush();
+        locate();
+        syncCloud();
+        _watchInbox();
+      }
     }
     notifyListeners();
   }
@@ -141,8 +145,21 @@ class AppState extends ChangeNotifier {
     );
   }
 
+  Future<void> refreshBan() async {
+    if (!email.contains('@')) {
+      banNote = '';
+      return;
+    }
+    banNote = await Network.banStatus(email);
+  }
+
   Future<void> syncCloud() async {
     if (!email.contains('@')) return;
+    await refreshBan();
+    if (banNote.isNotEmpty) {
+      notifyListeners();
+      return;
+    }
     liveDogs = await Network.liveDogs(email);
     for (final d in myDogs) {
       await Network.upsertDog(email: email, owner: fullName, dog: d, lat: lat, lng: lng);
