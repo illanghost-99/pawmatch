@@ -117,11 +117,12 @@ class DogProfile {
 }
 
 class ChatLine {
-  const ChatLine(this.fromMe, this.text, {this.id = '', this.recalled = false});
+  const ChatLine(this.fromMe, this.text, {this.id = '', this.recalled = false, this.senderName = ''});
   final bool fromMe;
   final String text;
   final String id;
   final bool recalled;
+  final String senderName;
 }
 
 class SigPoint {
@@ -180,6 +181,29 @@ class MatchThread {
   String cloudMatchId;
   String peerEmail;
   bool get expired => DateTime.now().difference(createdAt).inDays >= 7;
+}
+
+class GroupMember {
+  const GroupMember(this.email, this.name);
+  final String email;
+  final String name;
+}
+
+class GroupChat {
+  GroupChat({
+    required this.id,
+    required this.name,
+    required this.ownerEmail,
+    required this.members,
+    List<ChatLine>? messages,
+    this.unread = 0,
+  }) : messages = messages ?? [];
+  final String id;
+  String name;
+  final String ownerEmail;
+  List<GroupMember> members;
+  final List<ChatLine> messages;
+  int unread;
 }
 
 class MyDog {
