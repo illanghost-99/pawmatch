@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../models.dart';
+import '../widgets/verified_mark.dart';
 import 'dog_detail.dart';
 
 const _rose = Color(0xFFC23B2E);
@@ -107,7 +108,12 @@ class _DogCard extends StatelessWidget {
                     child: Text(intent, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
                   ),
                   const SizedBox(height: 8),
-                  Text('${dog.name}, ${dog.age}', style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800)),
+                  Row(
+                    children: [
+                      Flexible(child: Text('${dog.name}, ${dog.age}', style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800))),
+                      VerifiedMark(owner: dog.ownerVerified, dog: dog.dogVerified),
+                    ],
+                  ),
                   Text('${dog.breed} · ${dog.city} · ${state.kmTo(dog).round()} km', style: const TextStyle(color: Colors.white70, fontSize: 14)),
                   const SizedBox(height: 6),
                   Text(dog.bio, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, height: 1.3)),
