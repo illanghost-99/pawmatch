@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../models.dart';
+import '../services/moderator.dart';
 import '../services/network.dart';
 
 const _cream = Color(0xFFFFF4EC);
@@ -117,14 +118,18 @@ class _ReportsState extends State<_Reports> {
         itemCount: rows.length,
         itemBuilder: (_, i) {
           final r = rows[i];
+          final number = r['case_no'] ?? r['id'];
           final answered = ('${r['reply'] ?? ''}').trim().isNotEmpty;
           return Card(
             color: Colors.white,
             child: ListTile(
-              title: Text('${r['from_name'] ?? r['from_email']}', style: const TextStyle(fontWeight: FontWeight.w800)),
-              subtitle: Text('${r['body'] ?? ''}', maxLines: 2, overflow: TextOverflow.ellipsis),
+              title: Text('Ärende $number', style: const TextStyle(fontWeight: FontWeight.w800)),
+              subtitle: Text('${r['kind'] ?? 'problem'} · ${r['body'] ?? ''}', maxLines: 2, overflow: TextOverflow.ellipsis),
               trailing: Icon(answered ? Icons.mark_email_read : Icons.mark_email_unread, color: answered ? const Color(0xFF1F8A4C) : _coral),
-              onTap: () => _reply(r),
+              onTap: () async {
+                await Navigator.push(context, MaterialPageRoute(builder: (_) => CasePage(row: r)));
+                _load();
+              },
             ),
           );
         },
@@ -260,3 +265,118 @@ class _DogsState extends State<_Dogs> {
     );
   }
 }
+
+class CasePage extends StatefulWidget {
+  const CasePage({super.key, required this.row});
+  final Map<String, dynamic> row;
+  @override
+  State<CasePage> createState() => _CasePageState();
+}
+
+class _CasePageState extends State<CasePage> {
+  final reply = TextEditingController();
+  List<({String email, String text})> log = [];
+  String note = '';
+  bool loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    reply.text = '${widget.row['reply'] ?? ''}';
+    note = '${widget.row['agent_note'] ?? ''}';
+    _load();
+  }
+
+  Future<void> _load() async {
+    final id = '${widget.row['match_id'] ?? ''}';
+    final group = '${widget.row['kind'] ?? ''}' == 'grupp';
+    final lines = id.isEmpty ? <({String email, String text})>[] : await Network.chatLog(id, group: group);
+    if (!mounted) return;
+    setState(() {
+      log = lines;
+      loading = false;
+    });
+  }
+
+  Future<void> _review() async {
+    final decision = Moderation.review(log);
+    var text = decision.note;
+    if (decision.ban && decision.email.contains('@')) {
+      final length = await Network.sanction(decision.email, decision.note, permanentNow: decision.permanent);
+      if (length.isNotEmpty) text = '$text Åtgärd: $length.';
+    }
+    if (mounted) setState(() => note = text);
+  }
+
+  @override
+  void dispose() {
+    reply.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final number = widget.row['case_no'] ?? widget.row['id'];
+    final reported = '${widget.row['reported_email'] ?? ''}';
+    return Scaffold(
+      backgroundColor: _cream,
+      appBar: AppBar(title: Text('Ärende $number', style: const TextStyle(fontWeight: FontWeight.w800)), backgroundColor: Colors.transparent),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        children: [
+          Text('Från ${widget.row['from_name'] ?? widget.row['from_email']}', style: const TextStyle(fontWeight: FontWeight.w800)),
+          Text('${widget.row['body'] ?? ''}', style: const TextStyle(height: 1.35)),
+          if (reported.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 6), child: Text('Gäller $reported')),
+          if (note.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(note, style: const TextStyle(fontWeight: FontWeight.w700, height: 1.35)),
+          ],
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            children: [
+              FilledButton(onPressed: log.isEmpty ? null : _review, child: const Text('Låt assistenten läsa')),
+              if (reported.contains('@')) TextButton(onPressed: () => Network.liftBan(reported), child: const Text('Häv avstängning')),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Text('Chatten', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
+          const SizedBox(height: 8),
+          if (loading) const LinearProgressIndicator(),
+          if (!loading && log.isEmpty) const Text('Ingen chatt är kopplad till det här ärendet.'),
+          for (final line in log)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(line.email, style: const TextStyle(fontSize: 12, color: Color(0xFF5C6B78), fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 2),
+                  Text(line.text, style: const TextStyle(color: _ink, height: 1.3)),
+                ],
+              ),
+            ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: reply,
+            minLines: 2,
+            maxLines: 5,
+            decoration: const InputDecoration(labelText: 'Svar till den som rapporterade', filled: true, fillColor: Colors.white),
+          ),
+          const SizedBox(height: 8),
+          FilledButton(
+            onPressed: () async {
+              if (reply.text.trim().isEmpty) return;
+              await Network.replyReport('${widget.row['id']}', reply.text.trim());
+              if (context.mounted) Navigator.pop(context);
+            },
+            child: const Text('Skicka svar'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
