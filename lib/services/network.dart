@@ -511,21 +511,137 @@ class Network {
     }
   }
 
-  static Future<bool> fileReport(String email, String name, String body) async {
+  static Future<bool> fileReport(
+    String email,
+    String name,
+    String body, {
+    String matchId = '',
+    String reportedEmail = '',
+    String agentNote = '',
+    String kind = 'problem',
+  }) async {
     final c = _c;
     final text = body.trim();
     if (c == null || !email.contains('@') || text.isEmpty) return false;
+    final full = {
+      'from_email': email.toLowerCase(),
+      'from_name': name,
+      'body': text,
+      'match_id': matchId,
+      'reported_email': reportedEmail.toLowerCase(),
+      'agent_note': agentNote,
+      'kind': kind,
+    };
     try {
-      await c.from('pm_reports').insert({
-        'from_email': email.toLowerCase(),
-        'from_name': name,
-        'body': text,
-      });
+      await c.from('pm_reports').insert(full);
       return true;
     } catch (e) {
       debugPrint('fileReport $e');
-      return false;
+      try {
+        await c.from('pm_reports').insert({
+          'from_email': email.toLowerCase(),
+          'from_name': name,
+          'body': text,
+        });
+        return true;
+      } catch (e2) {
+        debugPrint('fileReport basic $e2');
+        return false;
+      }
     }
+  }
+
+  static Future<List<({String email, String text})>> chatLog(String id, {bool group = false}) async {
+    final c = _c;
+    if (c == null || id.isEmpty) return [];
+    try {
+      final table = group ? 'pm_group_messages' : 'pm_messages';
+      final column = group ? 'group_id' : 'match_id';
+      final rows = await c.from(table).select('sender,text,recalled').eq(column, id).order('created_at');
+      return [
+        for (final r in rows)
+          if (r['recalled'] != true) (email: '${r['sender'] ?? ''}'.toLowerCase(), text: '${r['text'] ?? ''}'),
+      ];
+    } catch (e) {
+      debugPrint('chatLog $e');
+      return [];
+    }
+  }
+
+  static Future<String> sanction(String email, String reason, {bool permanentNow = false}) async {
+    final c = _c;
+    final who = email.trim().toLowerCase();
+    if (c == null || !who.contains('@')) return '';
+    var strikes = 0;
+    try {
+      final rows = await c.from('pm_sanctions').select('strikes').eq('email', who).limit(1);
+      if (rows.isNotEmpty) strikes = (rows.first['strikes'] as num?)?.toInt() ?? 0;
+    } catch (e) {
+      debugPrint('sanction read $e');
+    }
+    strikes += 1;
+    final permanent = permanentNow || strikes >= 3;
+    DateTime? until;
+    String length;
+    if (permanent) {
+      length = 'kontot är stängt';
+    } else if (strikes == 1) {
+      until = DateTime.now().toUtc().add(const Duration(days: 7));
+      length = 'avstängd i 1 vecka';
+    } else {
+      until = DateTime.now().toUtc().add(const Duration(days: 21));
+      length = 'avstängd i 3 veckor';
+    }
+    try {
+      await c.from('pm_sanctions').upsert({
+        'email': who,
+        'strikes': strikes,
+        'banned_until': until?.toIso8601String(),
+        'permanent': permanent,
+        'reason': reason,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('sanction write $e');
+      return '';
+    }
+    return length;
+  }
+
+  static Future<void> liftBan(String email) async {
+    final c = _c;
+    final who = email.trim().toLowerCase();
+    if (c == null || !who.contains('@')) return;
+    try {
+      await c.from('pm_sanctions').update({
+        'banned_until': null,
+        'permanent': false,
+        'reason': 'Hävdes av support',
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }).eq('email', who);
+    } catch (e) {
+      debugPrint('liftBan $e');
+    }
+  }
+
+  static Future<String> banStatus(String email) async {
+    final c = _c;
+    if (c == null || !email.contains('@')) return '';
+    try {
+      final rows = await c.from('pm_sanctions').select('permanent,banned_until,reason').eq('email', email.toLowerCase()).limit(1);
+      if (rows.isEmpty) return '';
+      final row = rows.first;
+      if (row['permanent'] == true) return 'Kontot är stängt efter upprepade regelbrott.';
+      final until = DateTime.tryParse('${row['banned_until'] ?? ''}');
+      if (until != null && until.toUtc().isAfter(DateTime.now().toUtc())) {
+        final local = until.toLocal();
+        final day = '${local.day}/${local.month}';
+        return 'Kontot är avstängt till $day. ${row['reason'] ?? ''}';
+      }
+    } catch (e) {
+      debugPrint('banStatus $e');
+    }
+    return '';
   }
 
   static Future<List<Map<String, dynamic>>> myReports(String email) async {
