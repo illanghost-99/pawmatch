@@ -156,11 +156,13 @@ class AppState extends ChangeNotifier {
 
   void _watchInbox() {
     _inbox?.cancel();
-    _inbox = Timer.periodic(const Duration(seconds: 6), (_) async {
+    _inbox = Timer.periodic(const Duration(seconds: 2), (_) async {
+      await Fcm.keepAlive();
       await pullInbox();
       await pullChats();
       await pullGroups();
     });
+    Fcm.keepAlive();
     pullInbox();
     pullChats();
     pullGroups();
@@ -274,8 +276,9 @@ class AppState extends ChangeNotifier {
     if (changed) notifyListeners();
   }
 
-  Future<void> refreshChat(MatchThread t, {bool countUnread = false}) async {
+  Future<void> refreshChat(MatchThread t, {bool countUnread = false, bool markSeen = false}) async {
     if (t.cloudMatchId.isEmpty) return;
+    if (markSeen) await Network.markSeen(t.cloudMatchId, email);
     final lines = await Network.messages(t.cloudMatchId, email);
     if (lines == null) return;
     final prev = t.messages.map((m) => m.id).toSet();
@@ -598,7 +601,7 @@ class AppState extends ChangeNotifier {
   Future<void> send(MatchThread t, String text) async {
     final body = text.trim();
     if (!t.accepted || body.isEmpty) return;
-    t.messages.add(ChatLine(true, body));
+    t.messages.add(ChatLine(true, body, createdAt: DateTime.now()));
     notifyListeners();
     if (t.cloudMatchId.isEmpty && t.peerEmail.contains('@')) {
       await _openCloud(t, t.dog, t.peerEmail);
