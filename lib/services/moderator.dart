@@ -92,4 +92,22 @@ Skriv kort på svenska vem som bröt mot reglerna och varför.
     if (mid.any(text.contains)) return 1;
     return 0;
   }
+
+  static String suggestReply({required String reason, required String note}) {
+    final n = note.toLowerCase();
+    final r = reason.toLowerCase();
+    if (n.contains('barn')) {
+      return 'Tack för att du rapporterade. Vi har läst chatten och stängt kontot. Du behöver inte göra något mer.';
+    }
+    if (n.contains('avstäng') || n.contains('hot, hat')) {
+      return 'Tack för att du hörde av dig. Vi har läst chatten och stängt av kontot en tid. Skriv till oss igen om det fortsätter.';
+    }
+    if (r.contains('hot') || r.contains('trakass')) {
+      return 'Tack. Vi har läst chatten. Vi ser inget som räcker för avstängning just nu, men vi har ärendet. Hör av dig om det händer igen.';
+    }
+    if (n.contains('inget tydligt')) {
+      return 'Tack för rapporten. Vi har läst igenom chatten och hittade inget som bryter mot reglerna. Hör av dig om något mer händer.';
+    }
+    return 'Tack, vi har tagit emot din rapport och läst ärendet. Vi hör av oss om vi behöver mer information.';
+  }
 }
