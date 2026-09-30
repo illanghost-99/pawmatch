@@ -20,6 +20,14 @@ String _groupPreview(GroupChat g) {
   return '$who: ${last.text}';
 }
 
+int _stamp(ChatLine m) => m.createdAt?.millisecondsSinceEpoch ?? 8640000000000000;
+
+List<ChatLine> _byTime(List<ChatLine> lines) {
+  final copy = [...lines];
+  copy.sort((a, b) => _stamp(a).compareTo(_stamp(b)));
+  return copy;
+}
+
 String _clock(DateTime? t) {
   if (t == null) return '';
   final l = t.toLocal();
@@ -266,8 +274,7 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
     super.initState();
     scroll.addListener(() {
       if (!scroll.hasClients) return;
-      final gap = scroll.position.maxScrollExtent - scroll.position.pixels;
-      _nearBottom = gap < 120;
+      _nearBottom = scroll.offset < 140;
     });
     widget.state.markRead(widget.thread);
     widget.state.refreshChat(widget.thread, markSeen: true);
@@ -284,7 +291,7 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !scroll.hasClients) return;
       if (!force && !_nearBottom) return;
-      scroll.jumpTo(scroll.position.maxScrollExtent);
+      if (scroll.offset > 0) scroll.jumpTo(0);
     });
   }
 
@@ -383,18 +390,23 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
               ),
             ),
           Expanded(
-            child: ListView(
-              controller: scroll,
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              children: [
-                for (final m in t.messages)
-                  TalkBubble(
+            child: Builder(builder: (context) {
+              final lines = _byTime(t.messages);
+              return ListView.builder(
+                reverse: true,
+                controller: scroll,
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                itemCount: lines.length,
+                itemBuilder: (context, i) {
+                  final m = lines[lines.length - 1 - i];
+                  return TalkBubble(
                     line: m,
                     otherName: _personName(t),
                     onRecall: m.fromMe && !m.recalled && m.id.isNotEmpty && !m.system ? () => _recall(m) : null,
-                  ),
-              ],
-            ),
+                  );
+                },
+              );
+            }),
           ),
           Container(
             color: Colors.white,
@@ -543,6 +555,8 @@ class _GroupChatPageState extends State<GroupChatPage> {
   final scroll = ScrollController();
   Timer? poll;
 
+  bool atLatest = true;
+
   GroupChat get g {
     for (final item in widget.state.groups) {
       if (item.id == widget.group.id) return item;
@@ -555,9 +569,13 @@ class _GroupChatPageState extends State<GroupChatPage> {
   @override
   void initState() {
     super.initState();
+    scroll.addListener(() {
+      if (!scroll.hasClients) return;
+      atLatest = scroll.offset < 140;
+    });
     widget.state.markGroupRead(g);
     widget.state.refreshGroup(g);
-    _jump();
+    _jump(force: true);
     poll = Timer.periodic(const Duration(seconds: 1), (_) async {
       await widget.state.refreshGroup(g);
       widget.state.markGroupRead(g);
@@ -566,9 +584,11 @@ class _GroupChatPageState extends State<GroupChatPage> {
     });
   }
 
-  void _jump() {
+  void _jump({bool force = false}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (scroll.hasClients) scroll.jumpTo(scroll.position.maxScrollExtent);
+      if (!scroll.hasClients) return;
+      if (!force && !atLatest) return;
+      if (scroll.offset > 0) scroll.jumpTo(0);
     });
   }
 
@@ -595,14 +615,19 @@ class _GroupChatPageState extends State<GroupChatPage> {
       body: Column(
         children: [
           Expanded(
-            child: ListView(
-              controller: scroll,
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              children: [
-                for (final m in group.messages)
-                  TalkBubble(line: m, otherName: m.senderName.isEmpty ? 'Hundägaren' : m.senderName),
-              ],
-            ),
+            child: Builder(builder: (context) {
+              final lines = _byTime(group.messages);
+              return ListView.builder(
+                reverse: true,
+                controller: scroll,
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                itemCount: lines.length,
+                itemBuilder: (context, i) {
+                  final m = lines[lines.length - 1 - i];
+                  return TalkBubble(line: m, otherName: m.senderName.isEmpty ? 'Hundägaren' : m.senderName);
+                },
+              );
+            }),
           ),
           Container(
             color: Colors.white,
@@ -628,7 +653,7 @@ class _GroupChatPageState extends State<GroupChatPage> {
                     widget.state.sendGroup(group, c.text.trim());
                     c.clear();
                     setState(() {});
-                    _jump();
+                    _jump(force: true);
                   },
                 ),
               ],
