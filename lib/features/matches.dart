@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../models.dart';
+import '../services/moderator.dart';
+import '../services/network.dart';
 import '../v2/premium_page.dart';
 import '../widgets/verified_mark.dart';
 import 'deal.dart';
@@ -252,6 +254,53 @@ class _Inbox extends StatelessWidget {
   }
 }
 
+Future<void> _reportConversation(
+  BuildContext context,
+  AppState state, {
+  required String matchId,
+  required String peer,
+  required bool group,
+}) async {
+  const reasons = ['Hot eller våld', 'Trakasserier', 'Olämpligt beteende', 'Annat'];
+  final reason = await showModalBottomSheet<String>(
+    context: context,
+    backgroundColor: _cream,
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+    builder: (ctx) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 12),
+          const Text('Rapportera den här chatten', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
+          for (final r in reasons)
+            ListTile(title: Text(r), onTap: () => Navigator.pop(ctx, r)),
+        ],
+      ),
+    ),
+  );
+  if (reason == null) return;
+  final log = await Network.chatLog(matchId, group: group);
+  final decision = Moderation.review(log);
+  var note = decision.note;
+  if (decision.ban && decision.email.contains('@')) {
+    final length = await Network.sanction(decision.email, decision.note, permanentNow: decision.permanent);
+    if (length.isNotEmpty) note = '$note Åtgärd: $length.';
+  }
+  final reported = decision.email.isNotEmpty ? decision.email : peer;
+  await Network.fileReport(
+    state.email,
+    state.fullName,
+    reason,
+    matchId: matchId,
+    reportedEmail: reported,
+    agentNote: note,
+    kind: group ? 'grupp' : 'chatt',
+  );
+  if (context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Support har tagit emot rapporten och återkommer inom kort.')));
+  }
+}
+
 Future<bool> _confirmDelete(BuildContext context, String name) async {
   final ok = await showDialog<bool>(
     context: context,
@@ -370,6 +419,17 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
                 ),
               ),
             ),
+          IconButton(
+            tooltip: 'Rapportera chatten',
+            icon: const Icon(Icons.flag_outlined, color: _coral),
+            onPressed: () => _reportConversation(
+              context,
+              widget.state,
+              matchId: t.cloudMatchId,
+              peer: t.peerEmail,
+              group: false,
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.delete_outline),
             onPressed: () async {
@@ -623,6 +683,17 @@ class _GroupChatPageState extends State<GroupChatPage> {
         backgroundColor: Colors.white,
         title: Text(group.name, style: const TextStyle(fontWeight: FontWeight.w800)),
         actions: [
+          IconButton(
+            tooltip: 'Rapportera gruppen',
+            icon: const Icon(Icons.flag_outlined, color: _coral),
+            onPressed: () => _reportConversation(
+              context,
+              widget.state,
+              matchId: group.id,
+              peer: '',
+              group: true,
+            ),
+          ),
           IconButton(icon: const Icon(Icons.group_outlined), onPressed: () => _members(context)),
         ],
       ),
