@@ -45,11 +45,15 @@ class Network {
     return out;
   }
 
+  static bool _flag(dynamic v) => v == true;
+
   static DogProfile dogFromRow(Map<String, dynamic> r) {
     final photos = <String>[
       for (final p in List<String>.from(r['photos'] ?? const []))
         if (p.startsWith('http')) p,
     ];
+    final vaccinated = _flag(r['vaccinated']);
+    final pedigree = _flag(r['has_pedigree']);
     return DogProfile(
       id: r['id'] as String? ?? '',
       name: r['name'] as String? ?? '',
@@ -65,8 +69,21 @@ class Network {
       photos: photos,
       photoUrl: photos.isEmpty ? '' : photos.first,
       sex: r['sex'] as String? ?? '',
+      weightKg: (r['weight_kg'] as num?)?.toDouble() ?? 0,
       intent: r['intent'] as String? ?? 'friends',
       availableForBreeding: (r['intent'] as String? ?? '') == 'puppies',
+      chipped: _flag(r['chipped']),
+      vaccinated: vaccinated,
+      dewormed: _flag(r['dewormed']),
+      neutered: _flag(r['neutered']),
+      hasPedigree: pedigree,
+      hasAllergies: _flag(r['has_allergies']),
+      allergyNote: r['allergy_note'] as String? ?? '',
+      healthNote: r['health_note'] as String? ?? '',
+      vaccineNote: r['vaccine_note'] as String? ?? '',
+      pedigreeNote: r['pedigree_note'] as String? ?? '',
+      vaccineStatus: vaccinated ? ReviewStatus.approved : ReviewStatus.none,
+      pedigreeStatus: pedigree ? ReviewStatus.approved : ReviewStatus.none,
     );
   }
 
@@ -91,12 +108,23 @@ class Network {
         'breed': dog.breed,
         'sex': dog.sex,
         'age': dog.age,
+        'weight_kg': dog.weightKg,
         'city': dog.city,
         'intent': dog.availableForBreeding ? 'puppies' : 'friends',
         'bio': dog.bio,
         'photos': urls,
         'lat': lat,
         'lng': lng,
+        'chipped': dog.chipped,
+        'vaccinated': dog.vaccinated,
+        'dewormed': dog.dewormed,
+        'neutered': dog.neutered,
+        'has_pedigree': dog.hasPedigree,
+        'has_allergies': dog.hasAllergies,
+        'allergy_note': dog.allergyNote,
+        'health_note': dog.healthNote,
+        'vaccine_note': dog.vaccineNote,
+        'pedigree_note': dog.pedigreeNote,
         'updated_at': DateTime.now().toIso8601String(),
       });
     } catch (e) {
