@@ -243,6 +243,15 @@ class Network {
     }
   }
 
+  static DateTime? _when(dynamic raw) {
+    if (raw == null) return null;
+    return DateTime.tryParse('$raw')?.toLocal();
+  }
+
+  static bool _systemText(String text) {
+    return text.startsWith('Ni matchade') || text.startsWith('Gruppen är skapad') || text.endsWith('lades till i gruppen.') || text.endsWith('togs bort från gruppen.');
+  }
+
   static Future<List<ChatLine>?> messages(String matchId, String me) async {
     final c = _c;
     if (c == null || matchId.isEmpty) return null;
@@ -255,11 +264,24 @@ class Network {
             r['text'] as String? ?? '',
             id: '${r['id']}',
             recalled: r['recalled'] == true,
+            createdAt: _when(r['created_at']),
+            seen: r['seen_at'] != null,
+            system: _systemText(r['text'] as String? ?? ''),
           ),
       ];
     } catch (e) {
       debugPrint('messages $e');
       return null;
+    }
+  }
+
+  static Future<void> markSeen(String matchId, String me) async {
+    final c = _c;
+    if (c == null || matchId.isEmpty || !me.contains('@')) return;
+    try {
+      await c.from('pm_messages').update({'seen_at': DateTime.now().toUtc().toIso8601String()}).eq('match_id', matchId).neq('sender', me.toLowerCase()).isFilter('seen_at', null);
+    } catch (e) {
+      debugPrint('markSeen $e');
     }
   }
 
@@ -390,6 +412,8 @@ class Network {
             id: '${r['id']}',
             recalled: r['recalled'] == true,
             senderName: names[(r['sender'] as String? ?? '').toLowerCase()] ?? '',
+            createdAt: _when(r['created_at']),
+            system: _systemText(r['text'] as String? ?? ''),
           ),
       ];
     } catch (e) {
