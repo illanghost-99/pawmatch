@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../app_state.dart';
 import '../models.dart';
+import '../widgets/verified_mark.dart';
 import 'dog_detail.dart';
 
 const _gold = Color(0xFFC9A24A);
@@ -162,7 +163,12 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(d.name, style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800)),
+                Row(
+                  children: [
+                    Flexible(child: Text(d.name, style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800))),
+                    VerifiedMark(owner: d.ownerVerified, dog: d.dogVerified),
+                  ],
+                ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 6,
