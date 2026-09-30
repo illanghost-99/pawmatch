@@ -84,6 +84,8 @@ class Network {
       pedigreeNote: r['pedigree_note'] as String? ?? '',
       vaccineStatus: vaccinated ? ReviewStatus.approved : ReviewStatus.none,
       pedigreeStatus: pedigree ? ReviewStatus.approved : ReviewStatus.none,
+      ownerVerified: r['owner_verified'] == true,
+      dogVerified: r['dog_verified'] == true,
     );
   }
 
@@ -481,6 +483,118 @@ class Network {
       await c.from('pm_groups').delete().eq('id', groupId);
     } catch (e) {
       debugPrint('deleteGroup $e');
+    }
+  }
+
+  static const adminCode = 'PawAdmin-Hanna';
+
+  static Future<bool> isAdmin(String email) async {
+    final c = _c;
+    if (c == null || !email.contains('@')) return false;
+    if (email.toLowerCase() == 'dilanahanna@hotmail.com') return true;
+    try {
+      final rows = await c.from('pm_admins').select('email').eq('email', email.toLowerCase()).limit(1);
+      return rows.isNotEmpty;
+    } catch (e) {
+      debugPrint('isAdmin $e');
+      return false;
+    }
+  }
+
+  static Future<void> grantAdmin(String email) async {
+    final c = _c;
+    if (c == null || !email.contains('@')) return;
+    try {
+      await c.from('pm_admins').upsert({'email': email.toLowerCase()});
+    } catch (e) {
+      debugPrint('grantAdmin $e');
+    }
+  }
+
+  static Future<bool> fileReport(String email, String name, String body) async {
+    final c = _c;
+    final text = body.trim();
+    if (c == null || !email.contains('@') || text.isEmpty) return false;
+    try {
+      await c.from('pm_reports').insert({
+        'from_email': email.toLowerCase(),
+        'from_name': name,
+        'body': text,
+      });
+      return true;
+    } catch (e) {
+      debugPrint('fileReport $e');
+      return false;
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> myReports(String email) async {
+    final c = _c;
+    if (c == null || !email.contains('@')) return [];
+    try {
+      final rows = await c.from('pm_reports').select().eq('from_email', email.toLowerCase()).order('created_at', ascending: false);
+      return [for (final r in rows) Map<String, dynamic>.from(r as Map)];
+    } catch (e) {
+      debugPrint('myReports $e');
+      return [];
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> allReports() async {
+    final c = _c;
+    if (c == null) return [];
+    try {
+      final rows = await c.from('pm_reports').select().order('created_at', ascending: false).limit(80);
+      return [for (final r in rows) Map<String, dynamic>.from(r as Map)];
+    } catch (e) {
+      debugPrint('allReports $e');
+      return [];
+    }
+  }
+
+  static Future<void> replyReport(String id, String reply) async {
+    final c = _c;
+    if (c == null || id.isEmpty) return;
+    try {
+      await c.from('pm_reports').update({
+        'reply': reply.trim(),
+        'replied_at': DateTime.now().toUtc().toIso8601String(),
+      }).eq('id', id);
+    } catch (e) {
+      debugPrint('replyReport $e');
+    }
+  }
+
+  static Future<List<DogProfile>> searchDogs(String query) async {
+    final c = _c;
+    final q = query.trim().replaceAll(RegExp(r'[^a-zA-Z0-9@.\- åäöÅÄÖ]'), '');
+    if (c == null || q.length < 2) return [];
+    try {
+      final rows = await c.from('pm_dogs').select().or('name.ilike.%$q%,owner_name.ilike.%$q%,owner_email.ilike.%$q%,breed.ilike.%$q%').limit(30);
+      return [for (final r in rows) dogFromRow(Map<String, dynamic>.from(r as Map))];
+    } catch (e) {
+      debugPrint('searchDogs $e');
+      return [];
+    }
+  }
+
+  static Future<void> verifyOwner(String email, bool on) async {
+    final c = _c;
+    if (c == null || !email.contains('@')) return;
+    try {
+      await c.from('pm_dogs').update({'owner_verified': on}).eq('owner_email', email.toLowerCase());
+    } catch (e) {
+      debugPrint('verifyOwner $e');
+    }
+  }
+
+  static Future<void> verifyDog(String id, bool on) async {
+    final c = _c;
+    if (c == null || id.isEmpty) return;
+    try {
+      await c.from('pm_dogs').update({'dog_verified': on}).eq('id', id);
+    } catch (e) {
+      debugPrint('verifyDog $e');
     }
   }
 }
