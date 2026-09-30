@@ -93,7 +93,7 @@ void openDogHub(BuildContext context, AppState state) {
           _Row(const Color(0xFF3D5A80), Icons.health_and_safety_outlined, 'AI Vet', 'Sammanfattar — inte veterinär', () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => const AiVetPage()));
           }),
-          _Row(const Color(0xFF14202B), Icons.verified_outlined, 'Verifiering', 'Nivå 1–5', () {
+          _Row(const Color(0xFF14202B), Icons.verified_outlined, 'Verifiering', 'E-post, telefon och intyg', () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => const VerifyPage()));
           }),
         ],
@@ -112,7 +112,7 @@ void openLegalHub(BuildContext context) {
           _Row(const Color(0xFF3D5A80), Icons.description_outlined, 'Användarvillkor', 'Regler för appen', () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => const LegalPage(title: 'Villkor', body: kTerms)));
           }),
-          _Row(const Color(0xFF6B4C9A), Icons.privacy_tip_outlined, 'Integritet', 'GDPR och Apple', () {
+          _Row(const Color(0xFF6B4C9A), Icons.privacy_tip_outlined, 'Integritet', 'Så hanterar vi dina uppgifter', () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => const LegalPage(title: 'Integritet', body: kPrivacy)));
           }),
           _Row(const Color(0xFFE9C46A), Icons.groups_outlined, 'Communityregler', 'Så här är vi mot varandra', () {
