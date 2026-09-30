@@ -1,15 +1,70 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../app_state.dart';
+import '../services/network.dart';
 import '../v2/premium_page.dart';
+import 'admin_page.dart';
 import 'deals.dart';
 import 'edit_profile.dart';
 import 'hubs.dart';
 import 'my_dogs.dart';
+import 'report.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key, required this.state});
   final AppState state;
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  int taps = 0;
+  DateTime tapped = DateTime.fromMillisecondsSinceEpoch(0);
+  bool admin = false;
+
+  AppState get state => widget.state;
+
+  @override
+  void initState() {
+    super.initState();
+    Network.isAdmin(state.email).then((v) {
+      if (mounted) setState(() => admin = v);
+    });
+  }
+
+  Future<void> _secret() async {
+    final now = DateTime.now();
+    if (now.difference(tapped) > const Duration(seconds: 4)) taps = 0;
+    tapped = now;
+    taps++;
+    if (taps < 7) return;
+    taps = 0;
+    if (await Network.isAdmin(state.email)) {
+      if (!mounted) return;
+      setState(() => admin = true);
+      Navigator.push(context, MaterialPageRoute(builder: (_) => AdminPage(state: state)));
+      return;
+    }
+    final code = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Support'),
+        content: TextField(controller: code, obscureText: true, decoration: const InputDecoration(labelText: 'Kod')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Avbryt')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Öppna')),
+        ],
+      ),
+    );
+    if (ok == true && code.text.trim() == Network.adminCode) {
+      await Network.grantAdmin(state.email);
+      if (!mounted) return;
+      setState(() => admin = true);
+      Navigator.push(context, MaterialPageRoute(builder: (_) => AdminPage(state: state)));
+    }
+    code.dispose();
+  }
 
   ImageProvider? _photo(String photo) {
     if (photo.isEmpty) return null;
@@ -113,6 +168,13 @@ class ProfilePage extends StatelessWidget {
           }),
           _tile(context, const Color(0xFF6B4C9A), Icons.favorite_outline, 'Hund och hälsa', 'Stamtavla, vaccin, community', () => openDogHub(context, state)),
           _tile(context, const Color(0xFF2A9D8F), Icons.support_agent, 'Kundtjänst', 'AI-chatt, e-post, telefon', () => openSupportHub(context)),
+          _tile(context, const Color(0xFF8B3A32), Icons.flag_outlined, 'Rapportera ett problem', 'Skriv till support', () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => ReportPage(state: state)));
+          }),
+          if (admin)
+            _tile(context, const Color(0xFF8C6A2F), Icons.admin_panel_settings_outlined, 'Supportinkorg', 'Rapporter och verifiering', () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => AdminPage(state: state)));
+            }),
           _tile(context, const Color(0xFF3D5A80), Icons.gavel_outlined, 'Villkor', 'Användarvillkor och GDPR', () => openLegalHub(context)),
           const SizedBox(height: 12),
           FilledButton(
@@ -136,6 +198,11 @@ class ProfilePage extends StatelessWidget {
               state.signOut();
             },
             child: const Text('Radera konto på enheten'),
+          ),
+          const SizedBox(height: 16),
+          GestureDetector(
+            onTap: _secret,
+            child: const Center(child: Text('PawMatch', style: TextStyle(color: Color(0xFFB7A79C), fontSize: 12))),
           ),
         ],
       ),
