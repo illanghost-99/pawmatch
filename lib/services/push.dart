@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class PushService {
@@ -40,15 +41,18 @@ class PushService {
             presentAlert: true,
             presentBadge: true,
             presentSound: true,
+            interruptionLevel: InterruptionLevel.timeSensitive,
           ),
           android: AndroidNotificationDetails(
             'pawmatch',
             'PawMatch',
-            importance: Importance.high,
-            priority: Priority.high,
+            importance: Importance.max,
+            priority: Priority.max,
+            playSound: true,
           ),
         ),
       );
+      await SystemSound.play(SystemSoundType.alert);
     } catch (e) {
       debugPrint('[Push] show: $e');
     }
