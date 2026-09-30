@@ -28,6 +28,18 @@ class Fcm {
     }
   }
 
+  static Future<void> keepAlive() async {
+    if (kIsWeb) return;
+    try {
+      if (token == null || token!.isEmpty) {
+        token = await FirebaseMessaging.instance.getToken();
+      }
+    } catch (e) {
+      debugPrint('FCM keep: $e');
+    }
+    flush();
+  }
+
   static void flush() {
     final t = token;
     final cb = onToken;
