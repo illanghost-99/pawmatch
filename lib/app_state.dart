@@ -158,6 +158,10 @@ class AppState extends ChangeNotifier {
     _inbox?.cancel();
     _inbox = Timer.periodic(const Duration(seconds: 2), (_) async {
       await Fcm.keepAlive();
+      if (email.contains('@')) {
+        final token = Fcm.token;
+        await Network.notePush(email, token == null || token.isEmpty ? (Fcm.lastError ?? 'ingen token') : 'token sparad');
+      }
       await pullInbox();
       await pullChats();
       await pullGroups();
