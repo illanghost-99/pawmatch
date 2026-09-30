@@ -10,6 +10,7 @@ class Store {
   static StreamSubscription<List<PurchaseDetails>>? _sub;
   static ProductDetails? product;
   static String status = '';
+  static Future<ProductDetails?>? _loading;
 
   static Future<void> boot(void Function(bool ok) onOwned) async {
     _sub?.cancel();
@@ -18,8 +19,7 @@ class Store {
       status = 'Butiken är inte redo än.';
       return;
     }
-    final resp = await iap.queryProductDetails({kPremiumId});
-    if (resp.productDetails.isNotEmpty) product = resp.productDetails.first;
+    await load();
     _sub = iap.purchaseStream.listen((buys) async {
       for (final p in buys) {
         if (p.status == PurchaseStatus.purchased || p.status == PurchaseStatus.restored) {
@@ -30,18 +30,32 @@ class Store {
     });
   }
 
+  static Future<ProductDetails?> load() {
+    if (product != null) return Future.value(product);
+    return _loading ??= _fetch();
+  }
+
+  static Future<ProductDetails?> _fetch() async {
+    try {
+      final resp = await iap.queryProductDetails({kPremiumId});
+      if (resp.productDetails.isNotEmpty) product = resp.productDetails.first;
+      return product;
+    } catch (e) {
+      debugPrint('IAP load $e');
+      return null;
+    } finally {
+      _loading = null;
+    }
+  }
+
   static Future<bool> buy() async {
     try {
-      if (product == null) {
-        final resp = await iap.queryProductDetails({kPremiumId});
-        if (resp.productDetails.isEmpty) {
-          status = 'Produkten saknas i App Store Connect.';
-          return false;
-        }
-        product = resp.productDetails.first;
+      final item = await load();
+      if (item == null) {
+        status = 'Produkten saknas i App Store Connect.';
+        return false;
       }
-      final ok = await iap.buyNonConsumable(purchaseParam: PurchaseParam(productDetails: product!));
-      return ok;
+      return iap.buyNonConsumable(purchaseParam: PurchaseParam(productDetails: item));
     } catch (e) {
       status = e.toString();
       debugPrint('IAP $e');
