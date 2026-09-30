@@ -2,11 +2,23 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../models.dart';
+import '../v2/premium_page.dart';
 import 'deal.dart';
 
 const _coral = Color(0xFFE25C3A);
 const _cream = Color(0xFFFFF4EC);
 const _ink = Color(0xFF14202B);
+
+String _groupPreview(GroupChat g) {
+  if (g.messages.isEmpty) {
+    final names = [for (final m in g.members) if (m.name.isNotEmpty) m.name];
+    return names.isEmpty ? 'Gruppchatt' : names.join(', ');
+  }
+  final last = g.messages.last;
+  if (last.recalled) return 'Meddelandet togs bort';
+  final who = last.fromMe ? 'Du' : (last.senderName.isEmpty ? 'Någon' : last.senderName);
+  return '$who: ${last.text}';
+}
 
 String _preview(MatchThread m) {
   if (m.messages.isEmpty) return m.dog.breed.isEmpty ? 'Tryck för att skriva' : m.dog.breed;
@@ -28,6 +40,17 @@ class MatchesPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Chatt', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
         backgroundColor: Colors.transparent,
+        actions: [
+          IconButton(
+            tooltip: state.isPremium ? 'Ny grupp' : 'Premium krävs',
+            onPressed: () => state.isPremium ? _openCreateGroup(context, state) : _premiumGroup(context, state),
+            icon: Icon(
+              Icons.add_circle_rounded,
+              size: 32,
+              color: state.isPremium ? _coral : const Color(0xFFC4B8B0),
+            ),
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -60,6 +83,29 @@ class MatchesPage extends StatelessWidget {
                 leading: const CircleAvatar(backgroundColor: Color(0xFFFFE0D4), child: Icon(Icons.hourglass_top, color: _coral)),
                 title: Text(m.dog.name, style: const TextStyle(fontWeight: FontWeight.w700)),
                 subtitle: Text('Skickat till ${m.dog.owner}.'),
+              ),
+            const SizedBox(height: 16),
+          ],
+          if (state.groups.isNotEmpty) ...[
+            const Text('Grupper', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: _ink)),
+            const SizedBox(height: 8),
+            for (final g in state.groups)
+              Card(
+                color: Colors.white,
+                child: ListTile(
+                  leading: Badge(
+                    isLabelVisible: g.unread > 0,
+                    label: Text('${g.unread}'),
+                    child: const CircleAvatar(backgroundColor: Color(0xFF1F7A6C), child: Icon(Icons.groups, color: Colors.white)),
+                  ),
+                  title: Text(g.name, style: const TextStyle(fontWeight: FontWeight.w800)),
+                  subtitle: Text(_groupPreview(g), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    state.markGroupRead(g);
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => GroupChatPage(state: state, group: g)));
+                  },
+                ),
               ),
             const SizedBox(height: 16),
           ],
@@ -297,6 +343,315 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+
+void _premiumGroup(BuildContext context, AppState state) {
+  showDialog<void>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Premium'),
+      content: const Text('Gruppchatt ingår i Premium. Knappen syns för alla, men bara Premium kan skapa en grupp med personer du redan chattat med.'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Inte nu')),
+        FilledButton(
+          onPressed: () {
+            Navigator.pop(ctx);
+            Navigator.push(context, MaterialPageRoute(builder: (_) => PremiumPage(state: state)));
+          },
+          child: const Text('Visa Premium'),
+        ),
+      ],
+    ),
+  );
+}
+
+Future<void> _openCreateGroup(BuildContext context, AppState state) async {
+  final partners = state.chatPartners;
+  final name = TextEditingController();
+  final picked = <String>{};
+  final ok = await showModalBottomSheet<bool>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: _cream,
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+    builder: (ctx) => Padding(
+      padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.viewInsetsOf(ctx).bottom + 20),
+      child: StatefulBuilder(
+        builder: (ctx, setLocal) => SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('Ny grupp', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: _ink)),
+              const SizedBox(height: 6),
+              const Text('Välj minst två personer du redan chattat med.', style: TextStyle(color: Color(0xFF3D4A57))),
+              const SizedBox(height: 12),
+              TextField(
+                controller: name,
+                textCapitalization: TextCapitalization.sentences,
+                onChanged: (_) => setLocal(() {}),
+                decoration: InputDecoration(
+                  labelText: 'Namn, till exempel Promenad lördag',
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (partners.isEmpty)
+                const Text('Du har inga chattar än. Matcha först, sedan kan du bjuda in dem.')
+              else
+                for (final person in partners)
+                  CheckboxListTile(
+                    value: picked.contains(person.email),
+                    activeColor: _coral,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(person.name, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    onChanged: (on) => setLocal(() {
+                      if (on == true) {
+                        picked.add(person.email);
+                      } else {
+                        picked.remove(person.email);
+                      }
+                    }),
+                  ),
+              const SizedBox(height: 12),
+              FilledButton(
+                onPressed: name.text.trim().isEmpty || picked.length < 2
+                    ? null
+                    : () => Navigator.pop(ctx, true),
+                child: const Text('Skapa grupp'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+  if (ok != true) {
+    name.dispose();
+    return;
+  }
+  final people = [for (final person in partners) if (picked.contains(person.email)) person];
+  final made = await state.createGroup(name.text, people);
+  name.dispose();
+  if (!made && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gruppen kunde inte skapas. Försök igen.')));
+  }
+}
+
+class GroupChatPage extends StatefulWidget {
+  const GroupChatPage({super.key, required this.state, required this.group});
+  final AppState state;
+  final GroupChat group;
+  @override
+  State<GroupChatPage> createState() => _GroupChatPageState();
+}
+
+class _GroupChatPageState extends State<GroupChatPage> {
+  final c = TextEditingController();
+  final scroll = ScrollController();
+  Timer? poll;
+
+  GroupChat get g {
+    for (final item in widget.state.groups) {
+      if (item.id == widget.group.id) return item;
+    }
+    return widget.group;
+  }
+
+  bool get mine => g.ownerEmail == widget.state.email.toLowerCase();
+
+  @override
+  void initState() {
+    super.initState();
+    widget.state.markGroupRead(g);
+    widget.state.refreshGroup(g);
+    poll = Timer.periodic(const Duration(seconds: 4), (_) async {
+      await widget.state.refreshGroup(g);
+      widget.state.markGroupRead(g);
+      if (mounted) setState(() {});
+      _jump();
+    });
+  }
+
+  void _jump() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (scroll.hasClients) scroll.jumpTo(scroll.position.maxScrollExtent);
+    });
+  }
+
+  @override
+  void dispose() {
+    poll?.cancel();
+    scroll.dispose();
+    c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final group = g;
+    return Scaffold(
+      backgroundColor: _cream,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        title: Text(group.name, style: const TextStyle(fontWeight: FontWeight.w800)),
+        actions: [
+          IconButton(icon: const Icon(Icons.group_outlined), onPressed: () => _members(context)),
+        ],
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView(
+              controller: scroll,
+              padding: const EdgeInsets.all(16),
+              children: [
+                for (final m in group.messages)
+                  Align(
+                    alignment: m.fromMe ? Alignment.centerRight : Alignment.centerLeft,
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.78),
+                      decoration: BoxDecoration(
+                        color: m.fromMe ? _coral : Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (!m.fromMe && m.senderName.isNotEmpty)
+                            Text(m.senderName, style: const TextStyle(color: _coral, fontWeight: FontWeight.w800, fontSize: 12)),
+                          Text(m.text, style: TextStyle(color: m.fromMe ? Colors.white : _ink, fontWeight: FontWeight.w600, fontSize: 15)),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(12, 8, 8, 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: c,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: InputDecoration(
+                      hintText: 'Skriv till gruppen',
+                      filled: true,
+                      fillColor: _cream,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.send_rounded, color: _coral),
+                  onPressed: () {
+                    if (c.text.trim().isEmpty) return;
+                    widget.state.sendGroup(group, c.text.trim());
+                    c.clear();
+                    setState(() {});
+                    _jump();
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _members(BuildContext context) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: _cream,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        child: StatefulBuilder(
+          builder: (ctx, setLocal) {
+            final group = g;
+            final inside = group.members.map((m) => m.email).toSet();
+            final extra = [for (final person in widget.state.chatPartners) if (!inside.contains(person.email)) person];
+            return SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(mine ? 'Du skapade gruppen' : 'Medlemmar', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 8),
+                  for (final member in group.members)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(member.name, style: const TextStyle(fontWeight: FontWeight.w700)),
+                      subtitle: Text(member.email == group.ownerEmail ? 'Skapare' : 'Medlem'),
+                      trailing: mine && member.email != group.ownerEmail
+                          ? IconButton(
+                              icon: const Icon(Icons.person_remove_outlined, color: Color(0xFF8B3A32)),
+                              onPressed: () async {
+                                await widget.state.removeGroupMember(group, member);
+                                if (ctx.mounted) setLocal(() {});
+                              },
+                            )
+                          : null,
+                    ),
+                  if (mine && extra.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    const Text('Lägg till från dina chattar', style: TextStyle(fontWeight: FontWeight.w800)),
+                    for (final person in extra)
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(person.name),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.person_add_alt_1, color: _coral),
+                          onPressed: () async {
+                            await widget.state.addGroupMember(group, person);
+                            if (ctx.mounted) setLocal(() {});
+                          },
+                        ),
+                      ),
+                  ],
+                  if (mine) ...[
+                    const SizedBox(height: 8),
+                    OutlinedButton(
+                      style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF8B3A32), side: const BorderSide(color: Color(0xFF8B3A32))),
+                      onPressed: () async {
+                        final yes = await showDialog<bool>(
+                          context: ctx,
+                          builder: (d) => AlertDialog(
+                            title: const Text('Lös upp gruppen?'),
+                            content: const Text('Chatten försvinner för alla i gruppen.'),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('Avbryt')),
+                              TextButton(onPressed: () => Navigator.pop(d, true), child: const Text('Lös upp')),
+                            ],
+                          ),
+                        );
+                        if (yes == true) {
+                          await widget.state.deleteGroup(group);
+                          if (context.mounted) {
+                            Navigator.pop(ctx);
+                            Navigator.pop(context);
+                          }
+                        }
+                      },
+                      child: const Text('Lös upp gruppen'),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
