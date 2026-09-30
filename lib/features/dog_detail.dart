@@ -5,6 +5,7 @@ import '../models.dart';
 const _ink = Color(0xFF14202B);
 const _cream = Color(0xFFFFF4EC);
 const _coral = Color(0xFFE25C3A);
+const _muted = Color(0xFF5C6B78);
 
 class DogDetailPage extends StatefulWidget {
   const DogDetailPage({super.key, required this.state, required this.dog});
@@ -29,7 +30,7 @@ class _DogDetailPageState extends State<DogDetailPage> {
             padding: EdgeInsets.zero,
             children: [
               SizedBox(
-                height: MediaQuery.sizeOf(context).height * 0.52,
+                height: MediaQuery.sizeOf(context).height * 0.48,
                 child: Stack(
                   children: [
                     PageView.builder(
@@ -80,24 +81,37 @@ class _DogDetailPageState extends State<DogDetailPage> {
                       runSpacing: 8,
                       children: [
                         if (d.sexLabel.isNotEmpty) _pill(d.sexLabel),
-                        if (d.weightKg > 0) _pill('${d.weightKg} kg'),
+                        _pill(d.weightLabel),
                         _pill(d.intent == 'puppies' ? 'Söker avel' : 'Söker vän'),
-                        if (d.pedigreeStatus == ReviewStatus.approved) _pill('Stamtavla'),
-                        if (d.vaccineStatus == ReviewStatus.approved) _pill('Vaccinerad'),
+                        if (d.chipped) _pill('Chippad'),
+                        if (d.vaccinated) _pill('Vaccinerad'),
+                        if (d.hasPedigree) _pill('Stamtavla'),
                       ],
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 22),
                     const Text('Om hunden', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: _ink)),
                     const SizedBox(height: 6),
-                    Text(d.bio, style: const TextStyle(height: 1.4, fontSize: 16, color: _ink)),
-                    const SizedBox(height: 18),
+                    Text(
+                      d.bio.trim().isEmpty ? 'Ingen beskrivning än.' : d.bio.trim(),
+                      style: const TextStyle(height: 1.4, fontSize: 16, color: _ink),
+                    ),
+                    const SizedBox(height: 22),
+                    const Text('Hälsa och avel', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: _ink)),
+                    const SizedBox(height: 4),
+                    const Text('Uppgifterna kommer från ägaren.', style: TextStyle(color: _muted, fontSize: 13)),
+                    const SizedBox(height: 8),
+                    _fact('Vikt', d.weightLabel),
+                    _fact('Chip', d.chipped ? 'Ja' : 'Nej'),
+                    _fact('Vaccin', _note(d.vaccinated, d.vaccineNote)),
+                    _fact('Avmaskad', d.dewormed ? 'Ja' : 'Nej'),
+                    _fact('Kastrerad', d.neutered ? 'Ja' : 'Nej'),
+                    _fact('Stamtavla', _note(d.hasPedigree, d.pedigreeNote)),
+                    _fact('Allergier', d.hasAllergies ? (d.allergyNote.trim().isEmpty ? 'Ja' : d.allergyNote.trim()) : 'Inga angivna'),
+                    if (d.healthNote.trim().isNotEmpty) _fact('Övrigt', d.healthNote.trim()),
+                    const SizedBox(height: 22),
                     const Text('Ägare', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: _ink)),
                     const SizedBox(height: 6),
-                    Text(d.owner, style: const TextStyle(fontSize: 16)),
-                    if (d.reviews.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Text(d.reviews.join(' · '), style: const TextStyle(color: Color(0xFF3D4A57))),
-                    ],
+                    Text(d.owner, style: const TextStyle(fontSize: 16, color: _ink)),
                   ],
                 ),
               ),
@@ -146,6 +160,26 @@ class _DogDetailPageState extends State<DogDetailPage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  String _note(bool yes, String note) {
+    if (!yes) return 'Nej';
+    final extra = note.trim();
+    return extra.isEmpty ? 'Ja' : 'Ja · $extra';
+  }
+
+  Widget _fact(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 11),
+      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFE8D9CE)))),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(width: 110, child: Text(label, style: const TextStyle(color: _muted, fontWeight: FontWeight.w700))),
+          Expanded(child: Text(value, style: const TextStyle(fontSize: 16, color: _ink, height: 1.3))),
+        ],
       ),
     );
   }
