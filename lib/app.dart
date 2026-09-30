@@ -5,6 +5,7 @@ import 'features/auth.dart';
 import 'features/identity.dart';
 import 'features/onboarding.dart';
 import 'features/shell.dart';
+import 'services/store.dart';
 
 class PawMatchApp extends StatefulWidget {
   const PawMatchApp({super.key});
@@ -19,6 +20,9 @@ class _PawMatchAppState extends State<PawMatchApp> {
   void initState() {
     super.initState();
     state.restore();
+    Store.boot((ok) {
+      if (ok) state.startLaunchOffer();
+    });
   }
 
   @override
