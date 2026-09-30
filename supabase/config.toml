@@ -15,3 +15,6 @@ site_url = "https://pawmatch.app"
 enabled = true
 client_id = "env(APPLE_CLIENT_ID)"
 secret = "env(APPLE_SECRET)"
+
+[functions.notify]
+verify_jwt = false
