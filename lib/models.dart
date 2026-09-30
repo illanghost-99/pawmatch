@@ -117,12 +117,24 @@ class DogProfile {
 }
 
 class ChatLine {
-  const ChatLine(this.fromMe, this.text, {this.id = '', this.recalled = false, this.senderName = ''});
+  const ChatLine(
+    this.fromMe,
+    this.text, {
+    this.id = '',
+    this.recalled = false,
+    this.senderName = '',
+    this.createdAt,
+    this.seen = false,
+    this.system = false,
+  });
   final bool fromMe;
   final String text;
   final String id;
   final bool recalled;
   final String senderName;
+  final DateTime? createdAt;
+  final bool seen;
+  final bool system;
 }
 
 class SigPoint {
