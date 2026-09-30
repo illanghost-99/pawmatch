@@ -50,8 +50,18 @@ class DogProfile {
     this.vaccineStatus = ReviewStatus.none,
     this.availableForBreeding = false,
     this.availableForFriends = true,
-    this.reviews = const ['Trygg ägare', 'Svarar snabbt'],
+    this.reviews = const [],
     this.ownerEmail = '',
+    this.chipped = false,
+    this.vaccinated = false,
+    this.dewormed = false,
+    this.neutered = false,
+    this.hasPedigree = false,
+    this.hasAllergies = false,
+    this.allergyNote = '',
+    this.healthNote = '',
+    this.vaccineNote = '',
+    this.pedigreeNote = '',
   });
 
   final String id;
@@ -76,6 +86,16 @@ class DogProfile {
   final bool availableForFriends;
   final List<String> reviews;
   final String ownerEmail;
+  final bool chipped;
+  final bool vaccinated;
+  final bool dewormed;
+  final bool neutered;
+  final bool hasPedigree;
+  final bool hasAllergies;
+  final String allergyNote;
+  final String healthNote;
+  final String vaccineNote;
+  final String pedigreeNote;
 
   List<String> get gallery {
     final all = <String>[if (photoUrl.isNotEmpty) photoUrl, ...photos];
@@ -87,6 +107,12 @@ class DogProfile {
     if (s == 'hane') return 'Hane';
     if (s == 'tik') return 'Tik';
     return '';
+  }
+
+  String get weightLabel {
+    if (weightKg <= 0) return 'Ej angiven';
+    final whole = weightKg == weightKg.roundToDouble();
+    return '${whole ? weightKg.toStringAsFixed(0) : weightKg.toStringAsFixed(1)} kg';
   }
 }
 
