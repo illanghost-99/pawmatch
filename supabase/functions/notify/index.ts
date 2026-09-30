@@ -1,9 +1,5 @@
-import { createClient } from "jsr:@supabase/supabase-js@2";
-
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { withSupabase } from "jsr:@supabase/server@^1";
 
 function b64url(bytes: Uint8Array) {
   let bin = "";
@@ -54,68 +50,51 @@ async function googleAccessToken(sa: { client_email: string; private_key: string
   return json.access_token as string;
 }
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
-  try {
-    const payload = await req.json();
-    const email = String(payload.to_email ?? "").trim().toLowerCase();
-    const title = String(payload.title ?? "PawMatch").slice(0, 80);
-    const text = String(payload.body ?? "").slice(0, 180);
-    if (!email.includes("@") || !text) {
-      return new Response(JSON.stringify({ ok: false }), {
-        status: 400,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
-    }
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
-    const { data, error } = await supabase.from("pm_devices").select("token").eq("email", email);
-    if (error) throw error;
-    const raw = Deno.env.get("FIREBASE_SERVICE_ACCOUNT");
-    if (!raw) {
-      return new Response(JSON.stringify({ ok: false, error: "missing firebase" }), {
-        status: 500,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
-    }
-    const sa = JSON.parse(raw);
-    const access = await googleAccessToken(sa);
-    let sent = 0;
-    for (const row of data ?? []) {
-      const token = String(row.token ?? "");
-      if (!token) continue;
-      const res = await fetch(`https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${access}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: {
-            token,
-            notification: { title, body: text },
-            apns: { payload: { aps: { sound: "default" } } },
+export default {
+  fetch: withSupabase({ auth: ["publishable", "secret"] }, async (req, ctx) => {
+    try {
+      const payload = await req.json();
+      const email = String(payload.to_email ?? "").trim().toLowerCase();
+      const title = String(payload.title ?? "PawMatch").slice(0, 80);
+      const text = String(payload.body ?? "").slice(0, 180);
+      if (!email.includes("@") || !text) {
+        return Response.json({ ok: false }, { status: 400 });
+      }
+      const { data, error } = await ctx.supabaseAdmin.from("pm_devices").select("token").eq("email", email);
+      if (error) throw error;
+      const raw = Deno.env.get("FIREBASE_SERVICE_ACCOUNT");
+      if (!raw) return Response.json({ ok: false, error: "missing firebase" }, { status: 500 });
+      const sa = JSON.parse(raw);
+      const access = await googleAccessToken(sa);
+      let sent = 0;
+      for (const row of data ?? []) {
+        const token = String(row.token ?? "");
+        if (!token) continue;
+        const res = await fetch(`https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${access}`,
+            "Content-Type": "application/json",
           },
-        }),
-      });
-      if (res.ok) {
-        sent++;
-      } else {
-        const errText = await res.text();
-        if (errText.includes("UNREGISTERED") || errText.includes("NOT_FOUND")) {
-          await supabase.from("pm_devices").delete().eq("token", token);
+          body: JSON.stringify({
+            message: {
+              token,
+              notification: { title, body: text },
+              apns: { payload: { aps: { sound: "default" } } },
+            },
+          }),
+        });
+        if (res.ok) sent++;
+        else {
+          const errText = await res.text();
+          if (errText.includes("UNREGISTERED") || errText.includes("NOT_FOUND")) {
+            await ctx.supabaseAdmin.from("pm_devices").delete().eq("token", token);
+          }
         }
       }
+      return Response.json({ ok: true, sent });
+    } catch (e) {
+      return Response.json({ ok: false, error: String(e) }, { status: 500 });
     }
-    return new Response(JSON.stringify({ ok: true, sent }), {
-      headers: { ...cors, "Content-Type": "application/json" },
-    });
-  } catch (e) {
-    return new Response(JSON.stringify({ ok: false, error: String(e) }), {
-      status: 500,
-      headers: { ...cors, "Content-Type": "application/json" },
-    });
-  }
-});
+  }),
+};
