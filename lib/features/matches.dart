@@ -8,6 +8,13 @@ const _coral = Color(0xFFE25C3A);
 const _cream = Color(0xFFFFF4EC);
 const _ink = Color(0xFF14202B);
 
+String _preview(MatchThread m) {
+  if (m.messages.isEmpty) return m.dog.breed.isEmpty ? 'Tryck för att skriva' : m.dog.breed;
+  final last = m.messages.last;
+  if (last.recalled) return 'Meddelandet togs bort';
+  return last.fromMe ? 'Du: ${last.text}' : last.text;
+}
+
 class MatchesPage extends StatelessWidget {
   const MatchesPage({super.key, required this.state});
   final AppState state;
@@ -37,7 +44,6 @@ class MatchesPage extends StatelessWidget {
                   trailing: Wrap(
                     spacing: 4,
                     children: [
-                      const Badge(label: Text('1')),
                       TextButton(onPressed: () => state.declineIncoming(m), child: const Text('Nej')),
                       FilledButton(onPressed: () => state.acceptIncoming(m), child: const Text('Godkänn')),
                     ],
@@ -58,30 +64,59 @@ class MatchesPage extends StatelessWidget {
             const SizedBox(height: 16),
           ],
           const Text('Aktiva chattar', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: _ink)),
+          const SizedBox(height: 6),
+          const Text('Svep åt sidan för att radera. Chatten finns kvar hos den andra.', style: TextStyle(color: Color(0xFF3D4A57), fontSize: 13)),
           const SizedBox(height: 8),
           if (open.isEmpty) const Text('Inga godkända matcher än.', style: TextStyle(color: Color(0xFF3D4A57))),
           for (final m in open)
-            Card(
-              color: Colors.white,
-              child: ListTile(
-                leading: Badge(
-                  isLabelVisible: m.unread > 0,
-                  label: Text('${m.unread}'),
-                  child: const CircleAvatar(backgroundColor: _coral, child: Icon(Icons.pets, color: Colors.white)),
+            Dismissible(
+              key: ValueKey(m.cloudMatchId.isEmpty ? m.dog.id : m.cloudMatchId),
+              direction: DismissDirection.endToStart,
+              background: Container(
+                alignment: Alignment.centerRight,
+                padding: const EdgeInsets.only(right: 20),
+                color: const Color(0xFF8B3A32),
+                child: const Icon(Icons.delete_outline, color: Colors.white),
+              ),
+              confirmDismiss: (_) => _confirmDelete(context, m.dog.name),
+              onDismissed: (_) => state.deleteThread(m),
+              child: Card(
+                color: Colors.white,
+                child: ListTile(
+                  leading: Badge(
+                    isLabelVisible: m.unread > 0,
+                    label: Text('${m.unread}'),
+                    child: const CircleAvatar(backgroundColor: _coral, child: Icon(Icons.pets, color: Colors.white)),
+                  ),
+                  title: Text(m.dog.name, style: const TextStyle(fontWeight: FontWeight.w800)),
+                  subtitle: Text(_preview(m), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    state.markRead(m);
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => ChatPage(state: state, thread: m)));
+                  },
                 ),
-                title: Text(m.dog.name, style: const TextStyle(fontWeight: FontWeight.w800)),
-                subtitle: Text(m.dog.breed),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  state.markRead(m);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => ChatPage(state: state, thread: m)));
-                },
               ),
             ),
         ],
       ),
     );
   }
+}
+
+Future<bool> _confirmDelete(BuildContext context, String name) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Radera chatten?'),
+      content: Text('Chatten med $name försvinner från din telefon. Den andra ägaren behåller den.'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Avbryt')),
+        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Radera')),
+      ],
+    ),
+  );
+  return ok == true;
 }
 
 class ChatPage extends StatefulWidget {
@@ -104,6 +139,7 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
     widget.state.refreshChat(widget.thread);
     poll = Timer.periodic(const Duration(seconds: 4), (_) async {
       await widget.state.refreshChat(widget.thread);
+      widget.state.markRead(widget.thread);
       if (mounted) setState(() {});
     });
   }
@@ -114,6 +150,24 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
     pulse.dispose();
     c.dispose();
     super.dispose();
+  }
+
+  Future<void> _recall(ChatLine m) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Dra tillbaka?'),
+        content: const Text('Meddelandet tas bort för er båda.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Avbryt')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Dra tillbaka')),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await widget.state.recall(widget.thread, m);
+      if (mounted) setState(() {});
+    }
   }
 
   @override
@@ -146,10 +200,12 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
               ),
             ),
           IconButton(
-            icon: const Icon(Icons.flag_outlined),
-            onPressed: () {
-              widget.state.block(t.dog);
-              Navigator.pop(context);
+            icon: const Icon(Icons.delete_outline),
+            onPressed: () async {
+              if (await _confirmDelete(context, t.dog.name) && context.mounted) {
+                await widget.state.deleteThread(t);
+                if (context.mounted) Navigator.pop(context);
+              }
             },
           ),
         ],
@@ -167,9 +223,7 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
               child: ListTile(
                 leading: const Icon(Icons.description, color: _coral),
                 title: Text(
-                  t.deal == null
-                      ? 'Avel — tryck Förhandla för avtal'
-                      : (t.deal!.signedByMe.isEmpty ? 'Avtal skapat — väntar på signering' : 'Avtal signerat ✓'),
+                  t.deal == null ? 'Avel — tryck Förhandla för avtal' : (t.deal!.signedByMe.isEmpty ? 'Avtal skapat — väntar på signering' : 'Avtal signerat'),
                   style: const TextStyle(fontWeight: FontWeight.w800, color: _ink),
                 ),
                 trailing: const Icon(Icons.chevron_right, color: _coral),
@@ -185,16 +239,25 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
                 for (final m in t.messages)
                   Align(
                     alignment: m.fromMe ? Alignment.centerRight : Alignment.centerLeft,
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: m.fromMe ? _coral : Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Text(
-                        m.text,
-                        style: TextStyle(color: m.fromMe ? Colors.white : _ink, fontWeight: FontWeight.w600, fontSize: 15),
+                    child: GestureDetector(
+                      onLongPress: m.fromMe && !m.recalled && m.id.isNotEmpty ? () => _recall(m) : null,
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.78),
+                        decoration: BoxDecoration(
+                          color: m.recalled ? const Color(0xFFE7E1DC) : (m.fromMe ? _coral : Colors.white),
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Text(
+                          m.recalled ? 'Meddelandet togs bort' : m.text,
+                          style: TextStyle(
+                            color: m.recalled ? const Color(0xFF5C6B78) : (m.fromMe ? Colors.white : _ink),
+                            fontStyle: m.recalled ? FontStyle.italic : FontStyle.normal,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -210,6 +273,7 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
                   child: TextField(
                     controller: c,
                     enabled: t.accepted,
+                    textCapitalization: TextCapitalization.sentences,
                     decoration: InputDecoration(
                       hintText: t.accepted ? 'Skriv ett meddelande' : 'Väntar på match',
                       filled: true,
