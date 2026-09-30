@@ -5,6 +5,7 @@ import 'data/sample_dogs.dart';
 import 'models.dart';
 import 'services/location.dart';
 import 'services/network.dart';
+import 'services/fcm.dart';
 import 'services/push.dart';
 import 'services/session.dart';
 import 'v2/circle_models.dart';
@@ -120,6 +121,7 @@ class AppState extends ChangeNotifier {
     sessionReady = true;
     if (signedIn) {
       PushService.init();
+      _armPush();
       locate();
       syncCloud();
       _watchInbox();
@@ -275,7 +277,12 @@ class AppState extends ChangeNotifier {
     final prev = t.messages.map((m) => m.id).toSet();
     final pending = t.messages.where((m) => m.id.isEmpty && m.fromMe).toList();
     if (countUnread) {
-      t.unread += lines.where((m) => !m.fromMe && m.id.isNotEmpty && !prev.contains(m.id) && !m.recalled).length;
+      final fresh = lines.where((m) => !m.fromMe && m.id.isNotEmpty && !prev.contains(m.id) && !m.recalled).length;
+      if (fresh > 0 && prev.isNotEmpty) {
+        final who = t.dog.owner.trim().isEmpty ? 'Någon' : t.dog.owner.trim();
+        PushService.notifyMessage(who);
+      }
+      t.unread += fresh;
     }
     t.messages
       ..clear()
@@ -320,6 +327,7 @@ class AppState extends ChangeNotifier {
     email = e;
     signedIn = true;
     PushService.init();
+    _armPush();
     persist();
     locate();
     syncCloud();
@@ -530,6 +538,11 @@ class AppState extends ChangeNotifier {
     final peer = d.ownerEmail;
     if (!email.contains('@') || !peer.contains('@')) return;
     final mutual = await Network.like(fromEmail: email, toEmail: peer, dogId: d.id);
+    await Network.ping(
+      peer,
+      mutual ? 'Ny match' : 'Någon gillar din hund',
+      mutual ? 'Ni matchade. Öppna chatten i PawMatch.' : '$fullName vill matcha med ${d.name}.',
+    );
     if (!mutual) return;
     await _openCloud(thread, d, peer);
     lastNotice = '${d.owner} matchade också!';
@@ -553,7 +566,10 @@ class AppState extends ChangeNotifier {
     incoming.remove(t);
     PushService.notifyMatch(t.dog.name);
     if (t.peerEmail.contains('@')) {
-      Network.like(fromEmail: email, toEmail: t.peerEmail, dogId: t.dog.id).then((_) => _openCloud(t, t.dog, t.peerEmail));
+      Network.like(fromEmail: email, toEmail: t.peerEmail, dogId: t.dog.id).then((_) async {
+        await Network.ping(t.peerEmail, 'Ny match', '$fullName godkände matchningen.');
+        await _openCloud(t, t.dog, t.peerEmail);
+      });
     }
     notifyListeners();
   }
@@ -585,7 +601,19 @@ class AppState extends ChangeNotifier {
     }
     if (t.cloudMatchId.isEmpty) return;
     await Network.sendMessage(t.cloudMatchId, email, body);
+    if (t.peerEmail.contains('@')) {
+      final who = fullName.trim().isEmpty ? 'Någon' : fullName.trim();
+      await Network.ping(t.peerEmail, 'Nytt meddelande', '$who: $body');
+    }
     await refreshChat(t);
+  }
+
+  void _armPush() {
+    if (!email.contains('@')) return;
+    Fcm.onToken = (token) {
+      Network.saveDevice(email, token);
+    };
+    Fcm.flush();
   }
 
   void block(DogProfile d) {
