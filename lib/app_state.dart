@@ -45,6 +45,7 @@ class AppState extends ChangeNotifier {
   List<DogProfile> liveDogs = [];
   List<DogProfile> deck = List.of(sampleDogs);
   final List<MatchThread> matches = [];
+  final List<GroupChat> groups = [];
   final List<MatchThread> incoming = [];
   final List<DogProfile> saved = [];
   final Set<String> blocked = {};
@@ -104,7 +105,7 @@ class AppState extends ChangeNotifier {
     return '';
   }
 
-  int get chatBadge => incoming.length + matches.where((m) => m.unread > 0).length;
+  int get chatBadge => incoming.length + matches.where((m) => m.unread > 0).length + groups.where((g) => g.unread > 0).length;
 
   List<MatchThread> get deals => matches.where((m) => m.deal != null).toList();
 
@@ -149,6 +150,7 @@ class AppState extends ChangeNotifier {
     applyFilters();
     await pullInbox();
     await pullChats();
+    await pullGroups();
     notifyListeners();
   }
 
@@ -157,9 +159,11 @@ class AppState extends ChangeNotifier {
     _inbox = Timer.periodic(const Duration(seconds: 6), (_) async {
       await pullInbox();
       await pullChats();
+      await pullGroups();
     });
     pullInbox();
     pullChats();
+    pullGroups();
   }
 
   Map<String, dynamic> _dogJson(DogProfile d, String peer) => {
@@ -606,6 +610,150 @@ class AppState extends ChangeNotifier {
       await Network.ping(t.peerEmail, 'Nytt meddelande', '$who: $body');
     }
     await refreshChat(t);
+  }
+
+  Future<void> pullGroups() async {
+    if (!email.contains('@')) return;
+    final rows = await Network.myGroups(email);
+    if (rows == null) return;
+    final me = email.toLowerCase();
+    final keep = <String>{};
+    for (final r in rows) {
+      final id = '${r['id']}';
+      keep.add(id);
+      final members = <GroupMember>[
+        for (final m in List.from(r['members'] ?? const []))
+          if ('${m['email'] ?? ''}'.contains('@'))
+            GroupMember(
+              '${m['email']}'.toLowerCase(),
+              () {
+                final raw = m['display_name'];
+                final text = raw == null ? '' : '$raw'.trim();
+                return text.isEmpty ? '${m['email']}' : text;
+              }(),
+            ),
+      ];
+      GroupChat? group;
+      for (final g in groups) {
+        if (g.id == id) {
+          group = g;
+          break;
+        }
+      }
+      if (group == null) {
+        group = GroupChat(
+          id: id,
+          name: '${r['name'] ?? 'Grupp'}',
+          ownerEmail: '${r['owner_email']}'.toLowerCase(),
+          members: members,
+        );
+        groups.insert(0, group);
+      } else {
+        group.name = '${r['name'] ?? group.name}';
+        group.members
+          ..clear()
+          ..addAll(members);
+      }
+      if (!members.any((m) => m.email == me)) continue;
+      await refreshGroup(group, countUnread: true);
+    }
+    groups.removeWhere((g) => !keep.contains(g.id) || !g.members.any((m) => m.email == me));
+    notifyListeners();
+  }
+
+  Future<void> refreshGroup(GroupChat g, {bool countUnread = false}) async {
+    final names = {for (final m in g.members) m.email: m.name};
+    final lines = await Network.groupMessages(g.id, email, names);
+    if (lines == null) return;
+    final prev = g.messages.map((m) => m.id).toSet();
+    final pending = g.messages.where((m) => m.id.isEmpty && m.fromMe).toList();
+    if (countUnread) {
+      final fresh = lines.where((m) => !m.fromMe && m.id.isNotEmpty && !prev.contains(m.id) && !m.recalled).length;
+      if (fresh > 0 && prev.isNotEmpty) {
+        g.unread += fresh;
+        PushService.notifyMessage(g.name);
+      }
+    }
+    g.messages
+      ..clear()
+      ..addAll(lines);
+    for (final p in pending) {
+      if (!lines.any((m) => m.fromMe && m.text == p.text)) g.messages.add(p);
+    }
+    notifyListeners();
+  }
+
+  void markGroupRead(GroupChat g) {
+    g.unread = 0;
+    notifyListeners();
+  }
+
+  List<GroupMember> get chatPartners {
+    final seen = <String>{};
+    final out = <GroupMember>[];
+    for (final m in matches) {
+      if (!m.accepted || !m.peerEmail.contains('@')) continue;
+      final mail = m.peerEmail.toLowerCase();
+      if (!seen.add(mail)) continue;
+      final owner = m.dog.owner.trim();
+      final name = owner.isNotEmpty && !owner.contains('@')
+          ? owner
+          : (m.dog.name.trim().isEmpty ? mail : m.dog.name.trim());
+      out.add(GroupMember(mail, name));
+    }
+    return out;
+  }
+
+  Future<bool> createGroup(String name, List<GroupMember> people) async {
+    if (!isPremium || !email.contains('@')) return false;
+    final title = name.trim();
+    if (title.isEmpty || people.length < 2) return false;
+    final id = await Network.createGroup(name: title, ownerEmail: email, ownerName: fullName, members: people);
+    if (id == null) return false;
+    for (final person in people) {
+      await Network.ping(person.email, title, '$fullName bjöd in dig till gruppen.');
+    }
+    await pullGroups();
+    return true;
+  }
+
+  Future<void> sendGroup(GroupChat g, String text) async {
+    final body = text.trim();
+    if (body.isEmpty) return;
+    if (!g.members.any((m) => m.email == email.toLowerCase())) return;
+    g.messages.add(ChatLine(true, body, senderName: fullName));
+    notifyListeners();
+    await Network.sendGroupMessage(g.id, email, body);
+    final who = fullName.trim().isEmpty ? 'Någon' : fullName.trim();
+    for (final m in g.members) {
+      if (m.email == email.toLowerCase()) continue;
+      await Network.ping(m.email, g.name, '$who: $body');
+    }
+    await refreshGroup(g);
+  }
+
+  Future<void> addGroupMember(GroupChat g, GroupMember member) async {
+    if (g.ownerEmail != email.toLowerCase()) return;
+    if (g.members.any((m) => m.email == member.email.toLowerCase())) return;
+    await Network.addGroupMember(g.id, member);
+    await Network.sendGroupMessage(g.id, email, '${member.name} lades till i gruppen.');
+    await Network.ping(member.email, g.name, '$fullName bjöd in dig till gruppen.');
+    await pullGroups();
+  }
+
+  Future<void> removeGroupMember(GroupChat g, GroupMember member) async {
+    if (g.ownerEmail != email.toLowerCase()) return;
+    if (member.email == g.ownerEmail) return;
+    await Network.removeGroupMember(g.id, member.email);
+    await Network.sendGroupMessage(g.id, email, '${member.name} togs bort från gruppen.');
+    await pullGroups();
+  }
+
+  Future<void> deleteGroup(GroupChat g) async {
+    if (g.ownerEmail != email.toLowerCase()) return;
+    groups.remove(g);
+    notifyListeners();
+    await Network.deleteGroup(g.id);
   }
 
   void _armPush() {
