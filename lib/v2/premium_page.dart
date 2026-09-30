@@ -13,27 +13,16 @@ class _PremiumPageState extends State<PremiumPage> {
   String note = '';
   bool busy = false;
 
-  @override
-  void initState() {
-    super.initState();
-    Store.boot((ok) {
-      if (ok && widget.state != null) widget.state!.startLaunchOffer();
-      if (mounted) setState(() {});
-    });
-  }
-
   Future<void> _go() async {
     final s = widget.state;
-    if (s == null) return;
+    if (s == null || busy) return;
     setState(() {
       busy = true;
       note = '';
     });
     final storeOk = await Store.buy();
     if (!storeOk) {
-      note = 'Apple hittar inte prenumerationen än. Kontrollera att Product ID är pawmatch_premium_month, att Paid Apps-avtalet är signerat och att status inte är Missing Metadata. Ingen betalning har gjorts.';
-    } else {
-      note = 'Köpet skickades till Apple.';
+      note = 'Apple hittar inte prenumerationen än. Kontrollera att Product ID är pawmatch_premium_month. Ingen betalning har gjorts.';
     }
     if (mounted) setState(() => busy = false);
   }
@@ -74,10 +63,10 @@ class _PremiumPageState extends State<PremiumPage> {
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: const Color(0xFFE25C3A), minimumSize: const Size.fromHeight(54)),
               onPressed: busy || s == null || active ? null : _go,
-              child: Text(active ? 'Premium är aktivt via Apple' : (busy ? 'Kontaktar Apple…' : 'Starta 6 månader gratis')),
+              child: Text(active ? 'Premium är aktivt via Apple' : (busy ? 'Öppnar Apple…' : 'Starta 6 månader gratis')),
             ),
             TextButton(
-              onPressed: () => Store.restore(),
+              onPressed: busy ? null : () => Store.restore(),
               child: const Text('Återställ köp', style: TextStyle(color: Colors.white54)),
             ),
             if (note.isNotEmpty) Text(note, style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.35)),
