@@ -309,6 +309,20 @@ class Network {
     }
   }
 
+  static String _lastPushNote = '';
+
+  static Future<void> notePush(String email, String note) async {
+    final c = _c;
+    final text = note.trim();
+    if (c == null || !email.contains('@') || text.isEmpty || text == _lastPushNote) return;
+    _lastPushNote = text;
+    try {
+      await c.from('pm_push_log').insert({'email': email.toLowerCase(), 'note': text.length > 280 ? text.substring(0, 280) : text});
+    } catch (e) {
+      debugPrint('notePush $e');
+    }
+  }
+
   static Future<void> ping(String toEmail, String title, String body) async {
     final c = _c;
     final to = toEmail.trim().toLowerCase();
