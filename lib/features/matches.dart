@@ -20,6 +20,86 @@ String _groupPreview(GroupChat g) {
   return '$who: ${last.text}';
 }
 
+String _clock(DateTime? t) {
+  if (t == null) return '';
+  final l = t.toLocal();
+  return '${l.hour.toString().padLeft(2, '0')}:${l.minute.toString().padLeft(2, '0')}';
+}
+
+String _personName(MatchThread t) {
+  final o = t.dog.owner.trim();
+  if (o.isNotEmpty && !o.contains('@') && o.toLowerCase() != 'ägare') return o;
+  if (t.dog.name.trim().isNotEmpty && t.dog.name != 'Hund' && t.dog.name != 'Match') return t.dog.name;
+  return 'Hundägaren';
+}
+
+class TalkBubble extends StatelessWidget {
+  const TalkBubble({super.key, required this.line, required this.otherName, this.onRecall});
+  final ChatLine line;
+  final String otherName;
+  final VoidCallback? onRecall;
+
+  @override
+  Widget build(BuildContext context) {
+    final m = line;
+    if (m.system) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Column(
+          children: [
+            Text(m.text, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF5C6B78), fontWeight: FontWeight.w600, fontSize: 13)),
+            if (_clock(m.createdAt).isNotEmpty) Text(_clock(m.createdAt), style: const TextStyle(color: Color(0xFF8A939C), fontSize: 11)),
+          ],
+        ),
+      );
+    }
+    final time = _clock(m.createdAt);
+    final status = !m.fromMe ? '' : (m.id.isEmpty ? 'Skickar…' : (m.seen ? 'Läst' : 'Levererat'));
+    final meta = [time, status].where((s) => s.isNotEmpty).join(' · ');
+    final name = m.fromMe ? 'Jag' : (m.senderName.trim().isNotEmpty ? m.senderName.trim() : otherName);
+    return Align(
+      alignment: m.fromMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: GestureDetector(
+        onLongPress: onRecall,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.78),
+          child: Column(
+            crossAxisAlignment: m.fromMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 3, left: 6, right: 6),
+                child: Text(name, style: const TextStyle(color: Color(0xFF8A939C), fontSize: 12, fontWeight: FontWeight.w700)),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: m.recalled ? const Color(0xFFE7E1DC) : (m.fromMe ? _coral : Colors.white),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Text(
+                  m.recalled ? 'Meddelandet togs bort' : m.text,
+                  style: TextStyle(
+                    color: m.recalled ? const Color(0xFF5C6B78) : (m.fromMe ? Colors.white : _ink),
+                    fontStyle: m.recalled ? FontStyle.italic : FontStyle.normal,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+              if (meta.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 3, left: 6, right: 6),
+                  child: Text(meta, style: const TextStyle(color: Color(0xFF8A939C), fontSize: 11, fontWeight: FontWeight.w600)),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 String _preview(MatchThread m) {
   if (m.messages.isEmpty) return m.dog.breed.isEmpty ? 'Tryck för att skriva' : m.dog.breed;
   final last = m.messages.last;
@@ -182,9 +262,9 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
   void initState() {
     super.initState();
     widget.state.markRead(widget.thread);
-    widget.state.refreshChat(widget.thread);
-    poll = Timer.periodic(const Duration(seconds: 4), (_) async {
-      await widget.state.refreshChat(widget.thread);
+    widget.state.refreshChat(widget.thread, markSeen: true);
+    poll = Timer.periodic(const Duration(seconds: 1), (_) async {
+      await widget.state.refreshChat(widget.thread, markSeen: true);
       widget.state.markRead(widget.thread);
       if (mounted) setState(() {});
     });
@@ -280,32 +360,14 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
             ),
           Expanded(
             child: ListView(
+              reverse: true,
               padding: const EdgeInsets.all(16),
               children: [
-                for (final m in t.messages)
-                  Align(
-                    alignment: m.fromMe ? Alignment.centerRight : Alignment.centerLeft,
-                    child: GestureDetector(
-                      onLongPress: m.fromMe && !m.recalled && m.id.isNotEmpty ? () => _recall(m) : null,
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.78),
-                        decoration: BoxDecoration(
-                          color: m.recalled ? const Color(0xFFE7E1DC) : (m.fromMe ? _coral : Colors.white),
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: Text(
-                          m.recalled ? 'Meddelandet togs bort' : m.text,
-                          style: TextStyle(
-                            color: m.recalled ? const Color(0xFF5C6B78) : (m.fromMe ? Colors.white : _ink),
-                            fontStyle: m.recalled ? FontStyle.italic : FontStyle.normal,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ),
-                    ),
+                for (final m in t.messages.reversed)
+                  TalkBubble(
+                    line: m,
+                    otherName: _personName(t),
+                    onRecall: m.fromMe && !m.recalled && m.id.isNotEmpty && !m.system ? () => _recall(m) : null,
                   ),
               ],
             ),
@@ -470,7 +532,7 @@ class _GroupChatPageState extends State<GroupChatPage> {
     super.initState();
     widget.state.markGroupRead(g);
     widget.state.refreshGroup(g);
-    poll = Timer.periodic(const Duration(seconds: 4), (_) async {
+    poll = Timer.periodic(const Duration(seconds: 1), (_) async {
       await widget.state.refreshGroup(g);
       widget.state.markGroupRead(g);
       if (mounted) setState(() {});
@@ -508,30 +570,11 @@ class _GroupChatPageState extends State<GroupChatPage> {
         children: [
           Expanded(
             child: ListView(
-              controller: scroll,
+              reverse: true,
               padding: const EdgeInsets.all(16),
               children: [
-                for (final m in group.messages)
-                  Align(
-                    alignment: m.fromMe ? Alignment.centerRight : Alignment.centerLeft,
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.78),
-                      decoration: BoxDecoration(
-                        color: m.fromMe ? _coral : Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (!m.fromMe && m.senderName.isNotEmpty)
-                            Text(m.senderName, style: const TextStyle(color: _coral, fontWeight: FontWeight.w800, fontSize: 12)),
-                          Text(m.text, style: TextStyle(color: m.fromMe ? Colors.white : _ink, fontWeight: FontWeight.w600, fontSize: 15)),
-                        ],
-                      ),
-                    ),
-                  ),
+                for (final m in group.messages.reversed)
+                  TalkBubble(line: m, otherName: m.senderName.isEmpty ? 'Hundägaren' : m.senderName),
               ],
             ),
           ),
