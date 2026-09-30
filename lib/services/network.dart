@@ -273,6 +273,36 @@ class Network {
     }
   }
 
+  static Future<void> saveDevice(String email, String token) async {
+    final c = _c;
+    if (c == null || !email.contains('@') || token.isEmpty) return;
+    try {
+      await c.from('pm_devices').upsert({
+        'token': token,
+        'email': email.toLowerCase(),
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('saveDevice $e');
+    }
+  }
+
+  static Future<void> ping(String toEmail, String title, String body) async {
+    final c = _c;
+    final to = toEmail.trim().toLowerCase();
+    final text = body.trim();
+    if (c == null || !to.contains('@') || text.isEmpty) return;
+    try {
+      await c.functions.invoke('notify', body: {
+        'to_email': to,
+        'title': title,
+        'body': text.length > 140 ? '${text.substring(0, 137)}...' : text,
+      });
+    } catch (e) {
+      debugPrint('ping $e');
+    }
+  }
+
   static Future<void> hideMatch(String matchId, String email) async {
     final c = _c;
     if (c == null || matchId.isEmpty) return;
