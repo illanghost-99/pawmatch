@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'data/sample_dogs.dart';
 import 'models.dart';
 import 'services/location.dart';
@@ -58,6 +59,10 @@ class AppState extends ChangeNotifier {
   final Set<String> _seenLikes = {};
 
   static const freeSwipesPerDay = 12;
+
+  bool darkMode = false;
+  bool discoverable = true;
+  bool notifyOn = true;
 
   bool get isPremium => premiumUntil != null && premiumUntil!.isAfter(DateTime.now());
 
@@ -122,6 +127,7 @@ class AppState extends ChangeNotifier {
     idConsent = s['idConsent'] == 'true';
     signedIn = s['signedIn'] == 'true' && email.contains('@');
     sessionReady = true;
+    await _loadPrefs();
     if (signedIn) {
       await refreshBan();
       if (banNote.isEmpty) {
@@ -133,6 +139,35 @@ class AppState extends ChangeNotifier {
       }
     }
     notifyListeners();
+  }
+
+  Future<void> _loadPrefs() async {
+    final p = await SharedPreferences.getInstance();
+    darkMode = p.getBool('darkMode') ?? false;
+    discoverable = p.getBool('discoverable') ?? true;
+    notifyOn = p.getBool('notifyOn') ?? true;
+  }
+
+  Future<void> setDarkMode(bool on) async {
+    darkMode = on;
+    notifyListeners();
+    final p = await SharedPreferences.getInstance();
+    await p.setBool('darkMode', on);
+  }
+
+  Future<void> setDiscoverable(bool on) async {
+    discoverable = on;
+    notifyListeners();
+    final p = await SharedPreferences.getInstance();
+    await p.setBool('discoverable', on);
+    await Network.setVisible(email, on);
+  }
+
+  Future<void> setNotify(bool on) async {
+    notifyOn = on;
+    notifyListeners();
+    final p = await SharedPreferences.getInstance();
+    await p.setBool('notifyOn', on);
   }
 
   Future<void> persist() async {
@@ -293,7 +328,7 @@ class AppState extends ChangeNotifier {
       incoming.insert(0, MatchThread(dog, [], accepted: false, outgoing: false, peerEmail: from));
       changed = true;
       if (_seenLikes.add(from)) {
-        PushService.notifyMatch(dog.name);
+        if (notifyOn) PushService.notifyMatch(dog.name);
         lastNotice = '${dog.owner} vill matcha med dig';
       }
     }
@@ -311,7 +346,7 @@ class AppState extends ChangeNotifier {
       final fresh = lines.where((m) => !m.fromMe && m.id.isNotEmpty && !prev.contains(m.id) && !m.recalled).length;
       if (fresh > 0 && prev.isNotEmpty) {
         final who = t.dog.owner.trim().isEmpty ? 'Någon' : t.dog.owner.trim();
-        PushService.notifyMessage(who);
+        if (notifyOn) PushService.notifyMessage(who);
       }
       t.unread += fresh;
     }
@@ -426,7 +461,7 @@ class AppState extends ChangeNotifier {
 
   void addMyDog(MyDog d) {
     myDogs.add(d);
-    PushService.notifyLive(d.name);
+    if (notifyOn) PushService.notifyLive(d.name);
     Network.upsertDog(email: email, owner: fullName, dog: d, lat: lat, lng: lng);
     applyFilters();
   }
@@ -577,7 +612,7 @@ class AppState extends ChangeNotifier {
     if (!mutual) return;
     await _openCloud(thread, d, peer);
     lastNotice = '${d.owner} matchade också!';
-    PushService.notifyMatch(d.name);
+    if (notifyOn) PushService.notifyMatch(d.name);
     notifyListeners();
   }
 
@@ -597,7 +632,7 @@ class AppState extends ChangeNotifier {
     if (!matches.any((m) => m.dog.id == t.dog.id && m.accepted)) {
       matches.insert(0, t);
     }
-    PushService.notifyMatch(t.dog.name);
+    if (notifyOn) PushService.notifyMatch(t.dog.name);
     notifyListeners();
     if (!peer.contains('@')) return;
     Network.forgetLike(fromEmail: peer, toEmail: email);
@@ -712,7 +747,7 @@ class AppState extends ChangeNotifier {
       final fresh = lines.where((m) => !m.fromMe && m.id.isNotEmpty && !prev.contains(m.id) && !m.recalled).length;
       if (fresh > 0 && prev.isNotEmpty) {
         g.unread += fresh;
-        PushService.notifyMessage(g.name);
+        if (notifyOn) PushService.notifyMessage(g.name);
       }
     }
     g.messages
