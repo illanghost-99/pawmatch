@@ -57,11 +57,39 @@ class ForYouPage extends StatelessWidget {
                 child: Text('Inga registrerade hundar här ännu.', textAlign: TextAlign.center, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               ),
             )
-          : ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-              itemCount: items.length,
-              itemBuilder: (_, n) => _DogCard(dog: items[n], state: state),
-            ),
+          : _WarmList(items: items, state: state),
+    );
+  }
+}
+
+class _WarmList extends StatefulWidget {
+  const _WarmList({required this.items, required this.state});
+  final List<DogProfile> items;
+  final AppState state;
+
+  @override
+  State<_WarmList> createState() => _WarmListState();
+}
+
+class _WarmListState extends State<_WarmList> {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final width = (MediaQuery.sizeOf(context).width * MediaQuery.devicePixelRatioOf(context)).round();
+    for (final dog in widget.items.take(6)) {
+      final url = dog.photoUrl;
+      if (!url.startsWith('http')) continue;
+      precacheImage(ResizeImage(NetworkImage(url), width: width), context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+      cacheExtent: 900,
+      itemCount: widget.items.length,
+      itemBuilder: (_, n) => RepaintBoundary(child: _DogCard(dog: widget.items[n], state: widget.state)),
     );
   }
 }
@@ -81,7 +109,8 @@ class _DogCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(28),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 6))],
+          border: Border.all(color: const Color(0xFFE7A08C), width: 1.6),
+          boxShadow: [BoxShadow(color: const Color(0xFFE25C3A).withValues(alpha: 0.16), blurRadius: 18, offset: const Offset(0, 8))],
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -90,9 +119,7 @@ class _DogCard extends StatelessWidget {
             SizedBox(
               height: 280,
               width: double.infinity,
-              child: dog.photoUrl.isNotEmpty
-                  ? Image.network(dog.photoUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _fallback())
-                  : _fallback(),
+              child: dog.photoUrl.isNotEmpty ? _photo(context, dog.photoUrl) : _fallback(),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
@@ -144,6 +171,25 @@ class _DogCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _photo(BuildContext context, String url) {
+    final width = (MediaQuery.sizeOf(context).width * MediaQuery.devicePixelRatioOf(context)).round();
+    return Image.network(
+      url,
+      fit: BoxFit.cover,
+      gaplessPlayback: true,
+      filterQuality: FilterQuality.low,
+      cacheWidth: width,
+      frameBuilder: (context, child, frame, sync) {
+        if (sync) return child;
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 180),
+          child: frame == null ? const ColoredBox(color: Color(0xFFF6E7DF), child: SizedBox.expand()) : child,
+        );
+      },
+      errorBuilder: (_, __, ___) => _fallback(),
     );
   }
 

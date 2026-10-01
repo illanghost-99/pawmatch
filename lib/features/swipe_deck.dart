@@ -144,7 +144,14 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
         fit: StackFit.expand,
         children: [
           if (d.photoUrl.isNotEmpty)
-            Image.network(d.photoUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _fallback())
+            Image.network(
+              d.photoUrl,
+              fit: BoxFit.cover,
+              gaplessPlayback: true,
+              filterQuality: FilterQuality.low,
+              cacheWidth: (MediaQuery.sizeOf(context).width * MediaQuery.devicePixelRatioOf(context)).round(),
+              errorBuilder: (_, __, ___) => _fallback(),
+            )
           else
             _fallback(),
           const DecoratedBox(
