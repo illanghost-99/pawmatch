@@ -246,10 +246,18 @@ class AppState extends ChangeNotifier {
       };
 
   DogProfile _dogFromMatch(Map<String, dynamic> r, String peer) {
+    final json = Map<String, dynamic>.from(r['dog_json'] ?? {});
+    final storedId = '${json['id'] ?? ''}';
+    final storedName = '${json['name'] ?? ''}'.toLowerCase();
+    for (final d in liveDogs) {
+      if (storedId.isNotEmpty && d.id == storedId) return d;
+    }
+    for (final d in liveDogs) {
+      if (d.ownerEmail.toLowerCase() == peer && storedName.isNotEmpty && d.name.toLowerCase() == storedName) return d;
+    }
     for (final d in liveDogs) {
       if (d.ownerEmail.toLowerCase() == peer) return d;
     }
-    final json = Map<String, dynamic>.from(r['dog_json'] ?? {});
     final me = email.toLowerCase();
     final ownerEmail = (json['owner_email'] as String? ?? '').toLowerCase();
     final mine = ownerEmail == me;
@@ -303,7 +311,7 @@ class AppState extends ChangeNotifier {
       incoming.removeWhere((m) => m.peerEmail.toLowerCase() == peer);
       await refreshChat(thread, countUnread: true);
     }
-    notifyListeners();
+    applyFilters();
   }
 
   Future<void> pullInbox() async {
@@ -490,8 +498,15 @@ class AppState extends ChangeNotifier {
   }
 
   bool _keptMatch(DogProfile d) {
+    final owner = d.ownerEmail.toLowerCase();
+    final name = d.name.toLowerCase();
     for (final m in matches) {
-      if (!m.accepted || !_sameDog(m.dog, d)) continue;
+      if (!m.accepted) continue;
+      final same = _sameDog(m.dog, d) ||
+          (owner.isNotEmpty &&
+              m.peerEmail.toLowerCase() == owner &&
+              (m.dog.id == d.id || m.dog.name.toLowerCase() == name || liveDogs.where((x) => x.ownerEmail.toLowerCase() == owner).length <= 1));
+      if (!same) continue;
       var latest = m.createdAt;
       for (final line in m.messages) {
         final at = line.createdAt;

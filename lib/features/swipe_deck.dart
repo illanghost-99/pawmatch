@@ -4,7 +4,6 @@ import '../app_state.dart';
 import '../models.dart';
 import '../widgets/verified_mark.dart';
 import 'dog_detail.dart';
-import 'owner_page.dart';
 
 const _gold = Color(0xFFC9A24A);
 
@@ -132,43 +131,6 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
     );
   }
 
-  Widget _ownerChip(DogProfile d) {
-    final name = d.owner.trim().isEmpty ? 'Hundägare' : d.owner.trim();
-    final photo = d.ownerPhoto;
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(99),
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OwnerPage(state: widget.state, dog: d))),
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(4, 4, 10, 4),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(99),
-              border: Border.all(color: Colors.white, width: 1.4),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircleAvatar(
-                  radius: 14,
-                  backgroundColor: Colors.white24,
-                  backgroundImage: photo.startsWith('http') ? NetworkImage(photo) : null,
-                  child: photo.startsWith('http') ? null : Text(name[0].toUpperCase(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12)),
-                ),
-                const SizedBox(width: 8),
-                Flexible(child: Text(name, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
-                const Icon(Icons.chevron_right, color: Colors.white, size: 18),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _chip(String t) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(99)),
@@ -207,8 +169,6 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
                     VerifiedMark(owner: d.ownerVerified, dog: d.dogVerified),
                   ],
                 ),
-                const SizedBox(height: 8),
-                _ownerChip(d),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 6,

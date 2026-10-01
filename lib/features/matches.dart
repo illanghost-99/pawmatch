@@ -7,6 +7,7 @@ import '../services/network.dart';
 import '../v2/premium_page.dart';
 import '../widgets/verified_mark.dart';
 import 'deal.dart';
+import 'owner_page.dart';
 
 const _coral = Color(0xFFE25C3A);
 const _cream = Color(0xFFFFF4EC);
@@ -422,7 +423,32 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.white,
-        title: Text(t.dog.name, style: const TextStyle(fontWeight: FontWeight.w800)),
+        title: GestureDetector(
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OwnerPage(state: widget.state, dog: t.dog))),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 190),
+            padding: const EdgeInsets.fromLTRB(4, 4, 8, 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF4EC),
+              borderRadius: BorderRadius.circular(99),
+              border: Border.all(color: const Color(0xFFE7C7B4)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircleAvatar(
+                  radius: 14,
+                  backgroundColor: const Color(0xFFFFE0D4),
+                  backgroundImage: t.dog.photoUrl.startsWith('http') ? NetworkImage(t.dog.photoUrl) : null,
+                  child: t.dog.photoUrl.startsWith('http') ? null : Text((t.dog.name.isEmpty ? '?' : t.dog.name[0]).toUpperCase(), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12, color: _ink)),
+                ),
+                const SizedBox(width: 8),
+                Flexible(child: Text(t.dog.name, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, color: _ink))),
+                const Icon(Icons.chevron_right, size: 18, color: _ink),
+              ],
+            ),
+          ),
+        ),
         actions: [
           if (breedChat)
             Padding(
