@@ -70,15 +70,8 @@ class Fcm {
 
   static Future<String?> _token(FirebaseMessaging m) async {
     try {
-      for (var i = 0; i < 6; i++) {
-        final apns = await m.getAPNSToken();
-        if (apns != null && apns.isNotEmpty) break;
-        await Future<void>.delayed(const Duration(seconds: 1));
-      }
-    } catch (e) {
-      debugPrint('APNs wait: $e');
-    }
-    try {
+      final apns = await m.getAPNSToken();
+      if (apns == null || apns.isEmpty) return null;
       return await m.getToken();
     } catch (e) {
       debugPrint('FCM token: $e');

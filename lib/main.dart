@@ -30,13 +30,7 @@ Future<void> main() async {
     }
   }
 
-  try {
-    await PushService.init().timeout(const Duration(seconds: 3));
-  } catch (e) {
-    debugPrint('Push startades inte: $e');
-  }
-
-  await Fcm.start();
-
   runApp(const PawMatchApp());
+  PushService.init();
+  Fcm.start();
 }
