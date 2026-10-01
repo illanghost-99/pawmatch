@@ -69,11 +69,16 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
     );
-    if (ok == true && code.text.trim() == Network.adminCode) {
-      await Network.grantAdmin(state.email);
-      if (!mounted) return;
-      setState(() => admin = true);
-      Navigator.push(context, MaterialPageRoute(builder: (_) => AdminPage(state: state)));
+    if (ok == true) {
+      final typed = code.text.trim();
+      final master = typed == Network.adminCode;
+      final invited = !master && await Network.redeemInvite(typed, state.email);
+      if (master || invited) {
+        if (master) await Network.grantAdmin(state.email);
+        if (!mounted) return;
+        setState(() => admin = true);
+        Navigator.push(context, MaterialPageRoute(builder: (_) => AdminPage(state: state)));
+      }
     }
     code.dispose();
   }
