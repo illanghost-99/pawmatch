@@ -30,7 +30,7 @@ class _AppShellState extends State<AppShell> {
       body: pages[i],
       bottomNavigationBar: NavigationBar(
         selectedIndex: i,
-        backgroundColor: const Color(0xFFFFF4EC),
+        backgroundColor: s.darkMode ? const Color(0xFF1C1410) : const Color(0xFFFFF4EC),
         indicatorColor: const Color(0xFFFFD8C8),
         onDestinationSelected: (v) => setState(() => i = v),
         destinations: [
