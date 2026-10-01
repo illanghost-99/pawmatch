@@ -9,6 +9,7 @@ import 'edit_profile.dart';
 import 'hubs.dart';
 import 'my_dogs.dart';
 import 'report.dart';
+import 'settings.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key, required this.state});
@@ -30,6 +31,17 @@ class _ProfilePageState extends State<ProfilePage> {
     Network.isAdmin(state.email).then((v) {
       if (mounted) setState(() => admin = v);
     });
+    state.addListener(_tick);
+  }
+
+  void _tick() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    state.removeListener(_tick);
+    super.dispose();
   }
 
   Future<void> _secret() async {
@@ -75,9 +87,20 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     final photo = state.photoUrl;
+    final dark = state.darkMode;
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF4EC),
-      appBar: AppBar(title: const Text('Profil', style: TextStyle(fontWeight: FontWeight.w800)), backgroundColor: Colors.transparent),
+      backgroundColor: dark ? const Color(0xFF1C1410) : const Color(0xFFFFF4EC),
+      appBar: AppBar(
+        title: const Text('Profil', style: TextStyle(fontWeight: FontWeight.w800)),
+        backgroundColor: Colors.transparent,
+        actions: [
+          IconButton(
+            tooltip: 'Inställningar',
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SettingsPage(state: state))),
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
@@ -95,10 +118,10 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: Row(
                   children: [
                     CircleAvatar(
-                      radius: 28,
+                      radius: 46,
                       backgroundColor: Colors.white,
                       backgroundImage: _photo(photo),
-                      child: photo.isEmpty ? const Icon(Icons.pets, color: Color(0xFFE25C3A)) : null,
+                      child: photo.isEmpty ? const Icon(Icons.pets, color: Color(0xFFE25C3A), size: 36) : null,
                     ),
                     const SizedBox(width: 14),
                     Expanded(
