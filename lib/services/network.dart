@@ -36,6 +36,66 @@ class Network {
     }
   }
 
+  static Future<String?> uploadOwnerPhoto(String email, String path) async {
+    if (path.startsWith('http')) return path;
+    final c = _c;
+    if (c == null || path.isEmpty || !email.contains('@')) return null;
+    try {
+      final file = File(path);
+      if (!file.existsSync()) return null;
+      final bytes = await file.readAsBytes();
+      final id = email.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_');
+      final name = 'owners/$id.jpg';
+      await c.storage.from('dog-photos').uploadBinary(
+            name,
+            bytes,
+            fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: true),
+          );
+      return c.storage.from('dog-photos').getPublicUrl(name);
+    } catch (e) {
+      debugPrint('uploadOwnerPhoto $e');
+      return null;
+    }
+  }
+
+  static Future<void> saveOwner({
+    required String email,
+    required String first,
+    required String last,
+    required String bio,
+    required String city,
+    required String photo,
+  }) async {
+    final c = _c;
+    if (c == null || !email.contains('@')) return;
+    try {
+      await c.from('pm_profiles').upsert({
+        'email': email.toLowerCase(),
+        'first_name': first,
+        'last_name': last,
+        'bio': bio,
+        'city': city,
+        'photo_url': photo.startsWith('http') ? photo : '',
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('saveOwner $e');
+    }
+  }
+
+  static Future<Map<String, dynamic>?> ownerProfile(String email) async {
+    final c = _c;
+    if (c == null || !email.contains('@')) return null;
+    try {
+      final row = await c.from('pm_profiles').select().eq('email', email.toLowerCase()).maybeSingle();
+      if (row == null) return null;
+      return Map<String, dynamic>.from(row);
+    } catch (e) {
+      debugPrint('ownerProfile $e');
+      return null;
+    }
+  }
+
   static Future<List<String>> publicPhotos(List<String> photos) async {
     final out = <String>[];
     for (final p in photos) {

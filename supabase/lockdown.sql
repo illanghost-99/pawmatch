@@ -223,6 +223,26 @@ create policy pm_admin_invites_read on public.pm_admin_invites for select to aut
 create policy pm_admin_invites_insert on public.pm_admin_invites for insert to authenticated
   with check (public.pm_is_admin());
 
+create table if not exists public.pm_profiles (
+  email text primary key,
+  first_name text default '',
+  last_name text default '',
+  bio text default '',
+  city text default '',
+  photo_url text default '',
+  updated_at timestamptz default now()
+);
+
+alter table public.pm_profiles enable row level security;
+drop policy if exists pm_profiles_all on public.pm_profiles;
+drop policy if exists pm_profiles_read on public.pm_profiles;
+drop policy if exists pm_profiles_write on public.pm_profiles;
+create policy pm_profiles_read on public.pm_profiles for select to authenticated
+  using (true);
+create policy pm_profiles_write on public.pm_profiles for all to authenticated
+  using (lower(email) = public.pm_me() or public.pm_is_admin())
+  with check (lower(email) = public.pm_me() or public.pm_is_admin());
+
 alter table public.pm_devices enable row level security;
 drop policy if exists pm_devices_all on public.pm_devices;
 drop policy if exists pm_devices_own on public.pm_devices;

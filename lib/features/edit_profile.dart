@@ -17,6 +17,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late final bio = TextEditingController(text: widget.state.ownerBio);
   late final city = TextEditingController(text: widget.state.locationLabel);
   late String photo = widget.state.photoUrl;
+  bool saving = false;
 
   @override
   void dispose() {
@@ -81,17 +82,20 @@ class _EditProfilePageState extends State<EditProfilePage> {
           TextField(controller: bio, maxLines: 4, decoration: _d('Bio — vem är du och hur är era hundar?')),
           const SizedBox(height: 20),
           FilledButton(
-            onPressed: () {
-              widget.state.saveProfile(
-                first: first.text.trim(),
-                last: last.text.trim(),
-                bio: bio.text.trim(),
-                city: city.text.trim(),
-                photo: photo,
-              );
-              Navigator.pop(context);
-            },
-            child: const Text('Spara profil'),
+            onPressed: saving
+                ? null
+                : () async {
+                    setState(() => saving = true);
+                    await widget.state.saveProfile(
+                      first: first.text.trim(),
+                      last: last.text.trim(),
+                      bio: bio.text.trim(),
+                      city: city.text.trim(),
+                      photo: photo,
+                    );
+                    if (mounted) Navigator.pop(context);
+                  },
+            child: Text(saving ? 'Sparar...' : 'Spara profil'),
           ),
         ],
       ),

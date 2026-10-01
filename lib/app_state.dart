@@ -145,6 +145,7 @@ class AppState extends ChangeNotifier {
   Future<void> _loadPrefs() async {
     final p = await SharedPreferences.getInstance();
     darkMode = p.getBool('darkMode') ?? false;
+    photoUrl = p.getString('photoUrl') ?? photoUrl;
     discoverable = p.getBool('discoverable') ?? true;
     notifyOn = p.getBool('notifyOn') ?? true;
   }
@@ -198,6 +199,13 @@ class AppState extends ChangeNotifier {
       return;
     }
     liveDogs = await Network.liveDogs(email);
+    final remote = await Network.ownerProfile(email);
+    final remotePhoto = '${remote?['photo_url'] ?? ''}';
+    if (remotePhoto.startsWith('http')) {
+      photoUrl = remotePhoto;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('photoUrl', photoUrl);
+    }
     for (final d in myDogs) {
       await Network.upsertDog(email: email, owner: fullName, dog: d, lat: lat, lng: lng);
     }
@@ -423,20 +431,28 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void saveProfile({
+  Future<void> saveProfile({
     required String first,
     required String last,
     required String bio,
     required String city,
     required String photo,
-  }) {
+  }) async {
     firstName = first;
     lastName = last;
     ownerBio = bio;
     locationLabel = city.isEmpty ? locationLabel : city;
-    photoUrl = photo;
+    var url = photo;
+    if (url.isNotEmpty && !url.startsWith('http')) {
+      final uploaded = await Network.uploadOwnerPhoto(email, url);
+      if (uploaded != null) url = uploaded;
+    }
+    photoUrl = url;
     displayName = fullName;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('photoUrl', photoUrl);
     persist();
+    await Network.saveOwner(email: email, first: firstName, last: lastName, bio: ownerBio, city: locationLabel, photo: photoUrl);
     notifyListeners();
   }
 
