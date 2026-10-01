@@ -118,6 +118,24 @@ String _preview(MatchThread m) {
   return last.fromMe ? 'Du: ${last.text}' : last.text;
 }
 
+DateTime _lastActivity(MatchThread m) {
+  var latest = m.createdAt;
+  for (final line in m.messages) {
+    final at = line.createdAt;
+    if (at != null && at.isAfter(latest)) latest = at;
+  }
+  return latest;
+}
+
+DateTime _groupActivity(GroupChat g) {
+  var latest = DateTime.fromMillisecondsSinceEpoch(0);
+  for (final line in g.messages) {
+    final at = line.createdAt;
+    if (at != null && at.isAfter(latest)) latest = at;
+  }
+  return latest;
+}
+
 class MatchesPage extends StatelessWidget {
   const MatchesPage({super.key, required this.state});
   final AppState state;
@@ -158,6 +176,8 @@ class _Inbox extends StatelessWidget {
       for (final m in state.matches.where((m) => m.accepted))
         if (m.peerEmail.isEmpty || seen.add(m.peerEmail.toLowerCase())) m,
     ];
+    open.sort((a, b) => _lastActivity(b).compareTo(_lastActivity(a)));
+    final groups = [...state.groups]..sort((a, b) => _groupActivity(b).compareTo(_groupActivity(a)));
     final items = <Widget>[
       if (state.incoming.isNotEmpty) ...[
         const Text('Vill matcha med dig', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: _ink)),
@@ -190,10 +210,10 @@ class _Inbox extends StatelessWidget {
           ),
         const SizedBox(height: 16),
       ],
-      if (state.groups.isNotEmpty) ...[
+      if (groups.isNotEmpty) ...[
         const Text('Grupper', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: _ink)),
         const SizedBox(height: 8),
-        for (final g in state.groups)
+        for (final g in groups)
           Card(
             color: Theme.of(context).cardColor,
             margin: const EdgeInsets.only(bottom: 8),

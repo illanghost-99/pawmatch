@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'firebase_options.dart';
 
 @pragma('vm:entry-point')
 Future<void> pawmatchBg(RemoteMessage message) async {}
@@ -13,7 +14,9 @@ class Fcm {
   static Future<void> start() async {
     if (kIsWeb) return;
     try {
-      if (Firebase.apps.isEmpty) await Firebase.initializeApp();
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp(options: DefaultFirebaseOptions.ios);
+      }
       FirebaseMessaging.onBackgroundMessage(pawmatchBg);
       final m = FirebaseMessaging.instance;
       await m.requestPermission(alert: true, badge: true, sound: true);
@@ -35,7 +38,9 @@ class Fcm {
   static Future<void> keepAlive() async {
     if (kIsWeb) return;
     try {
-      if (Firebase.apps.isEmpty) await Firebase.initializeApp();
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp(options: DefaultFirebaseOptions.ios);
+      }
       final m = FirebaseMessaging.instance;
       final settings = await m.getNotificationSettings();
       if (settings.authorizationStatus == AuthorizationStatus.notDetermined) {
