@@ -43,11 +43,10 @@ class DiscoverPage extends StatelessWidget {
       body: Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
         child: deck.isEmpty
-            ? const Center(child: Text('Inga fler kort. Ändra filter eller titta under Sparade.'))
+            ? const Center(child: Text('Inga registrerade hundar här ännu.', textAlign: TextAlign.center))
             : Column(
                 children: [
                   Text('${deck.length} hundar · ${state.locationLabel}', style: const TextStyle(color: _navy)),
-                  const Text('Svep höger för like, vänster för nej', style: TextStyle(fontSize: 12, color: Colors.black54)),
                   const SizedBox(height: 8),
                   Expanded(child: SwipeDeck(state: state)),
                   const SizedBox(height: 16),

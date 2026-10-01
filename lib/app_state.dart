@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'data/sample_dogs.dart';
 import 'models.dart';
 import 'services/location.dart';
 import 'services/network.dart';
@@ -45,7 +44,7 @@ class AppState extends ChangeNotifier {
   String intentFilter = 'all';
   String feedSort = 'forYou';
   List<DogProfile> liveDogs = [];
-  List<DogProfile> deck = List.of(sampleDogs);
+  List<DogProfile> deck = [];
   final List<MatchThread> matches = [];
   final List<GroupChat> groups = [];
   final List<MatchThread> incoming = [];
@@ -118,7 +117,10 @@ class AppState extends ChangeNotifier {
 
   List<MatchThread> get deals => matches.where((m) => m.deal != null).toList();
 
-  List<DogProfile> get _pool => liveDogs.isEmpty ? sampleDogs : [...liveDogs, ...sampleDogs];
+  List<DogProfile> get _pool => [
+        for (final d in liveDogs)
+          if (d.ownerEmail.contains('@')) d,
+      ];
 
   Future<void> restore() async {
     final s = await Session.read();

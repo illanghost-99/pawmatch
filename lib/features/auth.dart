@@ -157,19 +157,23 @@ class _AuthScreenState extends State<AuthScreen> {
                     TextField(controller: email, keyboardType: TextInputType.emailAddress, decoration: _field('E-post')),
                     const SizedBox(height: 10),
                     TextField(controller: pass, obscureText: true, decoration: _field('Lösenord')),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(child: _mode('Logga in', !create)),
-                        const SizedBox(width: 8),
-                        Expanded(child: _mode('Skapa konto', create)),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 22),
                     _PressBtn(
                       color: _coral,
                       label: busy ? 'Väntar...' : (create ? 'Skapa konto' : 'Logga in'),
                       onTap: busy ? null : _go,
+                    ),
+                    TextButton(
+                      onPressed: busy
+                          ? null
+                          : () => setState(() {
+                                create = !create;
+                                notice = '';
+                              }),
+                      child: Text(
+                        create ? 'Har redan konto? Logga in' : 'Ny här? Skapa konto',
+                        style: const TextStyle(color: _coral, fontWeight: FontWeight.w800),
+                      ),
                     ),
                     if (notice.isNotEmpty) ...[
                       const SizedBox(height: 12),
@@ -203,13 +207,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         onTap: busy ? null : _face,
                       ),
                     ],
-                    TextButton(
-                      onPressed: () => setState(() => create = !create),
-                      child: Text(
-                        create ? 'Har redan konto? Logga in' : 'Ny här? Skapa konto',
-                        style: const TextStyle(color: _coral, fontWeight: FontWeight.w800),
-                      ),
-                    ),
+                    const SizedBox(height: 8),
                     const Text(
                       'Genom att fortsätta godkänner du villkor och integritetspolicy.',
                       textAlign: TextAlign.center,
@@ -221,27 +219,6 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _mode(String label, bool on) {
-    return GestureDetector(
-      onTap: busy
-          ? null
-          : () => setState(() {
-                create = label == 'Skapa konto';
-                notice = '';
-              }),
-      child: Container(
-        height: 44,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: on ? _ink : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: on ? _ink : const Color(0xFFE2C4B3)),
-        ),
-        child: Text(label, style: TextStyle(fontWeight: FontWeight.w800, color: on ? Colors.white : _ink)),
       ),
     );
   }

@@ -51,7 +51,12 @@ class ForYouPage extends StatelessWidget {
         ],
       ),
       body: items.isEmpty
-          ? const Center(child: Text('Inga hundar matchar dina intressen ännu.'))
+          ? const Center(
+              child: Padding(
+                padding: EdgeInsets.all(28),
+                child: Text('Inga registrerade hundar här ännu.', textAlign: TextAlign.center, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              ),
+            )
           : ListView.builder(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
               itemCount: items.length,
@@ -72,33 +77,25 @@ class _DogCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => DogDetailPage(state: state, dog: dog))),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 20),
-        height: 460,
+        margin: const EdgeInsets.only(bottom: 18),
         decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(28),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.16), blurRadius: 18, offset: const Offset(0, 8))],
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 6))],
         ),
         clipBehavior: Clip.antiAlias,
-        child: Stack(
-          fit: StackFit.expand,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (dog.photoUrl.isNotEmpty)
-              Image.network(dog.photoUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _fallback())
-            else
-              _fallback(),
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Colors.transparent, Color(0xCC1A0B08)],
-                ),
-              ),
+            SizedBox(
+              height: 280,
+              width: double.infinity,
+              child: dog.photoUrl.isNotEmpty
+                  ? Image.network(dog.photoUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _fallback())
+                  : _fallback(),
             ),
-            Positioned(
-              left: 18,
-              right: 18,
-              bottom: 16,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -110,44 +107,33 @@ class _DogCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Flexible(child: Text('${dog.name}, ${dog.age}', style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800))),
+                      Flexible(child: Text('${dog.name}, ${dog.age}', style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800))),
                       VerifiedMark(owner: dog.ownerVerified, dog: dog.dogVerified),
                     ],
                   ),
-                  Text('${dog.breed} · ${dog.city} · ${state.kmTo(dog).round()} km', style: const TextStyle(color: Colors.white70, fontSize: 14)),
-                  Text(state.matchReason(dog), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
-                  const SizedBox(height: 6),
-                  Text(dog.bio, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, height: 1.3)),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 2),
+                  Text('${dog.breed} · ${dog.city} · ${state.kmTo(dog).round()} km', style: const TextStyle(color: Color(0xFF3D4A57))),
+                  Text(state.matchReason(dog), style: const TextStyle(fontWeight: FontWeight.w700)),
+                  if (dog.bio.trim().isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(dog.bio, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(height: 1.3)),
+                  ],
                   const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
-                        child: SizedBox(
-                          height: 48,
-                          child: OutlinedButton(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              side: const BorderSide(color: Colors.white70),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            ),
-                            onPressed: () => state.swipe(dog, like: false),
-                            child: const Text('Hoppa över'),
-                          ),
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                          onPressed: () => state.swipe(dog, like: false),
+                          child: const Text('Hoppa över'),
                         ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: SizedBox(
-                          height: 48,
-                          child: FilledButton(
-                            style: FilledButton.styleFrom(
-                              backgroundColor: _rose,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            ),
-                            onPressed: () => state.swipe(dog, like: true),
-                            child: const Text('Matcha'),
-                          ),
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(backgroundColor: _rose, minimumSize: const Size.fromHeight(48), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                          onPressed: () => state.swipe(dog, like: true),
+                          child: const Text('Matcha'),
                         ),
                       ),
                     ],
