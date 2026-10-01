@@ -1,5 +1,4 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { withSupabase } from "jsr:@supabase/server@^1";
+import { withSupabase } from "npm:@supabase/server@1";
 
 function b64url(bytes: Uint8Array) {
   let bin = "";
@@ -91,6 +90,10 @@ export default {
         if (res.ok) sent++;
         else {
           const errText = await res.text();
+          await ctx.supabaseAdmin.from("pm_push_log").insert({
+            email,
+            note: errText.slice(0, 280),
+          });
           if (errText.includes("UNREGISTERED") || errText.includes("NOT_FOUND")) {
             await ctx.supabaseAdmin.from("pm_devices").delete().eq("token", token);
           }
