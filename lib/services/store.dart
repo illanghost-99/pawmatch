@@ -63,5 +63,25 @@ class Store {
     }
   }
 
-  static Future<void> restore() => iap.restorePurchases();
+  static Future<String> restore() async {
+    try {
+      final ok = await iap.isAvailable();
+      if (!ok) return 'App Store svarar inte just nu. Försök igen om en stund.';
+      var hit = false;
+      final sub = iap.purchaseStream.listen((buys) {
+        for (final p in buys) {
+          if (p.status == PurchaseStatus.restored || p.status == PurchaseStatus.purchased) hit = true;
+          if (p.pendingCompletePurchase) iap.completePurchase(p);
+        }
+      });
+      await iap.restorePurchases();
+      await Future<void>.delayed(const Duration(seconds: 2));
+      await sub.cancel();
+      if (hit) return 'Köpet är återställt. Premium gäller på den här telefonen.';
+      return 'Inget köp hittades. När appen är publicerad kan du återställa här om du bytt telefon. Abonnemanget sägs upp i App Store, inte i PawMatch.';
+    } catch (e) {
+      debugPrint('restore $e');
+      return 'Kunde inte nå App Store. Försök igen.';
+    }
+  }
 }
