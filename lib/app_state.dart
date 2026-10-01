@@ -48,6 +48,7 @@ class AppState extends ChangeNotifier {
   final List<MatchThread> matches = [];
   final List<GroupChat> groups = [];
   final List<MatchThread> incoming = [];
+  final Set<String> handledPeers = {};
   final List<DogProfile> saved = [];
   final Set<String> blocked = {};
   final Map<String, DateTime> hiddenUntil = {};
@@ -230,16 +231,17 @@ class AppState extends ChangeNotifier {
     final me = email.toLowerCase();
     for (final r in rows) {
       final id = '${r['id']}';
-      final hidden = <String>[
-        for (final h in List.from(r['hidden_by'] ?? const [])) h.toString().toLowerCase(),
-      ];
-      if (hidden.contains(me)) {
-        matches.removeWhere((m) => m.cloudMatchId == id);
-        continue;
-      }
       final a = (r['user_a'] as String? ?? '').toLowerCase();
       final b = (r['user_b'] as String? ?? '').toLowerCase();
       final peer = a == me ? b : a;
+      final hidden = <String>[
+        for (final h in List.from(r['hidden_by'] ?? const [])) h.toString().toLowerCase(),
+      ];
+      if (hidden.contains(me) && !handledPeers.contains(peer)) {
+        matches.removeWhere((m) => m.cloudMatchId == id);
+        continue;
+      }
+      if (hidden.contains(me)) Network.unhideMatch(id, email);
       MatchThread? thread;
       for (final m in matches) {
         if (m.cloudMatchId == id || (peer.isNotEmpty && m.peerEmail.toLowerCase() == peer)) {
@@ -265,6 +267,7 @@ class AppState extends ChangeNotifier {
     final froms = await Network.likersOf(email);
     var changed = false;
     for (final from in froms) {
+      if (handledPeers.contains(from)) continue;
       if (matches.any((m) => m.accepted && m.peerEmail.toLowerCase() == from)) continue;
       if (incoming.any((m) => m.peerEmail.toLowerCase() == from)) continue;
       DogProfile? dog;
@@ -586,26 +589,40 @@ class AppState extends ChangeNotifier {
   }
 
   void acceptIncoming(MatchThread t) {
+    final peer = t.peerEmail.toLowerCase();
     t.accepted = true;
     t.unread = 0;
+    if (peer.isNotEmpty) handledPeers.add(peer);
+    incoming.removeWhere((m) => m.peerEmail.toLowerCase() == peer);
     if (!matches.any((m) => m.dog.id == t.dog.id && m.accepted)) {
       matches.insert(0, t);
     }
-    incoming.remove(t);
     PushService.notifyMatch(t.dog.name);
-    if (t.peerEmail.contains('@')) {
-      Network.like(fromEmail: email, toEmail: t.peerEmail, dogId: t.dog.id).then((_) async {
-        await Network.ping(t.peerEmail, 'Ny match', '$fullName godkände matchningen.');
-        await _openCloud(t, t.dog, t.peerEmail);
-      });
-    }
     notifyListeners();
+    if (!peer.contains('@')) return;
+    Network.forgetLike(fromEmail: peer, toEmail: email);
+    Network.like(fromEmail: email, toEmail: peer, dogId: t.dog.id).then((_) async {
+      await Network.ping(peer, 'Ny match', '$fullName godkände matchningen.');
+      final id = await Network.ensureMatch(a: email, b: peer, dogJson: _dogJson(t.dog, peer));
+      if (id == null || id.isEmpty) return;
+      await Network.unhideMatch(id, email);
+      t.cloudMatchId = id;
+      t.accepted = true;
+      final existing = await Network.messages(id, email);
+      if (existing != null && existing.isEmpty) {
+        await Network.sendMessage(id, email, 'Ni matchade — nu kan ni chatta.');
+      }
+      await refreshChat(t);
+    });
   }
 
   void declineIncoming(MatchThread t) {
-    incoming.remove(t);
+    final peer = t.peerEmail.toLowerCase();
+    if (peer.isNotEmpty) handledPeers.add(peer);
+    incoming.removeWhere((m) => m.peerEmail.toLowerCase() == peer);
     hiddenUntil[t.dog.id] = DateTime.now().add(const Duration(days: 7));
     notifyListeners();
+    if (peer.contains('@')) Network.forgetLike(fromEmail: peer, toEmail: email);
   }
 
   void saveDog(DogProfile d) {
