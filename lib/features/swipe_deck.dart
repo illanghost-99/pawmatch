@@ -180,6 +180,7 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
                     _chip(d.city),
                     _chip('$km km'),
                     _chip(d.intent == 'puppies' ? 'Avel' : 'Vän'),
+                    _chip(widget.state.matchReason(d)),
                   ],
                 ),
                 const SizedBox(height: 8),
