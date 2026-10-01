@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../app_state.dart';
 import '../services/store.dart';
 
@@ -48,6 +49,28 @@ class _PremiumPageState extends State<PremiumPage> with TickerProviderStateMixin
       note = 'Apple hittar inte prenumerationen än. Ingen betalning har gjorts.';
     }
     if (mounted) setState(() => busy = false);
+  }
+
+  Future<void> _restore() async {
+    if (busy) return;
+    setState(() {
+      busy = true;
+      note = 'Söker tidigare köp hos Apple…';
+    });
+    final text = await Store.restore();
+    if (!mounted) return;
+    setState(() {
+      busy = false;
+      note = text;
+    });
+  }
+
+  Future<void> _manage() async {
+    final uri = Uri.parse('https://apps.apple.com/account/subscriptions');
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      setState(() => note = 'Öppna Inställningar på iPhone, tryck på ditt namn och sedan Prenumerationer.');
+    }
   }
 
   @override
@@ -136,28 +159,14 @@ class _PremiumPageState extends State<PremiumPage> with TickerProviderStateMixin
               opacity: CurvedAnimation(parent: intro, curve: const Interval(0.75, 1, curve: Curves.easeOut)),
               child: Column(
                 children: [
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [Color(0xFFE8C77A), _gold, Color(0xFFB68B3E)]),
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: const [BoxShadow(color: Color(0x44C6A15A), blurRadius: 16, offset: Offset(0, 8))],
-                    ),
-                    child: FilledButton(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                        foregroundColor: _ink,
-                        minimumSize: const Size.fromHeight(56),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                        textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
-                      ),
-                      onPressed: busy || s == null || active ? null : _go,
-                      child: Text(active ? 'Premium är aktivt' : (busy ? 'Öppnar Apple…' : 'Starta 6 månader gratis')),
-                    ),
+                  _SubscribeButton(active: active, busy: busy, onTap: busy || s == null || active ? null : _go),
+                  TextButton(
+                    onPressed: busy ? null : _restore,
+                    child: const Text('Återställ köp', style: TextStyle(color: _goldDeep, fontWeight: FontWeight.w700)),
                   ),
                   TextButton(
-                    onPressed: busy ? null : () => Store.restore(),
-                    child: const Text('Återställ köp', style: TextStyle(color: _goldDeep, fontWeight: FontWeight.w700)),
+                    onPressed: _manage,
+                    child: const Text('Hantera i App Store', style: TextStyle(color: _goldDeep, fontWeight: FontWeight.w700)),
                   ),
                   const Text(
                     'Ingen betalning nu. Gratisperioden syns i Apples köpruta innan du bekräftar.',
@@ -214,6 +223,63 @@ class _Perk extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(child: Text(label, style: const TextStyle(color: _ink, fontWeight: FontWeight.w800, fontSize: 16))),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SubscribeButton extends StatefulWidget {
+  const _SubscribeButton({required this.active, required this.busy, required this.onTap});
+  final bool active;
+  final bool busy;
+  final VoidCallback? onTap;
+
+  @override
+  State<_SubscribeButton> createState() => _SubscribeButtonState();
+}
+
+class _SubscribeButtonState extends State<_SubscribeButton> with SingleTickerProviderStateMixin {
+  late final AnimationController pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final live = !widget.active && !widget.busy;
+    return ScaleTransition(
+      scale: Tween(begin: live ? 0.98 : 1.0, end: 1.0).animate(pulse),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: widget.active ? const [Color(0xFFE8C77A), _gold] : const [Color(0xFF2B2116), Color(0xFF3E2C12)]),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [BoxShadow(color: const Color(0x66C6A15A), blurRadius: live ? 18 : 8, offset: const Offset(0, 8))],
+        ),
+        child: SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: TextButton(
+            onPressed: widget.onTap,
+            child: widget.active
+                ? const Text('PawMatch Premium är aktivt', style: TextStyle(color: Color(0xFF2B2116), fontWeight: FontWeight.w800, fontSize: 16))
+                : AnimatedBuilder(
+                    animation: pulse,
+                    builder: (context, _) {
+                      return Text(
+                        widget.busy ? 'Öppnar Apple…' : 'Abonnera på PawMatch Premium',
+                        style: TextStyle(
+                          color: Color.lerp(const Color(0xFFF6E2A8), const Color(0xFFFFF6D8), pulse.value),
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                        ),
+                      );
+                    },
+                  ),
           ),
         ),
       ),
