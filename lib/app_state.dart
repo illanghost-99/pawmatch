@@ -63,6 +63,7 @@ class AppState extends ChangeNotifier {
 
   bool darkMode = false;
   bool discoverable = true;
+  final Set<String> _readMessageIds = {};
   bool notifyOn = true;
 
   bool get isPremium => premiumUntil != null && premiumUntil!.isAfter(DateTime.now());
@@ -148,6 +149,7 @@ class AppState extends ChangeNotifier {
     photoUrl = p.getString('photoUrl') ?? photoUrl;
     discoverable = p.getBool('discoverable') ?? true;
     notifyOn = p.getBool('notifyOn') ?? true;
+    _readMessageIds.addAll(p.getStringList('readMessages') ?? const []);
   }
 
   Future<void> setDarkMode(bool on) async {
@@ -360,12 +362,20 @@ class AppState extends ChangeNotifier {
     final prev = t.messages.map((m) => m.id).toSet();
     final pending = t.messages.where((m) => m.id.isEmpty && m.fromMe).toList();
     if (countUnread) {
-      final fresh = lines.where((m) => !m.fromMe && m.id.isNotEmpty && !prev.contains(m.id) && !m.recalled).length;
-      if (fresh > 0 && prev.isNotEmpty) {
-        final who = t.dog.owner.trim().isEmpty ? 'Någon' : t.dog.owner.trim();
-        if (notifyOn) PushService.notifyMessage(who);
+      final unseen = lines.where((m) => !m.fromMe && m.id.isNotEmpty && !m.recalled && !m.seen && !_readMessageIds.contains(m.id)).length;
+      if (prev.isEmpty) {
+        t.unread = unseen;
+      } else {
+        final fresh = lines.where((m) => !m.fromMe && m.id.isNotEmpty && !prev.contains(m.id) && !m.recalled && !m.seen && !_readMessageIds.contains(m.id)).length;
+        if (fresh > 0) {
+          t.unread += fresh;
+          final who = t.dog.owner.trim().isEmpty ? 'Någon' : t.dog.owner.trim();
+          if (notifyOn) PushService.notifyMessage(who);
+        }
       }
-      t.unread += fresh;
+    } else if (markSeen) {
+      t.unread = 0;
+      _rememberRead(lines.map((m) => m.id));
     }
     t.messages
       ..clear()
@@ -549,7 +559,24 @@ class AppState extends ChangeNotifier {
 
   void markRead(MatchThread t) {
     t.unread = 0;
+    _rememberRead(t.messages.map((m) => m.id));
     notifyListeners();
+  }
+
+  void _rememberRead(Iterable<String> ids) {
+    var changed = false;
+    for (final id in ids) {
+      if (id.isEmpty) continue;
+      if (_readMessageIds.add(id)) changed = true;
+    }
+    if (!changed) return;
+    if (_readMessageIds.length > 4000) {
+      final keep = _readMessageIds.toList().sublist(_readMessageIds.length - 4000);
+      _readMessageIds
+        ..clear()
+        ..addAll(keep);
+    }
+    SharedPreferences.getInstance().then((p) => p.setStringList('readMessages', _readMessageIds.toList()));
   }
 
   bool wantsBreeding(DogProfile d) => d.intent == 'puppies' || d.availableForBreeding;
