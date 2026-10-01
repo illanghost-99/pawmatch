@@ -216,14 +216,10 @@ class _ProfilePageState extends State<ProfilePage> {
               minimumSize: const Size.fromHeight(50),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
-            onPressed: () {
-              state.onboarded = false;
-              state.matches.clear();
-              state.interests.clear();
-              state.myDogs.clear();
-              state.signOut();
+            onPressed: () async {
+              await state.eraseAccount();
             },
-            child: const Text('Radera konto på enheten'),
+            child: const Text('Radera konto'),
           ),
           const SizedBox(height: 16),
           GestureDetector(

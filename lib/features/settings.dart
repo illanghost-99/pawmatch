@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../app_state.dart';
-import '../services/network.dart';
 import '../services/store.dart';
 
 const _cream = Color(0xFFFFF4EC);
@@ -115,8 +114,7 @@ class SettingsPage extends StatelessWidget {
                   ),
                 );
                 if (ok != true) return;
-                await Network.deleteOwn(state.email);
-                state.signOut();
+                await state.eraseAccount();
               },
             ),
           ),

@@ -481,8 +481,37 @@ class AppState extends ChangeNotifier {
   }
 
   void signOut() {
+    _inbox?.cancel();
     signedIn = false;
     persist();
+    Network.signOut();
+    notifyListeners();
+  }
+
+  Future<void> eraseAccount() async {
+    final who = email;
+    _inbox?.cancel();
+    if (who.contains('@')) await Network.deleteOwn(who);
+    email = '';
+    firstName = '';
+    lastName = '';
+    ownerBio = '';
+    photoUrl = '';
+    signedIn = false;
+    onboarded = false;
+    idConsent = false;
+    myDogs.clear();
+    matches.clear();
+    incoming.clear();
+    groups.clear();
+    saved.clear();
+    interests.clear();
+    handledPeers.clear();
+    _readMessageIds.clear();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('photoUrl');
+    await prefs.remove('readMessages');
+    await persist();
     notifyListeners();
   }
 

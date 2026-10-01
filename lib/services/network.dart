@@ -977,6 +977,14 @@ class Network {
     }
   }
 
+  static Future<void> signOut() async {
+    try {
+      await Supabase.instance.client.auth.signOut();
+    } catch (e) {
+      debugPrint('signOut $e');
+    }
+  }
+
   static Future<void> deleteOwn(String email) async {
     final c = _c;
     final who = email.trim().toLowerCase();
@@ -986,6 +994,7 @@ class Network {
       await c.from('pm_likes').delete().eq('from_email', who);
       await c.from('pm_likes').delete().eq('to_email', who);
       await c.from('pm_devices').delete().eq('email', who);
+      await c.from('pm_profiles').delete().eq('email', who);
       await c.from('pm_matches').delete().or('user_a.eq.$who,user_b.eq.$who');
     } catch (e) {
       debugPrint('deleteOwn $e');
