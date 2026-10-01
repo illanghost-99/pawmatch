@@ -30,17 +30,32 @@ class _AdminPageState extends State<AdminPage> {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SegmentedButton<int>(
-              segments: const [
-                ButtonSegment(value: 0, label: Text('Rapporter')),
-                ButtonSegment(value: 1, label: Text('Hundar')),
-              ],
-              selected: {tab},
-              onSelectionChanged: (v) => setState(() => tab = v.first),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final item in const [(0, 'Rapporter'), (1, 'Hundar'), (2, 'Konton'), (3, 'Team')])
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(item.$2),
+                        selected: tab == item.$1,
+                        onSelected: (_) => setState(() => tab = item.$1),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 8),
-          Expanded(child: tab == 0 ? _Reports(state: widget.state) : _Dogs(state: widget.state)),
+          Expanded(
+            child: switch (tab) {
+              1 => _Dogs(state: widget.state),
+              2 => _Accounts(state: widget.state),
+              3 => _Team(email: widget.state.email),
+              _ => _Reports(state: widget.state),
+            },
+          ),
         ],
       ),
     );
@@ -501,5 +516,196 @@ class _CasePageState extends State<CasePage> {
     );
   }
 }
+
+class _Accounts extends StatefulWidget {
+  const _Accounts({required this.state});
+  final AppState state;
+  @override
+  State<_Accounts> createState() => _AccountsState();
+}
+
+class _AccountsState extends State<_Accounts> {
+  final q = TextEditingController();
+  List<Map<String, dynamic>> rows = [];
+  bool loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final list = await Network.accounts();
+    if (!mounted) return;
+    setState(() {
+      rows = list;
+      loading = false;
+    });
+  }
+
+  List<Map<String, dynamic>> get shown {
+    final text = q.text.trim().toLowerCase();
+    if (text.isEmpty) return rows;
+    return rows.where((r) => '${r['name']} ${r['email']}'.toLowerCase().contains(text)).toList();
+  }
+
+  Future<void> _act(Map<String, dynamic> row, String mode) async {
+    final name = '${row['name']}';
+    final word = switch (mode) {
+      'on' => 'aktivera',
+      'off' => 'avaktivera',
+      'closed' => 'stänga',
+      _ => 'radera',
+    };
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('${word[0].toUpperCase()}${word.substring(1)} $name?'),
+        content: Text(mode == 'delete' ? 'Hundarna tas bort och kontot kan inte användas.' : 'Personen ser ändringen nästa gång appen öppnas.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Avbryt')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Ja')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await Network.setAccount('${row['email']}', mode);
+    await _load();
+  }
+
+  @override
+  void dispose() {
+    q.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) return const Center(child: CircularProgressIndicator(color: _coral));
+    final list = shown;
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: TextField(
+            controller: q,
+            onChanged: (_) => setState(() {}),
+            decoration: const InputDecoration(hintText: 'Sök namn eller e-post', filled: true, fillColor: Colors.white),
+          ),
+        ),
+        Expanded(
+          child: list.isEmpty
+              ? const Center(child: Text('Inga konton hittades.'))
+              : ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  itemCount: list.length,
+                  itemBuilder: (_, i) {
+                    final r = list[i];
+                    final dogs = (r['dogs'] as List).join(', ');
+                    final status = '${r['status']}';
+                    return Card(
+                      color: Colors.white,
+                      child: ListTile(
+                        title: Text('${r['name']}', style: const TextStyle(fontWeight: FontWeight.w800)),
+                        subtitle: Text('${r['email']}${dogs.isEmpty ? '' : '\n$dogs'}'),
+                        isThreeLine: dogs.isNotEmpty,
+                        trailing: Text(status, style: TextStyle(color: status == 'Aktiv' ? const Color(0xFF1F8A4C) : _coral, fontWeight: FontWeight.w800)),
+                        onTap: () => showModalBottomSheet<void>(
+                          context: context,
+                          builder: (ctx) => SafeArea(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                ListTile(title: Text('${r['name']}', style: const TextStyle(fontWeight: FontWeight.w800)), subtitle: Text('${r['email']}')),
+                                ListTile(leading: const Icon(Icons.check_circle_outline), title: const Text('Aktivera'), onTap: () { Navigator.pop(ctx); _act(r, 'on'); }),
+                                ListTile(leading: const Icon(Icons.pause_circle_outline), title: const Text('Avaktivera'), onTap: () { Navigator.pop(ctx); _act(r, 'off'); }),
+                                ListTile(leading: const Icon(Icons.block), title: const Text('Stäng kontot'), onTap: () { Navigator.pop(ctx); _act(r, 'closed'); }),
+                                ListTile(leading: const Icon(Icons.delete_outline, color: _coral), title: const Text('Radera kontot'), onTap: () { Navigator.pop(ctx); _act(r, 'delete'); }),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Team extends StatefulWidget {
+  const _Team({required this.email});
+  final String email;
+  @override
+  State<_Team> createState() => _TeamState();
+}
+
+class _TeamState extends State<_Team> {
+  List<String> people = [];
+  String fresh = '';
+  bool loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final list = await Network.admins();
+    if (!mounted) return;
+    setState(() {
+      people = list;
+      loading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) return const Center(child: CircularProgressIndicator(color: _coral));
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      children: [
+        const Text('Skapa en kod och skicka den till personen. Hen trycker sju gånger på PawMatch i profilen och skriver in koden. Koden fungerar en gång.', style: TextStyle(height: 1.35, color: Color(0xFF3D4A57))),
+        const SizedBox(height: 12),
+        FilledButton(
+          onPressed: () async {
+            final code = await Network.createInvite(widget.email);
+            if (!mounted) return;
+            setState(() => fresh = code.isEmpty ? 'Kunde inte skapa koden. Kör SQL:en först.' : code);
+          },
+          child: const Text('Skapa inbjudningskod'),
+        ),
+        if (fresh.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text(fresh, textAlign: TextAlign.center, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: 2)),
+        ],
+        const SizedBox(height: 18),
+        const Text('Admins', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
+        for (final email in people)
+          Card(
+            color: Colors.white,
+            child: ListTile(
+              title: Text(email),
+              subtitle: Text(email == 'dilanahanna@hotmail.com' ? 'Ägare' : 'Admin'),
+              trailing: email == 'dilanahanna@hotmail.com' || email == widget.email.toLowerCase()
+                  ? null
+                  : IconButton(
+                      icon: const Icon(Icons.person_remove_outlined),
+                      onPressed: () async {
+                        await Network.revokeAdmin(email);
+                        _load();
+                      },
+                    ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 
 
