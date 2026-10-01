@@ -977,6 +977,16 @@ class Network {
     }
   }
 
+  static Future<void> deleteAuth() async {
+    final c = _c;
+    if (c == null) return;
+    try {
+      await c.functions.invoke('delete-account');
+    } catch (e) {
+      debugPrint('deleteAuth $e');
+    }
+  }
+
   static Future<void> signOut() async {
     try {
       await Supabase.instance.client.auth.signOut();

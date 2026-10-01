@@ -42,24 +42,32 @@ class _AuthScreenState extends State<AuthScreen> {
     super.dispose();
   }
 
+  String notice = '';
+
   Future<void> _go() async {
     if (busy) return;
     final mail = email.text.trim();
     if (!mail.contains('@') || pass.text.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Skriv e-post och lösenord (minst 6 tecken).')),
-      );
+      setState(() => notice = 'Skriv e-post och ett lösenord med minst 6 tecken.');
       return;
     }
-    setState(() => busy = true);
-    final mode = await Cloud.login(email: mail, password: pass.text, create: create);
-    if (!mounted) return;
-    final ok = mode == 'cloud';
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(ok ? (create ? 'Konto skapat' : 'Välkommen in') : 'Kunde inte logga in just nu.')),
-    );
-    if (ok) widget.state.signIn(mail);
-    if (mounted) setState(() => busy = false);
+    setState(() {
+      busy = true;
+      notice = '';
+    });
+    try {
+      final mode = await Cloud.login(email: mail, password: pass.text, create: create);
+      if (!mounted) return;
+      if (mode == 'cloud') {
+        widget.state.signIn(mail);
+        return;
+      }
+      setState(() => notice = mode);
+    } catch (e) {
+      if (mounted) setState(() => notice = 'Det gick inte just nu. Försök igen.');
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
   }
 
   Future<void> _face() async {
@@ -150,11 +158,23 @@ class _AuthScreenState extends State<AuthScreen> {
                     const SizedBox(height: 10),
                     TextField(controller: pass, obscureText: true, decoration: _field('Lösenord')),
                     const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(child: _mode('Logga in', !create)),
+                        const SizedBox(width: 8),
+                        Expanded(child: _mode('Skapa konto', create)),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
                     _PressBtn(
                       color: _coral,
                       label: busy ? 'Väntar...' : (create ? 'Skapa konto' : 'Logga in'),
                       onTap: busy ? null : _go,
                     ),
+                    if (notice.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text(notice, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF8B3A32), fontWeight: FontWeight.w700, height: 1.3)),
+                    ],
                     const SizedBox(height: 14),
                     const Row(
                       children: [
@@ -201,6 +221,27 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _mode(String label, bool on) {
+    return GestureDetector(
+      onTap: busy
+          ? null
+          : () => setState(() {
+                create = label == 'Skapa konto';
+                notice = '';
+              }),
+      child: Container(
+        height: 44,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: on ? _ink : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: on ? _ink : const Color(0xFFE2C4B3)),
+        ),
+        child: Text(label, style: TextStyle(fontWeight: FontWeight.w800, color: on ? Colors.white : _ink)),
       ),
     );
   }

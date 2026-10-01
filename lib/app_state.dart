@@ -491,7 +491,10 @@ class AppState extends ChangeNotifier {
   Future<void> eraseAccount() async {
     final who = email;
     _inbox?.cancel();
-    if (who.contains('@')) await Network.deleteOwn(who);
+    if (who.contains('@')) {
+      await Network.deleteAuth();
+      await Network.deleteOwn(who);
+    }
     email = '';
     firstName = '';
     lastName = '';
