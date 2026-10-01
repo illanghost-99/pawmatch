@@ -186,6 +186,32 @@ class Network {
     }
   }
 
+  static Future<void> forgetLike({required String fromEmail, required String toEmail}) async {
+    final c = _c;
+    if (c == null || !fromEmail.contains('@') || !toEmail.contains('@')) return;
+    try {
+      await c.from('pm_likes').delete().eq('from_email', fromEmail.toLowerCase()).eq('to_email', toEmail.toLowerCase());
+    } catch (e) {
+      debugPrint('forgetLike $e');
+    }
+  }
+
+  static Future<void> unhideMatch(String matchId, String email) async {
+    final c = _c;
+    if (c == null || matchId.isEmpty || !email.contains('@')) return;
+    try {
+      final row = await c.from('pm_matches').select('hidden_by').eq('id', matchId).maybeSingle();
+      if (row == null) return;
+      final hidden = <String>[
+        for (final h in List.from(row['hidden_by'] ?? const []))
+          if (h.toString().toLowerCase() != email.toLowerCase()) h.toString(),
+      ];
+      await c.from('pm_matches').update({'hidden_by': hidden}).eq('id', matchId);
+    } catch (e) {
+      debugPrint('unhideMatch $e');
+    }
+  }
+
   static Future<String?> ensureMatch({
     required String a,
     required String b,
