@@ -193,7 +193,7 @@ class _ProfilePageState extends State<ProfilePage> {
             Navigator.push(context, MaterialPageRoute(builder: (_) => DealsPage(state: state)));
           }),
           _tile(context, const Color(0xFF6B4C9A), Icons.favorite_outline, 'Hund och hälsa', 'Stamtavla, vaccin, community', () => openDogHub(context, state)),
-          _tile(context, const Color(0xFF2A9D8F), Icons.support_agent, 'Kundtjänst', 'AI-chatt, e-post, telefon', () => openSupportHub(context)),
+          _tile(context, const Color(0xFF2A9D8F), Icons.support_agent, 'Kundtjänst', 'AI-chatt, e-post, telefon', () => openSupportHub(context, state)),
           _tile(context, const Color(0xFF8B3A32), Icons.flag_outlined, 'Rapportera ett problem', 'Skriv till support', () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => ReportPage(state: state)));
           }),

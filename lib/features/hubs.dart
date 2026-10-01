@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../app_state.dart';
 import '../v2/ai_vet_page.dart';
 import '../v2/community_page.dart';
 import '../v2/health_page.dart';
 import '../v2/pedigree_page.dart';
 import '../v2/verify_page.dart';
+import '../services/network.dart';
 import 'legal.dart';
 import 'support.dart';
 
@@ -51,7 +51,7 @@ class HubPage extends StatelessWidget {
   }
 }
 
-void openSupportHub(BuildContext context) {
+void openSupportHub(BuildContext context, AppState state) {
   Navigator.push(
     context,
     MaterialPageRoute(
@@ -61,17 +61,72 @@ void openSupportHub(BuildContext context) {
           _Row(const Color(0xFFE25C3A), Icons.smart_toy_outlined, 'AI-chatt', 'Svar dygnet runt om appen', () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => const SupportPage()));
           }),
-          _Row(const Color(0xFF2A9D8F), Icons.mail_outline, 'E-post', 'support@pawmatch.app', () async {
-            final uri = Uri(scheme: 'mailto', path: 'support@pawmatch.app', queryParameters: {'subject': 'PawMatch'});
-            if (await canLaunchUrl(uri)) await launchUrl(uri);
-          }),
-          _Row(const Color(0xFF3D5A80), Icons.phone_outlined, 'Telefon', 'Kommer när supportlinjen är öppen', () {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mejla support@pawmatch.app så länge.')));
-          }),
+          _Row(const Color(0xFF2A9D8F), Icons.mail_outline, 'E-post', 'support@pawmatch.app', () => _askMail(context, state)),
+          _Row(const Color(0xFF3D5A80), Icons.phone_outlined, 'Telefon', 'Vi ringer upp dig', () => _askCall(context, state)),
         ],
       ),
     ),
   );
+}
+
+Future<void> _askCall(BuildContext context, AppState state) async {
+  final phone = TextEditingController();
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Vi ringer dig'),
+      content: TextField(
+        controller: phone,
+        keyboardType: TextInputType.phone,
+        decoration: const InputDecoration(labelText: 'Ditt telefonnummer'),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Avbryt')),
+        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Skicka')),
+      ],
+    ),
+  );
+  final number = phone.text.trim();
+  phone.dispose();
+  if (ok != true || !context.mounted) return;
+  final digits = number.replaceAll(RegExp(r'\D'), '');
+  if (digits.length < 8) {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Skriv ett riktigt telefonnummer.')));
+    return;
+  }
+  final sent = await Network.fileReport(state.email, state.fullName, 'Ring mig på $number', kind: 'samtal');
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(sent ? 'Tack. Support ringer dig på $number.' : 'Kunde inte skicka. Försök igen.')));
+}
+
+Future<void> _askMail(BuildContext context, AppState state) async {
+  final text = TextEditingController();
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Skriv till support'),
+      content: TextField(
+        controller: text,
+        minLines: 3,
+        maxLines: 6,
+        decoration: const InputDecoration(labelText: 'Ditt meddelande', alignLabelWithHint: true),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Avbryt')),
+        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('support@pawmatch.app')),
+      ],
+    ),
+  );
+  final body = text.text.trim();
+  text.dispose();
+  if (ok != true || !context.mounted) return;
+  if (body.length < 4) {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Skriv meddelandet först.')));
+    return;
+  }
+  final sent = await Network.fileReport(state.email, state.fullName, body, kind: 'mejl');
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(sent ? 'Mejlet ligger i supportinkorgen.' : 'Kunde inte skicka. Försök igen.')));
 }
 
 void openDogHub(BuildContext context, AppState state) {

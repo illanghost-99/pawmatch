@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../app_state.dart';
 import '../models.dart';
 import '../services/moderator.dart';
@@ -431,6 +432,20 @@ class _CasePageState extends State<CasePage> {
                 const SizedBox(height: 6),
                 Text('Rapporterat av ${widget.row['from_name'] ?? _reporter}', style: const TextStyle(color: Color(0xFF3D4A57))),
                 if (reported.isNotEmpty) Text('Gäller $reported', style: const TextStyle(color: Color(0xFF3D4A57))),
+                if ('${widget.row['kind'] ?? ''}' == 'samtal')
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: FilledButton.icon(
+                      onPressed: () async {
+                        final match = RegExp(r'(\+?\d[\d\s\-]{6,})').firstMatch('${widget.row['body'] ?? ''}');
+                        final raw = (match?.group(0) ?? '').replaceAll(RegExp(r'[^\d+]'), '');
+                        if (raw.length < 8) return;
+                        await launchUrl(Uri(scheme: 'tel', path: raw));
+                      },
+                      icon: const Icon(Icons.phone),
+                      label: const Text('Ring användaren'),
+                    ),
+                  ),
               ],
             ),
           ),
