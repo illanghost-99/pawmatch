@@ -502,16 +502,133 @@ class AppState extends ChangeNotifier {
 
   int score(DogProfile d) {
     var s = 0;
-    for (final tag in d.tags) {
-      if (interests.contains(tag)) s += 3;
-    }
     final km = kmTo(d);
-    if (km < 20) {
-      s += 4;
-    } else if (km < 50) {
-      s += 2;
+    final placed = d.lat.abs() > 0.01 || d.lng.abs() > 0.01;
+    if (placed) {
+      final span = radiusKm <= 0 ? 250.0 : radiusKm.toDouble();
+      s += (30 * (1 - (km / span).clamp(0, 1))).round();
+    } else {
+      s += 8;
     }
+
+    final friends = myDogs.isEmpty || myDogs.any((m) => m.availableForFriends);
+    final breeding = myDogs.any((m) => m.availableForBreeding) || intentFilter == 'puppies';
+    final dogFriends = d.intent != 'puppies' || d.availableForFriends;
+    final dogBreeding = wantsBreeding(d);
+    if (friends && dogFriends) s += 14;
+    if (breeding && dogBreeding) s += 16;
+    if (friends && !dogFriends && !breeding) s -= 8;
+
+    final sameBreed = myDogs.any((m) => m.breed.trim().isNotEmpty && m.breed.toLowerCase() == d.breed.toLowerCase());
+    if (sameBreed) {
+      s += breeding && dogBreeding ? 20 : 12;
+    } else if (_sameSize(d)) {
+      s += 6;
+    }
+
+    if (myDogs.isNotEmpty && d.age > 0) {
+      var best = 99;
+      for (final m in myDogs) {
+        final diff = (m.age - d.age).abs();
+        if (diff < best) best = diff;
+      }
+      if (best <= 1) {
+        s += 12;
+      } else if (best <= 3) {
+        s += 8;
+      } else if (best <= 6) {
+        s += 4;
+      }
+      if (d.age <= 1 && myDogs.any((m) => m.age <= 1)) s += 4;
+    }
+
+    if (breeding && dogBreeding && d.sex.isNotEmpty && myDogs.any((m) => m.sex.isNotEmpty)) {
+      s += _opposite(d) ? 15 : -18;
+    }
+    if (breeding && dogBreeding && d.neutered) s -= 16;
+    if (breeding && dogBreeding) s += d.vaccinated ? 4 : -4;
+
+    if (d.weightKg > 0 && myDogs.any((m) => m.weightKg > 0)) {
+      var closest = 999.0;
+      for (final m in myDogs.where((m) => m.weightKg > 0)) {
+        final gap = (m.weightKg - d.weightKg).abs() / m.weightKg;
+        if (gap < closest) closest = gap;
+      }
+      if (closest <= 0.2) {
+        s += 8;
+      } else if (closest <= 0.5) {
+        s += 4;
+      }
+    }
+
+    var tags = 0;
+    for (final tag in d.tags) {
+      if (interests.contains(tag)) tags += 4;
+    }
+    if (tags > 12) tags = 12;
+    s += tags;
+    if (d.ownerVerified) s += 3;
+    if (d.dogVerified) s += 3;
     return s;
+  }
+
+  bool _opposite(DogProfile d) {
+    final sex = d.sex.toLowerCase();
+    if (sex.isEmpty) return false;
+    return myDogs.any((m) => m.sex.isNotEmpty && m.sex.toLowerCase() != sex);
+  }
+
+  bool _sameSize(DogProfile d) {
+    final theirs = _size(d.breed, d.weightKg);
+    if (theirs.isEmpty) return false;
+    return myDogs.any((m) => _size(m.breed, m.weightKg) == theirs);
+  }
+
+  String _size(String breed, double kg) {
+    final b = breed.toLowerCase();
+    const groups = {
+      'liten': ['chihuahua', 'pomeranian', 'yorkshire', 'maltes', 'papillon', 'dvärg', 'toy'],
+      'mellan': ['tax', 'beagle', 'cocker', 'fransk', 'mops', 'shih', 'cavalier', 'russell', 'schnauzer', 'staff', 'bulldog', 'whippet', 'sheltie'],
+      'stor': ['labrador', 'golden', 'schäfer', 'schafer', 'rottweil', 'boxer', 'dobermann', 'husky', 'collie', 'tollare', 'springer'],
+      'mycket stor': ['grand danois', 'bernhard', 'newfoundland', 'mastiff', 'leonberg', 'dogge'],
+    };
+    for (final entry in groups.entries) {
+      if (entry.value.any(b.contains)) return entry.key;
+    }
+    if (kg <= 0) return '';
+    if (kg < 10) return 'liten';
+    if (kg < 22) return 'mellan';
+    if (kg < 40) return 'stor';
+    return 'mycket stor';
+  }
+
+  String matchReason(DogProfile d) {
+    final bits = <String>[];
+    final placed = d.lat.abs() > 0.01 || d.lng.abs() > 0.01;
+    final km = kmTo(d);
+    if (placed && km < 15) bits.add('Nära dig');
+    final sameBreed = myDogs.any((m) => m.breed.trim().isNotEmpty && m.breed.toLowerCase() == d.breed.toLowerCase());
+    if (sameBreed) bits.add('Samma ras');
+    else if (_sameSize(d)) bits.add('Liknande storlek');
+    final breeding = myDogs.any((m) => m.availableForBreeding) || intentFilter == 'puppies';
+    if (breeding && wantsBreeding(d) && _opposite(d) && !d.neutered) bits.add('Passar för avel');
+    else if (d.intent != 'puppies' || d.availableForFriends) bits.add('Hundvän');
+    if (myDogs.isNotEmpty && d.age > 0 && myDogs.any((m) => (m.age - d.age).abs() <= 2)) bits.add('Samma ålder');
+    if (d.dogVerified || d.ownerVerified) bits.add('Verifierad');
+    if (bits.isEmpty) return 'Förslag för dig';
+    return bits.take(2).join(' · ');
+  }
+
+  void _rank(List<DogProfile> list) {
+    if (feedSort == 'nearest') {
+      list.sort((a, b) => kmTo(a).compareTo(kmTo(b)));
+      return;
+    }
+    list.sort((a, b) {
+      final byScore = score(b).compareTo(score(a));
+      if (byScore != 0) return byScore;
+      return kmTo(a).compareTo(kmTo(b));
+    });
   }
 
   bool _isHidden(DogProfile d) {
@@ -527,24 +644,17 @@ class AppState extends ChangeNotifier {
 
   List<DogProfile> get forYou {
     final list = filtered.toList();
-    if (feedSort == 'nearest') {
-      list.sort((a, b) => kmTo(a).compareTo(kmTo(b)));
-    } else if (feedSort == 'friends') {
-      list.sort((a, b) => (a.intent == 'friends' ? 0 : 1).compareTo(b.intent == 'friends' ? 0 : 1));
-    } else if (feedSort == 'puppies') {
-      list.sort((a, b) => (a.intent == 'puppies' ? 0 : 1).compareTo(b.intent == 'puppies' ? 0 : 1));
-    } else {
-      list.sort((a, b) => score(b).compareTo(score(a)));
-    }
+    _rank(list);
     return list;
   }
 
   Iterable<DogProfile> get filtered sync* {
-    final want = oppositeSex;
+    final want = intentFilter == 'puppies' ? oppositeSex : '';
     for (final d in _pool) {
       if (blocked.contains(d.id)) continue;
       if (_isHidden(d)) continue;
       if (want.isNotEmpty && d.sex.isNotEmpty && d.sex.toLowerCase() != want) continue;
+      if (intentFilter == 'puppies' && d.neutered) continue;
       if (d.age < ageMin || d.age > ageMax) continue;
       if (breedQuery.isNotEmpty && !d.breed.toLowerCase().contains(breedQuery.toLowerCase())) continue;
       if (area.isNotEmpty && !d.city.toLowerCase().contains(area.toLowerCase())) continue;
@@ -556,9 +666,7 @@ class AppState extends ChangeNotifier {
 
   void applyFilters() {
     deck = filtered.toList();
-    if (feedSort == 'nearest') {
-      deck.sort((a, b) => kmTo(a).compareTo(kmTo(b)));
-    }
+    _rank(deck);
     notifyListeners();
   }
 
