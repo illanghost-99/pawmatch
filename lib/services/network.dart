@@ -142,11 +142,21 @@ class Network {
       final mine = myEmail.toLowerCase();
       return [
         for (final r in rows)
-          if ((r['owner_email'] as String? ?? '').toLowerCase() != mine) dogFromRow(Map<String, dynamic>.from(r as Map)),
+          if ((r['owner_email'] as String? ?? '').toLowerCase() != mine && r['visible'] != false) dogFromRow(Map<String, dynamic>.from(r as Map)),
       ];
     } catch (e) {
       debugPrint('liveDogs $e');
       return [];
+    }
+  }
+
+  static Future<void> setVisible(String email, bool on) async {
+    final c = _c;
+    if (c == null || !email.contains('@')) return;
+    try {
+      await c.from('pm_dogs').update({'visible': on}).eq('owner_email', email.toLowerCase());
+    } catch (e) {
+      debugPrint('setVisible $e');
     }
   }
 
