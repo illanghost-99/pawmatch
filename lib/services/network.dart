@@ -547,6 +547,170 @@ class Network {
     }
   }
 
+  static Future<List<String>> admins() async {
+    final c = _c;
+    if (c == null) return ['dilanahanna@hotmail.com'];
+    try {
+      final rows = await c.from('pm_admins').select('email');
+      final list = <String>{'dilanahanna@hotmail.com'};
+      for (final r in rows) {
+        final email = '${r['email'] ?? ''}'.toLowerCase();
+        if (email.contains('@')) list.add(email);
+      }
+      return list.toList()..sort();
+    } catch (e) {
+      debugPrint('admins $e');
+      return ['dilanahanna@hotmail.com'];
+    }
+  }
+
+  static Future<void> revokeAdmin(String email) async {
+    final who = email.trim().toLowerCase();
+    if (who == 'dilanahanna@hotmail.com') return;
+    final c = _c;
+    if (c == null || !who.contains('@')) return;
+    try {
+      await c.from('pm_admins').delete().eq('email', who);
+    } catch (e) {
+      debugPrint('revokeAdmin $e');
+    }
+  }
+
+  static Future<String> createInvite(String by) async {
+    final c = _c;
+    if (c == null) return '';
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    var x = DateTime.now().microsecondsSinceEpoch;
+    var code = '';
+    for (var i = 0; i < 6; i++) {
+      code += alphabet[x % alphabet.length];
+      x ~/= alphabet.length;
+    }
+    try {
+      await c.from('pm_admin_invites').insert({
+        'code': code,
+        'created_by': by.toLowerCase(),
+      });
+      return code;
+    } catch (e) {
+      debugPrint('createInvite $e');
+      return '';
+    }
+  }
+
+  static Future<bool> redeemInvite(String code, String email) async {
+    final c = _c;
+    final typed = code.trim().toUpperCase();
+    final who = email.trim().toLowerCase();
+    if (c == null || typed.length < 4 || !who.contains('@')) return false;
+    try {
+      final rows = await c.from('pm_admin_invites').select('used_by').eq('code', typed).limit(1);
+      if (rows.isEmpty) return false;
+      if ('${rows.first['used_by'] ?? ''}'.isNotEmpty) return false;
+      await grantAdmin(who);
+      await c.from('pm_admin_invites').update({
+        'used_by': who,
+        'used_at': DateTime.now().toUtc().toIso8601String(),
+      }).eq('code', typed);
+      return true;
+    } catch (e) {
+      debugPrint('redeemInvite $e');
+      return false;
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> accounts() async {
+    final c = _c;
+    if (c == null) return [];
+    try {
+      final dogs = await c.from('pm_dogs').select();
+      List bans = [];
+      try {
+        bans = await c.from('pm_sanctions').select('email,permanent,banned_until,reason');
+      } catch (e) {
+        debugPrint('accounts bans $e');
+      }
+      final by = <String, Map<String, dynamic>>{};
+      for (final raw in dogs) {
+        final r = Map<String, dynamic>.from(raw as Map);
+        final email = '${r['owner_email'] ?? ''}'.toLowerCase();
+        if (!email.contains('@')) continue;
+        final item = by.putIfAbsent(email, () => {'email': email, 'name': '${r['owner'] ?? email}', 'dogs': <String>[], 'status': 'Aktiv'});
+        final dog = '${r['name'] ?? ''}'.trim();
+        if (dog.isNotEmpty) (item['dogs'] as List<String>).add(dog);
+        if ('${item['name']}'.contains('@') && '${r['owner'] ?? ''}'.trim().isNotEmpty) item['name'] = '${r['owner']}';
+      }
+      for (final raw in bans) {
+        final r = Map<String, dynamic>.from(raw as Map);
+        final email = '${r['email'] ?? ''}'.toLowerCase();
+        if (!email.contains('@')) continue;
+        final item = by.putIfAbsent(email, () => {'email': email, 'name': email, 'dogs': <String>[], 'status': 'Aktiv'});
+        item['status'] = _accountStatus(r);
+      }
+      final list = by.values.toList();
+      list.sort((a, b) => '${a['name']}'.toLowerCase().compareTo('${b['name']}'.toLowerCase()));
+      return list;
+    } catch (e) {
+      debugPrint('accounts $e');
+      return [];
+    }
+  }
+
+  static String _accountStatus(Map<String, dynamic> row) {
+    final reason = '${row['reason'] ?? ''}';
+    if (row['permanent'] == true) {
+      return reason.toLowerCase().contains('rader') ? 'Raderat' : 'Stängt';
+    }
+    final until = DateTime.tryParse('${row['banned_until'] ?? ''}');
+    if (until != null && until.toUtc().isAfter(DateTime.now().toUtc())) {
+      return reason.toLowerCase().contains('avaktiver') ? 'Avaktiverat' : 'Avstängt';
+    }
+    return 'Aktiv';
+  }
+
+  static Future<void> setAccount(String email, String mode) async {
+    final c = _c;
+    final who = email.trim().toLowerCase();
+    if (c == null || !who.contains('@')) return;
+    if (mode == 'delete') {
+      try {
+        await c.from('pm_dogs').delete().eq('owner_email', who);
+        await c.from('pm_likes').delete().eq('from_email', who);
+        await c.from('pm_likes').delete().eq('to_email', who);
+      } catch (e) {
+        debugPrint('deleteAccount $e');
+      }
+    }
+    if (mode == 'on') {
+      await liftBan(who);
+      await setVisible(who, true);
+      return;
+    }
+    final closed = mode == 'closed' || mode == 'delete';
+    final until = closed ? null : DateTime.now().toUtc().add(const Duration(days: 3650)).toIso8601String();
+    final reason = mode == 'delete'
+        ? 'Kontot raderades av support'
+        : mode == 'closed'
+            ? 'Kontot stängdes av support'
+            : 'Avaktiverad av support';
+    try {
+      var strikes = closed ? 3 : 0;
+      final rows = await c.from('pm_sanctions').select('strikes').eq('email', who).limit(1);
+      if (rows.isNotEmpty && !closed) strikes = (rows.first['strikes'] as num?)?.toInt() ?? 0;
+      await c.from('pm_sanctions').upsert({
+        'email': who,
+        'strikes': strikes,
+        'banned_until': until,
+        'permanent': closed,
+        'reason': reason,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      });
+      await setVisible(who, false);
+    } catch (e) {
+      debugPrint('setAccount $e');
+    }
+  }
+
   static Future<bool> fileReport(
     String email,
     String name,
