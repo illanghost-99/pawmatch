@@ -115,6 +115,7 @@ class _DogCard extends StatelessWidget {
                     ],
                   ),
                   Text('${dog.breed} · ${dog.city} · ${state.kmTo(dog).round()} km', style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                  Text(state.matchReason(dog), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
                   const SizedBox(height: 6),
                   Text(dog.bio, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, height: 1.3)),
                   Text('Ägare: ${dog.owner}', style: const TextStyle(color: Colors.white70, fontSize: 13)),
