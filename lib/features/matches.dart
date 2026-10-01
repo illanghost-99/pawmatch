@@ -125,7 +125,7 @@ class MatchesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _cream,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Chatt', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
         backgroundColor: Colors.transparent,
@@ -153,14 +153,18 @@ class _Inbox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pending = state.matches.where((m) => !m.accepted).toList();
-    final open = state.matches.where((m) => m.accepted).toList();
+    final seen = <String>{};
+    final open = <MatchThread>[
+      for (final m in state.matches.where((m) => m.accepted))
+        if (m.peerEmail.isEmpty || seen.add(m.peerEmail.toLowerCase())) m,
+    ];
     final items = <Widget>[
       if (state.incoming.isNotEmpty) ...[
         const Text('Vill matcha med dig', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: _ink)),
         const SizedBox(height: 8),
         for (final m in state.incoming)
           Card(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             child: ListTile(
               title: Text('${m.dog.owner} · ${m.dog.name}', style: const TextStyle(fontWeight: FontWeight.w700)),
               subtitle: Text('${m.dog.breed} vill matcha. Godkänn för att chatta.'),
@@ -191,7 +195,7 @@ class _Inbox extends StatelessWidget {
         const SizedBox(height: 8),
         for (final g in state.groups)
           Card(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             margin: const EdgeInsets.only(bottom: 8),
             child: ListTile(
               leading: Badge(
@@ -217,7 +221,7 @@ class _Inbox extends StatelessWidget {
       if (open.isEmpty) const Text('Inga godkända matcher än.', style: TextStyle(color: Color(0xFF3D4A57))),
       for (final m in open)
         Card(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           margin: const EdgeInsets.only(bottom: 8),
           child: ListTile(
             onTap: () {
@@ -395,7 +399,7 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
       _follow();
     }
     return Scaffold(
-      backgroundColor: _cream,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.white,
         title: Text(t.dog.name, style: const TextStyle(fontWeight: FontWeight.w800)),
@@ -483,7 +487,7 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
             }),
           ),
           Container(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             padding: const EdgeInsets.fromLTRB(12, 8, 8, 12),
             child: Row(
               children: [
@@ -678,7 +682,7 @@ class _GroupChatPageState extends State<GroupChatPage> {
   Widget build(BuildContext context) {
     final group = g;
     return Scaffold(
-      backgroundColor: _cream,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.white,
         title: Text(group.name, style: const TextStyle(fontWeight: FontWeight.w800)),
@@ -715,7 +719,7 @@ class _GroupChatPageState extends State<GroupChatPage> {
             }),
           ),
           Container(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             padding: const EdgeInsets.fromLTRB(12, 8, 8, 12),
             child: Row(
               children: [
@@ -753,7 +757,7 @@ class _GroupChatPageState extends State<GroupChatPage> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: _cream,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (ctx) => Padding(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),

@@ -17,7 +17,7 @@ class Fcm {
       FirebaseMessaging.onBackgroundMessage(pawmatchBg);
       final m = FirebaseMessaging.instance;
       await m.requestPermission(alert: true, badge: true, sound: true);
-      await m.setForegroundNotificationPresentationOptions(alert: false, badge: true, sound: false);
+      await m.setForegroundNotificationPresentationOptions(alert: true, badge: true, sound: true);
       token = await _token(m);
       lastError = token == null ? 'ingen token' : null;
       flush();

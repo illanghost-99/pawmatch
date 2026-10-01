@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../services/media.dart';
+import '../services/photo_check.dart';
 
 class PhotoSlots extends StatelessWidget {
   const PhotoSlots({
@@ -21,7 +22,13 @@ class PhotoSlots extends StatelessWidget {
 
   Future<void> _pick(BuildContext context, int i) async {
     final path = await Media.choose(context);
-    if (path == null) return;
+    if (path == null || !context.mounted) return;
+    final problem = await PhotoCheck.dogProblem(path);
+    if (!context.mounted) return;
+    if (problem != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(problem)));
+      return;
+    }
     final next = List<String>.from(paths.where((p) => p.isNotEmpty));
     if (i < next.length) {
       next[i] = path;

@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../services/media.dart';
+import '../services/photo_check.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key, required this.state});
@@ -51,7 +52,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
             child: GestureDetector(
               onTap: () async {
                 final path = await Media.choose(context, title: 'Profilbild');
-                if (path != null) setState(() => photo = path);
+                if (path == null || !mounted) return;
+                final problem = await PhotoCheck.profileProblem(path);
+                if (!mounted) return;
+                if (problem != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(problem)));
+                  return;
+                }
+                setState(() => photo = path);
               },
               child: CircleAvatar(
                 radius: 52,

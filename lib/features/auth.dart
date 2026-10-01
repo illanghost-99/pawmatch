@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../app_state.dart';
 import '../services/biometrics.dart';
 import '../services/cloud.dart';
@@ -82,8 +83,22 @@ class _AuthScreenState extends State<AuthScreen> {
       final cred = await SignInWithApple.getAppleIDCredential(
         scopes: [AppleIDAuthorizationScopes.email, AppleIDAuthorizationScopes.fullName],
       );
-      final mail = cred.email ?? widget.state.email;
-      final used = (mail != null && mail.contains('@')) ? mail : 'apple-${cred.userIdentifier ?? 'user'}@pawmatch.app';
+      var used = (cred.email != null && cred.email!.contains('@'))
+          ? cred.email!
+          : (widget.state.email.contains('@') ? widget.state.email : 'apple-${cred.userIdentifier ?? 'user'}@pawmatch.app');
+      final token = cred.identityToken;
+      if (token != null && Cloud.ready) {
+        try {
+          await Supabase.instance.client.auth.signInWithIdToken(
+            provider: OAuthProvider.apple,
+            idToken: token,
+          );
+          final sessionMail = Supabase.instance.client.auth.currentUser?.email;
+          if (sessionMail != null && sessionMail.contains('@')) used = sessionMail;
+        } catch (e) {
+          debugPrint('Apple-koppling: $e');
+        }
+      }
       if (cred.givenName != null) widget.state.firstName = cred.givenName!;
       if (cred.familyName != null) widget.state.lastName = cred.familyName!;
       widget.state.signIn(used);

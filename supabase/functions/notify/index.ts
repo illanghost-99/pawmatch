@@ -80,7 +80,11 @@ export default {
             message: {
               token,
               notification: { title, body: text },
-              apns: { payload: { aps: { sound: "default" } } },
+              android: { priority: "HIGH", notification: { sound: "default" } },
+              apns: {
+                headers: { "apns-priority": "10", "apns-push-type": "alert" },
+                payload: { aps: { alert: { title, body: text }, sound: "default", badge: 1 } },
+              },
             },
           }),
         });

@@ -40,7 +40,7 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
     fly.reset();
     late void Function() tick;
     tick = () {
-      final t = Curves.easeOutCubic.transform(fly.value);
+      final t = Curves.easeOutBack.transform(fly.value.clamp(0.0, 1.0));
       setState(() => drag = Offset.lerp(start, target, t)!);
     };
     fly.addListener(tick);
@@ -81,7 +81,7 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
     if (current == null) {
       return const Center(child: Text('Inga fler kort. Ändra filter eller titta under Sparade.'));
     }
-    final angle = drag.dx / 1600;
+    final angle = drag.dx / 2400;
     final likeOpacity = (drag.dx / 160).clamp(0.0, 1.0);
     final noOpacity = (-drag.dx / 160).clamp(0.0, 1.0);
     final next = widget.state.deck.length > 1 ? widget.state.deck[1] : null;

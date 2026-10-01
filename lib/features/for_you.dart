@@ -14,7 +14,7 @@ class ForYouPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = state.forYou;
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF6F4),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         title: const Text('För dig', style: TextStyle(fontWeight: FontWeight.w800)),

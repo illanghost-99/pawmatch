@@ -55,6 +55,7 @@ class AppState extends ChangeNotifier {
   final Map<String, DateTime> hiddenUntil = {};
   final List<MyDog> myDogs = [];
   String lastNotice = '';
+  String celebrate = '';
   Timer? _inbox;
   final Set<String> _seenLikes = {};
 
@@ -439,6 +440,12 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void clearCelebrate() {
+    if (celebrate.isEmpty) return;
+    celebrate = '';
+    notifyListeners();
+  }
+
   void signOut() {
     signedIn = false;
     persist();
@@ -720,6 +727,7 @@ class AppState extends ChangeNotifier {
     if (!mutual) return;
     await _openCloud(thread, d, peer);
     lastNotice = '${d.owner} matchade också!';
+    celebrate = d.name;
     if (notifyOn) PushService.notifyMatch(d.name);
     notifyListeners();
   }
@@ -741,6 +749,7 @@ class AppState extends ChangeNotifier {
       matches.insert(0, t);
     }
     if (notifyOn) PushService.notifyMatch(t.dog.name);
+    celebrate = t.dog.name;
     notifyListeners();
     if (!peer.contains('@')) return;
     Network.forgetLike(fromEmail: peer, toEmail: email);

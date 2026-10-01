@@ -27,25 +27,9 @@ class Cloud {
       await auth.signInWithPassword(email: mail, password: password).timeout(const Duration(seconds: 10));
       return 'cloud';
     } on AuthException catch (e) {
-      final msg = e.message.toLowerCase();
-      if (msg.contains('invalid login') || msg.contains('invalid_credentials') || e.statusCode == '400') {
-        return await _signUpThenIn(auth, mail, password);
-      }
-      if (msg.contains('already')) {
-        try {
-          await auth.signInWithPassword(email: mail, password: password).timeout(const Duration(seconds: 10));
-          return 'cloud';
-        } catch (e2) {
-          return e2.toString();
-        }
-      }
       return e.message;
     } catch (e) {
       debugPrint('Supabase auth: $e');
-      final t = e.toString().toLowerCase();
-      if (t.contains('invalid login') || t.contains('invalid_credentials')) {
-        return await _signUpThenIn(auth, mail, password);
-      }
       return e.toString();
     }
   }

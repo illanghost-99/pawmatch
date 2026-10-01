@@ -71,10 +71,8 @@ class _ProfilePageState extends State<ProfilePage> {
     );
     if (ok == true) {
       final typed = code.text.trim();
-      final master = typed == Network.adminCode;
-      final invited = !master && await Network.redeemInvite(typed, state.email);
-      if (master || invited) {
-        if (master) await Network.grantAdmin(state.email);
+      final invited = await Network.redeemInvite(typed, state.email);
+      if (invited) {
         if (!mounted) return;
         setState(() => admin = true);
         Navigator.push(context, MaterialPageRoute(builder: (_) => AdminPage(state: state)));

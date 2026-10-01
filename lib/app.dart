@@ -67,6 +67,17 @@ class _PawMatchAppState extends State<PawMatchApp> {
               onSurface: const Color(0xFFFFF4EC),
             ),
             scaffoldBackgroundColor: const Color(0xFF1C1410),
+            cardTheme: const CardThemeData(color: Color(0xFF2A211C), elevation: 0),
+            appBarTheme: const AppBarTheme(
+              foregroundColor: Color(0xFFFFF4EC),
+              backgroundColor: Color(0xFF1C1410),
+              titleTextStyle: TextStyle(color: Color(0xFFFFF4EC), fontWeight: FontWeight.w800, fontSize: 20),
+            ),
+            listTileTheme: const ListTileThemeData(
+              textColor: Color(0xFFFFF4EC),
+              titleTextStyle: TextStyle(color: Color(0xFFFFF4EC), fontWeight: FontWeight.w700, fontSize: 16),
+              subtitleTextStyle: TextStyle(color: Color(0xFFD9C7B8), fontSize: 13),
+            ),
             useMaterial3: true,
           ),
           theme: ThemeData(

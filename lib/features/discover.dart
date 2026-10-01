@@ -16,7 +16,7 @@ class DiscoverPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final deck = state.deck;
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F4EE),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         title: const Text('Matcha', style: TextStyle(fontWeight: FontWeight.w800)),

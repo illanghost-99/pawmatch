@@ -522,12 +522,9 @@ class Network {
     }
   }
 
-  static const adminCode = 'PawAdmin-Hanna';
-
   static Future<bool> isAdmin(String email) async {
     final c = _c;
     if (c == null || !email.contains('@')) return false;
-    if (email.toLowerCase() == 'dilanahanna@hotmail.com') return true;
     try {
       final rows = await c.from('pm_admins').select('email').eq('email', email.toLowerCase()).limit(1);
       return rows.isNotEmpty;
@@ -603,6 +600,12 @@ class Network {
     final typed = code.trim().toUpperCase();
     final who = email.trim().toLowerCase();
     if (c == null || typed.length < 4 || !who.contains('@')) return false;
+    try {
+      final ok = await c.rpc('pm_redeem_invite', params: {'p_code': typed});
+      if (ok == true) return true;
+    } catch (e) {
+      debugPrint('redeem rpc $e');
+    }
     try {
       final rows = await c.from('pm_admin_invites').select('used_by').eq('code', typed).limit(1);
       if (rows.isEmpty) return false;
@@ -911,6 +914,26 @@ class Network {
       await c.from('pm_dogs').update({'dog_verified': on}).eq('id', id);
     } catch (e) {
       debugPrint('verifyDog $e');
+    }
+  }
+
+  static Future<void> deleteOwn(String email) async {
+    final c = _c;
+    final who = email.trim().toLowerCase();
+    if (c == null || !who.contains('@')) return;
+    try {
+      await c.from('pm_dogs').delete().eq('owner_email', who);
+      await c.from('pm_likes').delete().eq('from_email', who);
+      await c.from('pm_likes').delete().eq('to_email', who);
+      await c.from('pm_devices').delete().eq('email', who);
+      await c.from('pm_matches').delete().or('user_a.eq.$who,user_b.eq.$who');
+    } catch (e) {
+      debugPrint('deleteOwn $e');
+    }
+    try {
+      await Supabase.instance.client.auth.signOut();
+    } catch (e) {
+      debugPrint('signOut $e');
     }
   }
 }

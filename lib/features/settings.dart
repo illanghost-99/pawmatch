@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../app_state.dart';
+import '../services/network.dart';
 import '../services/store.dart';
 
 const _cream = Color(0xFFFFF4EC);
@@ -94,6 +95,29 @@ class SettingsPage extends StatelessWidget {
               title: Text('Återställ köp', style: TextStyle(fontWeight: FontWeight.w800, color: ink)),
               subtitle: Text('Om du bytt telefon.', style: TextStyle(color: ink.withValues(alpha: 0.7))),
               onTap: () => _restore(context),
+            ),
+          ),
+          _card(
+            card,
+            ListTile(
+              title: Text('Radera mitt konto', style: TextStyle(fontWeight: FontWeight.w800, color: const Color(0xFFE25C3A))),
+              subtitle: Text('Tar bort dina hundar, chattar och inloggning. Det går inte att ångra.', style: TextStyle(color: ink.withValues(alpha: 0.7))),
+              onTap: () async {
+                final ok = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Radera kontot?'),
+                    content: const Text('Dina hundar och chattar tas bort. Du loggas ut.'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Avbryt')),
+                      FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Radera')),
+                    ],
+                  ),
+                );
+                if (ok != true) return;
+                await Network.deleteOwn(state.email);
+                state.signOut();
+              },
             ),
           ),
         ],
