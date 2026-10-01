@@ -3,6 +3,7 @@ import '../app_state.dart';
 import '../models.dart';
 import '../widgets/verified_mark.dart';
 import 'dog_detail.dart';
+import 'owner_page.dart';
 
 const _rose = Color(0xFFC23B2E);
 
@@ -118,7 +119,39 @@ class _DogCard extends StatelessWidget {
                   Text(state.matchReason(dog), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
                   const SizedBox(height: 6),
                   Text(dog.bio, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, height: 1.3)),
-                  Text('Ägare: ${dog.owner}', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(99),
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OwnerPage(state: state, dog: dog))),
+                        child: Container(
+                          padding: const EdgeInsets.fromLTRB(4, 4, 10, 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(99),
+                            border: Border.all(color: Colors.white, width: 1.4),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircleAvatar(
+                                radius: 13,
+                                backgroundColor: Colors.white24,
+                                backgroundImage: dog.ownerPhoto.startsWith('http') ? NetworkImage(dog.ownerPhoto) : null,
+                                child: dog.ownerPhoto.startsWith('http') ? null : Text((dog.owner.isEmpty ? '?' : dog.owner[0]).toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
+                              ),
+                              const SizedBox(width: 8),
+                              Flexible(child: Text(dog.owner.isEmpty ? 'Hundägare' : dog.owner, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
+                              const Icon(Icons.chevron_right, color: Colors.white, size: 16),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   Row(
                     children: [

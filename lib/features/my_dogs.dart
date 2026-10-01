@@ -4,6 +4,7 @@ import '../app_state.dart';
 import '../data/suggestions.dart';
 import '../models.dart';
 import '../services/media.dart';
+import '../v2/premium_page.dart';
 import '../widgets/photo_slots.dart';
 import '../widgets/suggest_field.dart';
 
@@ -166,7 +167,10 @@ void openDogForm(BuildContext context, AppState state, {int? index, bool forceBr
                       vaccineDoc: vaccineDoc,
                     );
                     if (index == null) {
-                      state.addMyDog(dog);
+                      if (!state.addMyDog(dog)) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gratis ger en hund. Premium kan lägga till fler.')));
+                        return;
+                      }
                     } else {
                       state.updateMyDog(index, dog);
                     }
@@ -234,7 +238,13 @@ class MyDogsPage extends StatelessWidget {
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: _rose,
         foregroundColor: Colors.white,
-        onPressed: () => openDogForm(context, state),
+        onPressed: () {
+          if (!state.canAddAnotherDog) {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => PremiumPage(state: state)));
+            return;
+          }
+          openDogForm(context, state);
+        },
         label: const Text('Lägg till hund'),
         icon: const Icon(Icons.add),
       ),

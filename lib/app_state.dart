@@ -482,11 +482,39 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addMyDog(MyDog d) {
+  bool _sameDog(DogProfile a, DogProfile b) {
+    if (a.id.isNotEmpty && a.id == b.id) return true;
+    final ae = a.ownerEmail.toLowerCase();
+    final be = b.ownerEmail.toLowerCase();
+    return ae.isNotEmpty && ae == be && a.name.toLowerCase() == b.name.toLowerCase();
+  }
+
+  bool _keptMatch(DogProfile d) {
+    for (final m in matches) {
+      if (!m.accepted || !_sameDog(m.dog, d)) continue;
+      var latest = m.createdAt;
+      for (final line in m.messages) {
+        final at = line.createdAt;
+        if (at != null && at.isAfter(latest)) latest = at;
+      }
+      if (DateTime.now().difference(latest).inDays < 14) return true;
+    }
+    return false;
+  }
+
+  bool get canAddAnotherDog => isPremium || myDogs.isEmpty;
+
+  bool addMyDog(MyDog d) {
+    if (!canAddAnotherDog) {
+      lastNotice = 'Gratis ger en hund. Premium kan lägga till fler.';
+      notifyListeners();
+      return false;
+    }
     myDogs.add(d);
     if (notifyOn) PushService.notifyLive(d.name);
     Network.upsertDog(email: email, owner: fullName, dog: d, lat: lat, lng: lng);
     applyFilters();
+    return true;
   }
 
   void updateMyDog(int index, MyDog d) {
@@ -676,6 +704,7 @@ class AppState extends ChangeNotifier {
     for (final d in _pool) {
       if (blocked.contains(d.id)) continue;
       if (_isHidden(d)) continue;
+      if (_keptMatch(d)) continue;
       if (want.isNotEmpty && d.sex.isNotEmpty && d.sex.toLowerCase() != want) continue;
       if (intentFilter == 'puppies' && d.neutered) continue;
       if (d.age < ageMin || d.age > ageMax) continue;
