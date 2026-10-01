@@ -65,7 +65,10 @@ class Fcm {
       if (token == null || token!.isEmpty) {
         final apns = await m.getAPNSToken();
         if (apns == null || apns.isEmpty) {
-          lastError = 'Apple har inte gett appen en notisnyckel än';
+          final status = settings.authorizationStatus;
+          lastError = status == AuthorizationStatus.denied
+              ? 'Aviseringar är avstängda i iPhone-inställningarna'
+              : 'Apple har inte gett appen en notisnyckel än (${status.name})';
           return;
         }
         token = await m.getToken();
