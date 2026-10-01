@@ -56,6 +56,19 @@ class _PawMatchAppState extends State<PawMatchApp> {
             GlobalCupertinoLocalizations.delegate,
           ],
           debugShowCheckedModeBanner: false,
+          themeMode: state.darkMode ? ThemeMode.dark : ThemeMode.light,
+          darkTheme: ThemeData(
+            brightness: Brightness.dark,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: coral,
+              brightness: Brightness.dark,
+              primary: coral,
+              surface: const Color(0xFF1C1410),
+              onSurface: const Color(0xFFFFF4EC),
+            ),
+            scaffoldBackgroundColor: const Color(0xFF1C1410),
+            useMaterial3: true,
+          ),
           theme: ThemeData(
             colorScheme: ColorScheme.fromSeed(
               seedColor: coral,
