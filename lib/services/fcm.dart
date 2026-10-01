@@ -10,14 +10,32 @@ class Fcm {
   static String? token;
   static String? lastError;
   static void Function(String token)? onToken;
+  static Future<void>? _opening;
+  static bool _backgroundReady = false;
 
-  static Future<void> start() async {
-    if (kIsWeb) return;
+  static Future<void> _open() {
+    return _opening ??= _openNow();
+  }
+
+  static Future<void> _openNow() async {
     try {
       if (Firebase.apps.isEmpty) {
         await Firebase.initializeApp(options: DefaultFirebaseOptions.ios);
       }
-      FirebaseMessaging.onBackgroundMessage(pawmatchBg);
+      if (!_backgroundReady) {
+        FirebaseMessaging.onBackgroundMessage(pawmatchBg);
+        _backgroundReady = true;
+      }
+    } catch (e) {
+      _opening = null;
+      rethrow;
+    }
+  }
+
+  static Future<void> start() async {
+    if (kIsWeb) return;
+    try {
+      await _open();
       final m = FirebaseMessaging.instance;
       await m.requestPermission(alert: true, badge: true, sound: true);
       await m.setForegroundNotificationPresentationOptions(alert: true, badge: true, sound: true);
@@ -38,9 +56,7 @@ class Fcm {
   static Future<void> keepAlive() async {
     if (kIsWeb) return;
     try {
-      if (Firebase.apps.isEmpty) {
-        await Firebase.initializeApp(options: DefaultFirebaseOptions.ios);
-      }
+      await _open();
       final m = FirebaseMessaging.instance;
       final settings = await m.getNotificationSettings();
       if (settings.authorizationStatus == AuthorizationStatus.notDetermined) {
