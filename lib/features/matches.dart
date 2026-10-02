@@ -487,6 +487,27 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
               ),
             ),
           IconButton(
+            tooltip: 'Blockera',
+            icon: const Icon(Icons.block, color: _ink),
+            onPressed: () async {
+              final ok = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Blockera?'),
+                  content: Text('${t.dog.owner} och ${t.dog.name} syns inte igen, och chatten stängs.'),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Avbryt')),
+                    FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Blockera')),
+                  ],
+                ),
+              );
+              if (ok == true && context.mounted) {
+                await widget.state.blockPeer(t.dog);
+                if (context.mounted) Navigator.pop(context);
+              }
+            },
+          ),
+          IconButton(
             tooltip: 'Rapportera chatten',
             icon: const Icon(Icons.flag_outlined, color: _coral),
             onPressed: () => _reportConversation(
