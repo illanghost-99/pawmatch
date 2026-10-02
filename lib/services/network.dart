@@ -15,6 +15,21 @@ class Network {
     }
   }
 
+  static Future<String?> askSupport(List<Map<String, String>> messages) async {
+    final c = _c;
+    if (c == null) return null;
+    try {
+      final res = await c.functions.invoke('support-chat', body: {'messages': messages});
+      final data = res.data;
+      if (data is Map && data['reply'] is String && (data['reply'] as String).trim().isNotEmpty) {
+        return (data['reply'] as String).trim();
+      }
+    } catch (e) {
+      debugPrint('askSupport $e');
+    }
+    return null;
+  }
+
   static Future<String?> uploadPhoto(String path) async {
     if (path.startsWith('http')) return path;
     final c = _c;

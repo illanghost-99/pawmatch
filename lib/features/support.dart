@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../services/network.dart';
 
 const _cream = Color(0xFFFFF4EC);
 const _coral = Color(0xFFE25C3A);
@@ -59,13 +60,24 @@ class _SupportPageState extends State<SupportPage> {
     return 'Jag hjälper med appen, matchning, avel, GDPR och konto. För sjukdom: kontakta veterinär. Mejla support@pawmatch.app om du vill prata med en människa.';
   }
 
-  void _sendAsk() {
+  bool busy = false;
+
+  Future<void> _sendAsk() async {
     final t = ask.text.trim();
-    if (t.isEmpty) return;
+    if (t.isEmpty || busy) return;
     setState(() {
+      busy = true;
       msgs.add(_Msg(true, t));
-      msgs.add(_Msg(false, _answer(t)));
       ask.clear();
+    });
+    final history = [
+      for (final m in msgs.skip(1)) {'role': m.fromMe ? 'user' : 'assistant', 'text': m.text},
+    ];
+    final live = await Network.askSupport(history);
+    if (!mounted) return;
+    setState(() {
+      msgs.add(_Msg(false, live ?? _answer(t)));
+      busy = false;
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (scroll.hasClients) scroll.jumpTo(scroll.position.maxScrollExtent);
@@ -132,7 +144,7 @@ class _SupportPageState extends State<SupportPage> {
                     ),
                   ),
                 ),
-                IconButton(icon: const Icon(Icons.send_rounded, color: _coral), onPressed: _sendAsk),
+                IconButton(icon: const Icon(Icons.send_rounded, color: _coral), onPressed: busy ? null : _sendAsk),
               ],
             ),
           ),
