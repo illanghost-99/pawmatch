@@ -19,8 +19,8 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     final s = widget.state;
     final pages = [
-      ForYouPage(state: s),
       DiscoverPage(state: s),
+      ForYouPage(state: s),
       MatchesPage(state: s),
       DealsPage(state: s),
       ProfilePage(state: s),
@@ -36,8 +36,8 @@ class _AppShellState extends State<AppShell> {
         indicatorColor: const Color(0xFFFFD8C8),
         onDestinationSelected: (v) => setState(() => i = v),
         destinations: [
-          const NavigationDestination(icon: Icon(Icons.auto_awesome_outlined), selectedIcon: Icon(Icons.auto_awesome, color: Color(0xFFE25C3A)), label: 'För dig'),
           const NavigationDestination(icon: Icon(Icons.favorite_border), selectedIcon: Icon(Icons.favorite, color: Color(0xFFE25C3A)), label: 'Matcha'),
+          const NavigationDestination(icon: Icon(Icons.auto_awesome_outlined), selectedIcon: Icon(Icons.auto_awesome, color: Color(0xFFE25C3A)), label: 'För dig'),
           NavigationDestination(
             icon: Badge(
               isLabelVisible: n > 0,
