@@ -161,6 +161,7 @@ class Network {
       pedigreeStatus: pedigree ? ReviewStatus.approved : ReviewStatus.none,
       ownerVerified: r['owner_verified'] == true,
       dogVerified: r['dog_verified'] == true,
+      ownerPremium: r['owner_premium'] == true,
     );
   }
 
@@ -222,6 +223,16 @@ class Network {
     } catch (e) {
       debugPrint('liveDogs $e');
       return [];
+    }
+  }
+
+  static Future<void> markPremium(String email, bool on) async {
+    final c = _c;
+    if (c == null || !email.contains('@')) return;
+    try {
+      await c.from('pm_dogs').update({'owner_premium': on}).eq('owner_email', email.toLowerCase());
+    } catch (e) {
+      debugPrint('markPremium $e');
     }
   }
 

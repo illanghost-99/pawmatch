@@ -4,6 +4,7 @@ import '../app_state.dart';
 import '../data/suggestions.dart';
 import '../widgets/suggest_field.dart';
 import 'swipe_deck.dart';
+import '../v2/premium_page.dart';
 
 const _navy = Color(0xFF152033);
 const _gold = Color(0xFFC9A24A);
@@ -31,12 +32,31 @@ class DiscoverPage extends StatelessWidget {
             onPressed: () => _openSaved(context),
           ),
           IconButton(
+            tooltip: 'Ångra senaste nej',
+            icon: const Icon(Icons.undo),
+            onPressed: () {
+              if (!state.isPremium) {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => PremiumPage(state: state)));
+                return;
+              }
+              if (!state.undoPass()) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Inget nej att ångra.')));
+              }
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.tune),
-            onPressed: () => showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              builder: (_) => FiltersSheet(state: state),
-            ),
+            onPressed: () {
+              if (!state.isPremium) {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => PremiumPage(state: state)));
+                return;
+              }
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                builder: (_) => FiltersSheet(state: state),
+              );
+            },
           ),
         ],
       ),
@@ -69,7 +89,10 @@ class DiscoverPage extends StatelessWidget {
                         big: false,
                         onTap: () {
                           HapticFeedback.selectionClick();
-                          state.saveDog(deck.first);
+                          final dog = deck.first;
+                          if (!state.saveDog(dog)) {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => PremiumPage(state: state)));
+                          }
                         },
                       ),
                       _RoundAction(
@@ -219,8 +242,30 @@ class _FiltersSheetState extends State<FiltersSheet> {
                 s.ageMax = v.end.round();
               }),
             ),
-            Text('Radie ${s.radiusKm} km'),
+            Text('Avstånd ${s.radiusKm} km'),
             Slider(value: s.radiusKm.toDouble(), min: 5, max: 400, onChanged: (v) => setState(() => s.radiusKm = v.round())),
+            const SizedBox(height: 8),
+            DropdownButton<String>(
+              value: s.sizeFilter,
+              isExpanded: true,
+              items: const [
+                DropdownMenuItem(value: 'all', child: Text('Alla storlekar')),
+                DropdownMenuItem(value: 'small', child: Text('Liten, under 10 kg')),
+                DropdownMenuItem(value: 'medium', child: Text('Mellan, 10–25 kg')),
+                DropdownMenuItem(value: 'large', child: Text('Stor, över 25 kg')),
+              ],
+              onChanged: (v) => setState(() => s.sizeFilter = v ?? 'all'),
+            ),
+            DropdownButton<String>(
+              value: s.premiumIntent,
+              isExpanded: true,
+              items: const [
+                DropdownMenuItem(value: 'all', child: Text('Vän och avel')),
+                DropdownMenuItem(value: 'friends', child: Text('Bara hundvän')),
+                DropdownMenuItem(value: 'puppies', child: Text('Bara avel')),
+              ],
+              onChanged: (v) => setState(() => s.premiumIntent = v ?? 'all'),
+            ),
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: _navy),
               onPressed: () {

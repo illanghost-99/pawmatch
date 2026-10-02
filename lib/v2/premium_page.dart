@@ -24,10 +24,13 @@ class _PremiumPageState extends State<PremiumPage> with TickerProviderStateMixin
 
   static const _perks = [
     'Obegränsade swipes',
-    'Gruppchatt för promenader',
-    'Prioriterad profil',
-    'Avancerade filter',
-    'Fler sparade hundar',
+    'Se vem som gillat dig',
+    'Ångra ett nej',
+    'Filter för ras, ålder, avstånd och storlek',
+    'Syns först nära dig',
+    'Spara hur många hundar du vill',
+    'Pausa profilen och bläddra ändå',
+    'Fler hundar och gruppchatt',
   ];
 
   @override

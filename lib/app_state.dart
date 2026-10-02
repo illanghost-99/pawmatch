@@ -42,6 +42,8 @@ class AppState extends ChangeNotifier {
   int radiusKm = 250;
   String area = '';
   String intentFilter = 'all';
+  String premiumIntent = 'all';
+  String sizeFilter = 'all';
   String feedSort = 'forYou';
   List<DogProfile> liveDogs = [];
   List<DogProfile> deck = [];
@@ -50,6 +52,7 @@ class AppState extends ChangeNotifier {
   final List<MatchThread> incoming = [];
   final Set<String> handledPeers = {};
   final List<DogProfile> saved = [];
+  DogProfile? lastPassed;
   final Set<String> blocked = {};
   final Map<String, DateTime> hiddenUntil = {};
   final List<MyDog> myDogs = [];
@@ -84,6 +87,7 @@ class AppState extends ChangeNotifier {
   void startLaunchOffer() {
     premiumUntil = DateTime.now().add(const Duration(days: 150));
     notifyListeners();
+    Network.markPremium(email, true);
   }
 
   void addCircle(String name) {
@@ -113,7 +117,10 @@ class AppState extends ChangeNotifier {
     return '';
   }
 
-  int get chatBadge => incoming.length + matches.where((m) => m.unread > 0).length + groups.where((g) => g.unread > 0).length;
+  int get chatBadge {
+    final likes = isPremium ? incoming.length : (incoming.isEmpty ? 0 : 1);
+    return likes + matches.where((m) => m.unread > 0).length + groups.where((g) => g.unread > 0).length;
+  }
 
   List<MatchThread> get deals => matches.where((m) => m.deal != null).toList();
 
@@ -161,12 +168,18 @@ class AppState extends ChangeNotifier {
     await p.setBool('darkMode', on);
   }
 
-  Future<void> setDiscoverable(bool on) async {
+  Future<bool> setDiscoverable(bool on) async {
+    if (!on && !isPremium) {
+      lastNotice = 'Att pausa profilen ingår i Premium.';
+      notifyListeners();
+      return false;
+    }
     discoverable = on;
     notifyListeners();
     final p = await SharedPreferences.getInstance();
     await p.setBool('discoverable', on);
     await Network.setVisible(email, on);
+    return true;
   }
 
   Future<void> setNotify(bool on) async {
@@ -213,6 +226,7 @@ class AppState extends ChangeNotifier {
     for (final d in myDogs) {
       await Network.upsertDog(email: email, owner: fullName, dog: d, lat: lat, lng: lng);
     }
+    if (isPremium) await Network.markPremium(email, true);
     applyFilters();
     await pullInbox();
     await pullChats();
@@ -756,6 +770,24 @@ class AppState extends ChangeNotifier {
       if (byScore != 0) return byScore;
       return kmTo(a).compareTo(kmTo(b));
     });
+    if (feedSort == 'forYou') _liftNearbyPremium(list);
+  }
+
+  void _liftNearbyPremium(List<DogProfile> list) {
+    const nearKm = 40.0;
+    final top = <DogProfile>[];
+    final rest = <DogProfile>[];
+    for (final d in list) {
+      if (d.ownerPremium && kmTo(d) <= nearKm) {
+        top.add(d);
+      } else {
+        rest.add(d);
+      }
+    }
+    list
+      ..clear()
+      ..addAll(top)
+      ..addAll(rest);
   }
 
   bool _isHidden(DogProfile d) {
@@ -787,6 +819,9 @@ class AppState extends ChangeNotifier {
       if (breedQuery.isNotEmpty && !d.breed.toLowerCase().contains(breedQuery.toLowerCase())) continue;
       if (area.isNotEmpty && !d.city.toLowerCase().contains(area.toLowerCase())) continue;
       if (intentFilter != 'all' && d.intent != intentFilter) continue;
+      if (isPremium && premiumIntent == 'puppies' && d.intent != 'puppies') continue;
+      if (isPremium && premiumIntent == 'friends' && d.intent == 'puppies') continue;
+      if (isPremium && sizeFilter != 'all' && d.sizeBand.isNotEmpty && d.sizeBand != sizeFilter) continue;
       if (kmTo(d) > radiusKm) continue;
       yield d;
     }
@@ -814,12 +849,30 @@ class AppState extends ChangeNotifier {
     swipesToday += 1;
     hiddenUntil[d.id] = DateTime.now().add(const Duration(days: 7));
     deck.removeWhere((x) => x.id == d.id);
+    if (!like) {
+      lastPassed = d;
+    } else if (lastPassed?.id == d.id) {
+      lastPassed = null;
+    }
     if (like) {
       final thread = MatchThread(d, [], accepted: false, outgoing: true, peerEmail: d.ownerEmail);
       matches.insert(0, thread);
       lastNotice = 'Förfrågan skickad till ${d.owner} som äger ${d.name}.';
       _cloudLike(thread, d);
     }
+    notifyListeners();
+    return true;
+  }
+
+  bool undoPass() {
+    final d = lastPassed;
+    if (!isPremium || d == null) return false;
+    lastPassed = null;
+    hiddenUntil.remove(d.id);
+    if (swipesToday > 0) swipesToday -= 1;
+    deck.removeWhere((x) => x.id == d.id);
+    deck.insert(0, d);
+    lastNotice = '${d.name} är tillbaka.';
     notifyListeners();
     return true;
   }
@@ -898,13 +951,20 @@ class AppState extends ChangeNotifier {
     if (peer.contains('@')) Network.forgetLike(fromEmail: peer, toEmail: email);
   }
 
-  void saveDog(DogProfile d) {
+  bool saveDog(DogProfile d) {
     if (saved.any((x) => x.id == d.id)) {
       saved.removeWhere((x) => x.id == d.id);
-    } else {
-      saved.insert(0, d);
+      notifyListeners();
+      return true;
     }
+    if (!isPremium && saved.length >= 5) {
+      lastNotice = 'Gratis kan spara 5 hundar. Premium sparar obegränsat.';
+      notifyListeners();
+      return false;
+    }
+    saved.insert(0, d);
     notifyListeners();
+    return true;
   }
 
   bool isSaved(DogProfile d) => saved.any((x) => x.id == d.id);

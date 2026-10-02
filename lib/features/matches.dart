@@ -180,7 +180,7 @@ class _Inbox extends StatelessWidget {
     open.sort((a, b) => _lastActivity(b).compareTo(_lastActivity(a)));
     final groups = [...state.groups]..sort((a, b) => _groupActivity(b).compareTo(_groupActivity(a)));
     final items = <Widget>[
-      if (state.incoming.isNotEmpty) ...[
+      if (state.incoming.isNotEmpty && state.isPremium) ...[
         const Text('Vill matcha med dig', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: _ink)),
         const SizedBox(height: 8),
         for (final m in state.incoming)
@@ -198,6 +198,23 @@ class _Inbox extends StatelessWidget {
               ),
             ),
           ),
+        const SizedBox(height: 16),
+      ],
+      if (state.incoming.isNotEmpty && !state.isPremium) ...[
+        const Text('Vill matcha med dig', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: _ink)),
+        const SizedBox(height: 8),
+        Card(
+          color: Theme.of(context).cardColor,
+          child: ListTile(
+            leading: const Icon(Icons.lock_outline),
+            title: const Text('Någon gillar din hund', style: TextStyle(fontWeight: FontWeight.w700)),
+            subtitle: const Text('Premium visar vem, så du kan svara direkt.'),
+            trailing: FilledButton(
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PremiumPage(state: state))),
+              child: const Text('Visa'),
+            ),
+          ),
+        ),
         const SizedBox(height: 16),
       ],
       if (pending.isNotEmpty) ...[

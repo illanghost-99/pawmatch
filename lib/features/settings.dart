@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../app_state.dart';
 import '../services/store.dart';
+import '../v2/premium_page.dart';
 
 const _cream = Color(0xFFFFF4EC);
 const _ink = Color(0xFF14202B);
@@ -56,10 +57,15 @@ class SettingsPage extends StatelessWidget {
             card,
             SwitchListTile(
               title: Text('Synas för andra', style: TextStyle(fontWeight: FontWeight.w800, color: ink)),
-              subtitle: Text('Stäng av om du inte vill dyka upp i För dig och Matcha.', style: TextStyle(color: ink.withValues(alpha: 0.7))),
+              subtitle: Text(state.isPremium ? 'Stäng av om du vill bläddra utan att synas.' : 'Premium kan pausa profilen och ändå bläddra.', style: TextStyle(color: ink.withValues(alpha: 0.7))),
               value: state.discoverable,
               activeThumbColor: const Color(0xFFE25C3A),
-              onChanged: state.setDiscoverable,
+              onChanged: (v) async {
+                final ok = await state.setDiscoverable(v);
+                if (!ok && context.mounted) {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => PremiumPage(state: state)));
+                }
+              },
             ),
           ),
           _card(

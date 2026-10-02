@@ -64,6 +64,7 @@ class DogProfile {
     this.pedigreeNote = '',
     this.ownerVerified = false,
     this.dogVerified = false,
+    this.ownerPremium = false,
   });
 
   final String id;
@@ -100,6 +101,14 @@ class DogProfile {
   final String pedigreeNote;
   final bool ownerVerified;
   final bool dogVerified;
+  final bool ownerPremium;
+
+  String get sizeBand {
+    if (weightKg <= 0) return '';
+    if (weightKg < 10) return 'small';
+    if (weightKg < 25) return 'medium';
+    return 'large';
+  }
 
   List<String> get gallery {
     final all = <String>[if (photoUrl.isNotEmpty) photoUrl, ...photos];
