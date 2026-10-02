@@ -54,6 +54,7 @@ class AppState extends ChangeNotifier {
   final List<DogProfile> saved = [];
   DogProfile? lastPassed;
   final Set<String> blocked = {};
+  final Set<String> blockedOwners = {};
   final Map<String, DateTime> hiddenUntil = {};
   final List<MyDog> myDogs = [];
   String lastNotice = '';
@@ -159,6 +160,8 @@ class AppState extends ChangeNotifier {
     discoverable = p.getBool('discoverable') ?? true;
     notifyOn = p.getBool('notifyOn') ?? true;
     _readMessageIds.addAll(p.getStringList('readMessages') ?? const []);
+    blocked.addAll(p.getStringList('blockedDogs') ?? const []);
+    blockedOwners.addAll(p.getStringList('blockedOwners') ?? const []);
   }
 
   Future<void> setDarkMode(bool on) async {
@@ -811,6 +814,7 @@ class AppState extends ChangeNotifier {
     final want = intentFilter == 'puppies' ? oppositeSex : '';
     for (final d in _pool) {
       if (blocked.contains(d.id)) continue;
+      if (d.ownerEmail.isNotEmpty && blockedOwners.contains(d.ownerEmail.toLowerCase())) continue;
       if (_isHidden(d)) continue;
       if (_keptMatch(d)) continue;
       if (want.isNotEmpty && d.sex.isNotEmpty && d.sex.toLowerCase() != want) continue;
@@ -1138,11 +1142,23 @@ class AppState extends ChangeNotifier {
     Fcm.flush();
   }
 
-  void block(DogProfile d) {
+  Future<void> blockPeer(DogProfile d) async {
     blocked.add(d.id);
-    matches.removeWhere((m) => m.dog.id == d.id);
-    incoming.removeWhere((m) => m.dog.id == d.id);
-    saved.removeWhere((m) => m.id == d.id);
+    final owner = d.ownerEmail.toLowerCase();
+    if (owner.contains('@')) blockedOwners.add(owner);
+    bool same(MatchThread m) => m.dog.id == d.id || (owner.contains('@') && m.peerEmail.toLowerCase() == owner);
+    matches.removeWhere(same);
+    incoming.removeWhere(same);
+    saved.removeWhere((m) => m.id == d.id || (owner.contains('@') && m.ownerEmail.toLowerCase() == owner));
+    deck.removeWhere((m) => m.id == d.id || (owner.contains('@') && m.ownerEmail.toLowerCase() == owner));
+    lastNotice = 'Personen är blockerad och syns inte igen.';
     applyFilters();
+    final p = await SharedPreferences.getInstance();
+    await p.setStringList('blockedDogs', blocked.toList());
+    await p.setStringList('blockedOwners', blockedOwners.toList());
+  }
+
+  void block(DogProfile d) {
+    blockPeer(d);
   }
 }
