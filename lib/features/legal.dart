@@ -48,7 +48,8 @@ Tjänsten tillhandahålls i befintligt skick. Vi ansvarar inte för möten, avel
 Vi kan uppdatera villkoren. De aktuella villkoren finns alltid i appen. Fortsätter du använda PawMatch efter en uppdatering gäller de nya villkoren.
 
 Kontakt: support@pawmatch.app
-Senast uppdaterad: 30 september 2026
+Samma text finns på https://illanghost-99.github.io/pawmatch/
+Senast uppdaterad: 2 oktober 2026
 ''';
 
 const kPrivacy = '''
@@ -81,9 +82,11 @@ Köp
 Abonnemang betalas via Apple. Apple hanterar betalningen. PawMatch ser inte ditt kortnummer.
 
 Leverantörer
-Uppgifter kan behandlas av leverantörer som driftar databasen och skickar notiser. Vi väljer moln inom EU när det är möjligt.
+Uppgifter kan behandlas av leverantörer som driftar databasen, skickar notiser och besvarar kundtjänst. Vi väljer moln inom EU när det är möjligt.
 
-Senast uppdaterad: 30 september 2026
+Samma text finns på https://illanghost-99.github.io/pawmatch/
+
+Senast uppdaterad: 2 oktober 2026
 ''';
 
 const kCommunity = '''
