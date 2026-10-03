@@ -366,13 +366,12 @@ class ChatPage extends StatefulWidget {
   State<ChatPage> createState() => _ChatPageState();
 }
 
-class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin {
+class _ChatPageState extends State<ChatPage> {
   final c = TextEditingController();
   final scroll = ScrollController();
   Timer? poll;
   bool _nearBottom = true;
   double _inset = 0;
-  late final AnimationController pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))..repeat(reverse: true);
 
   @override
   void initState() {
@@ -382,6 +381,7 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
       _nearBottom = scroll.offset < 140;
     });
     widget.state.markRead(widget.thread);
+    widget.state.attachDeal(widget.thread);
     widget.state.refreshChat(widget.thread, markSeen: true);
     poll = Timer.periodic(const Duration(seconds: 1), (_) async {
       await widget.state.refreshChat(widget.thread, markSeen: true);
@@ -403,7 +403,6 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
   @override
   void dispose() {
     poll?.cancel();
-    pulse.dispose();
     scroll.dispose();
     c.dispose();
     super.dispose();
@@ -430,7 +429,6 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
   @override
   Widget build(BuildContext context) {
     final t = widget.thread;
-    final breedChat = widget.state.canNegotiate(t);
     final inset = MediaQuery.viewInsetsOf(context).bottom;
     if (inset != _inset) {
       _inset = inset;
@@ -467,25 +465,13 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
           ),
         ),
         actions: [
-          if (breedChat)
-            Padding(
-              padding: const EdgeInsets.only(right: 6),
-              child: ScaleTransition(
-                scale: Tween(begin: 0.96, end: 1.04).animate(CurvedAnimation(parent: pulse, curve: Curves.easeInOut)),
-                child: FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _coral,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                  ),
-                  onPressed: () => DealSheet.open(context, widget.state, t).then((_) {
-                    if (mounted) setState(() {});
-                  }),
-                  icon: const Icon(Icons.handshake, size: 18),
-                  label: const Text('Förhandla', style: TextStyle(fontWeight: FontWeight.w800)),
-                ),
-              ),
-            ),
+          IconButton(
+            tooltip: 'Förhandla avtal',
+            icon: const Icon(Icons.handshake_outlined, color: _coral),
+            onPressed: () => DealSheet.open(context, widget.state, t).then((_) {
+              if (mounted) setState(() {});
+            }),
+          ),
           IconButton(
             tooltip: 'Blockera',
             icon: const Icon(Icons.block, color: _ink),
@@ -536,13 +522,13 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
               padding: EdgeInsets.all(16),
               child: Text('Chatten öppnas när den andra ägaren också swipear ja.'),
             ),
-          if (breedChat)
+          if (t.accepted)
             Material(
               color: const Color(0xFFFFE0D4),
               child: ListTile(
-                leading: const Icon(Icons.description, color: _coral),
+                leading: const Icon(Icons.handshake_outlined, color: _coral),
                 title: Text(
-                  t.deal == null ? 'Avel — tryck Förhandla för avtal' : (t.deal!.signedByMe.isEmpty ? 'Avtal skapat — väntar på signering' : 'Avtal signerat'),
+                  t.deal == null ? 'Tryck för att förhandla och signera avtal' : (t.deal!.signedByMe.isEmpty ? 'Avtal skapat — väntar på signering' : 'Avtal signerat'),
                   style: const TextStyle(fontWeight: FontWeight.w800, color: _ink),
                 ),
                 trailing: const Icon(Icons.chevron_right, color: _coral),

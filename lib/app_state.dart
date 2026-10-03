@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -162,6 +163,11 @@ class AppState extends ChangeNotifier {
     _readMessageIds.addAll(p.getStringList('readMessages') ?? const []);
     blocked.addAll(p.getStringList('blockedDogs') ?? const []);
     blockedOwners.addAll(p.getStringList('blockedOwners') ?? const []);
+    final rawDeals = p.getString('pmDeals');
+    if (rawDeals != null && rawDeals.isNotEmpty) {
+      final decoded = jsonDecode(rawDeals);
+      if (decoded is Map) _dealCache = Map<String, dynamic>.from(decoded);
+    }
   }
 
   Future<void> setDarkMode(bool on) async {
@@ -329,6 +335,7 @@ class AppState extends ChangeNotifier {
         thread.accepted = true;
         thread.cloudMatchId = id;
       }
+      attachDeal(thread);
       incoming.removeWhere((m) => m.peerEmail.toLowerCase() == peer);
       await refreshChat(thread, countUnread: true);
     }
@@ -533,6 +540,7 @@ class AppState extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('photoUrl');
     await prefs.remove('readMessages');
+    await prefs.remove('pmDeals');
     await persist();
     notifyListeners();
   }
@@ -606,7 +614,34 @@ class AppState extends ChangeNotifier {
     applyFilters();
   }
 
-  void bump() => notifyListeners();
+  void bump() {
+    notifyListeners();
+    _saveDeals();
+  }
+
+  Map<String, dynamic> _dealCache = {};
+
+  void attachDeal(MatchThread t) {
+    if (t.deal != null) return;
+    final raw = _dealCache[t.cloudMatchId] ?? _dealCache[t.peerEmail.toLowerCase()];
+    if (raw is Map) {
+      t.deal = BreedingDeal.fromJson(Map<String, dynamic>.from(raw));
+    }
+  }
+
+  Future<void> _saveDeals() async {
+    final map = <String, dynamic>{};
+    for (final m in matches) {
+      final deal = m.deal;
+      if (deal == null) continue;
+      final payload = deal.toJson();
+      if (m.cloudMatchId.isNotEmpty) map[m.cloudMatchId] = payload;
+      if (m.peerEmail.contains('@')) map[m.peerEmail.toLowerCase()] = payload;
+    }
+    _dealCache = map;
+    final p = await SharedPreferences.getInstance();
+    await p.setString('pmDeals', jsonEncode(map));
+  }
 
   void markRead(MatchThread t) {
     t.unread = 0;

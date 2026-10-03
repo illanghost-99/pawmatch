@@ -183,6 +183,50 @@ class BreedingDeal {
   List<List<SigPoint>> signature;
   List<List<SigPoint>> signatureOther;
   bool get fullySigned => signedByMe.isNotEmpty && signedByOther.isNotEmpty;
+
+  Map<String, dynamic> toJson() => {
+        'price': pricePerPuppy,
+        'pups': expectedPups,
+        'place': place,
+        'notes': notes,
+        'a': partyA,
+        'b': partyB,
+        'body': body,
+        'me': signedByMe,
+        'other': signedByOther,
+        'sig': [
+          for (final stroke in signature) [for (final p in stroke) [p.x, p.y]],
+        ],
+        'sigB': [
+          for (final stroke in signatureOther) [for (final p in stroke) [p.x, p.y]],
+        ],
+      };
+
+  static List<List<SigPoint>> _strokes(dynamic raw) {
+    if (raw is! List) return [];
+    return [
+      for (final stroke in raw)
+        if (stroke is List)
+          [
+            for (final p in stroke)
+              if (p is List && p.length >= 2) SigPoint((p[0] as num).toDouble(), (p[1] as num).toDouble()),
+          ],
+    ];
+  }
+
+  factory BreedingDeal.fromJson(Map<String, dynamic> j) => BreedingDeal(
+        pricePerPuppy: '${j['price'] ?? ''}',
+        expectedPups: '${j['pups'] ?? ''}',
+        place: '${j['place'] ?? ''}',
+        notes: '${j['notes'] ?? ''}',
+        partyA: '${j['a'] ?? ''}',
+        partyB: '${j['b'] ?? ''}',
+        body: '${j['body'] ?? ''}',
+        signedByMe: '${j['me'] ?? ''}',
+        signedByOther: '${j['other'] ?? ''}',
+        signature: _strokes(j['sig']),
+        signatureOther: _strokes(j['sigB']),
+      );
 }
 
 class MatchThread {
