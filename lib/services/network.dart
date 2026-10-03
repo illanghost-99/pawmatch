@@ -463,6 +463,49 @@ class Network {
     }
   }
 
+  static Future<String> pingReport(String toEmail) async {
+    final c = _c;
+    final to = toEmail.trim().toLowerCase();
+    if (c == null) return 'NO_CLIENT';
+    if (!to.contains('@')) return 'BAD_EMAIL';
+    try {
+      final res = await c.functions.invoke('notify', body: {
+        'to_email': to,
+        'title': 'PawMatch',
+        'body': 'Testnotis från admin',
+      });
+      return '${res.status} ${res.data}';
+    } catch (e) {
+      return '$e';
+    }
+  }
+
+  static Future<int> deviceCount(String email) async {
+    final c = _c;
+    if (c == null || !email.contains('@')) return -1;
+    try {
+      final rows = await c.from('pm_devices').select('token').eq('email', email.toLowerCase());
+      return (rows as List).length;
+    } catch (e) {
+      debugPrint('deviceCount $e');
+      return -1;
+    }
+  }
+
+  static Future<List<String>> recentPushNotes(String email) async {
+    final c = _c;
+    if (c == null || !email.contains('@')) return [];
+    try {
+      final rows = await c.from('pm_push_log').select('note, created_at').eq('email', email.toLowerCase()).order('created_at', ascending: false).limit(6);
+      return [
+        for (final row in rows as List)
+          '${row['created_at'] ?? ''}  ${row['note'] ?? ''}',
+      ];
+    } catch (e) {
+      return ['loggfel: $e'];
+    }
+  }
+
   static Future<void> hideMatch(String matchId, String email) async {
     final c = _c;
     if (c == null || matchId.isEmpty) return;

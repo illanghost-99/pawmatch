@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../app_state.dart';
 import '../models.dart';
+import '../services/fcm.dart';
 import '../services/moderator.dart';
 import '../services/network.dart';
 
@@ -35,7 +37,7 @@ class _AdminPageState extends State<AdminPage> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  for (final item in const [(0, 'Rapporter'), (1, 'Hundar'), (2, 'Konton'), (3, 'Team')])
+                  for (final item in const [(0, 'Rapporter'), (1, 'Hundar'), (2, 'Konton'), (3, 'Team'), (4, 'Notiser')])
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: ChoiceChip(
@@ -54,6 +56,7 @@ class _AdminPageState extends State<AdminPage> {
               1 => _Dogs(state: widget.state),
               2 => _Accounts(state: widget.state),
               3 => _Team(email: widget.state.email),
+              4 => _PushLab(email: widget.state.email),
               _ => _Reports(state: widget.state),
             },
           ),
@@ -721,6 +724,166 @@ class _TeamState extends State<_Team> {
     );
   }
 }
+
+class _PushLab extends StatefulWidget {
+  const _PushLab({required this.email});
+  final String email;
+  @override
+  State<_PushLab> createState() => _PushLabState();
+}
+
+class _PushLabState extends State<_PushLab> {
+  Map<String, String> info = {};
+  int devices = -1;
+  List<String> notes = [];
+  String send = '';
+  bool busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _run();
+  }
+
+  Future<void> _run() async {
+    setState(() => busy = true);
+    final next = await Fcm.diagnose();
+    final count = await Network.deviceCount(widget.email);
+    final log = await Network.recentPushNotes(widget.email);
+    var code = next['code'] ?? 'OKAND';
+    if (code == 'TOKEN_OK' && count == 0) code = 'DB_EMPTY';
+    if (code == 'TOKEN_OK' && count < 0) code = 'DB_FAIL';
+    next['code'] = code;
+    next['devices'] = '$count';
+    if (!mounted) return;
+    setState(() {
+      info = next;
+      devices = count;
+      notes = log;
+      busy = false;
+    });
+  }
+
+  Future<void> _send() async {
+    setState(() => busy = true);
+    final result = await Network.pingReport(widget.email);
+    var code = info['code'] ?? '';
+    if (result.contains('"sent":1') || result.contains('sent: 1')) code = 'SEND_1';
+    if (result.contains('"sent":0') || result.contains('sent: 0')) code = 'SEND_0';
+    if (!mounted) return;
+    setState(() {
+      send = result;
+      info = {...info, 'code': code, 'send': result};
+      busy = false;
+    });
+  }
+
+  String get _report {
+    return [
+      'PawMatch notistest',
+      'konto: ${widget.email}',
+      'felkod: ${info['code'] ?? ''}',
+      'tillstånd: ${info['permission'] ?? ''}',
+      'apple-nyckel: ${info['apns'] ?? ''}',
+      'firebase-nyckel: ${info['fcm'] ?? ''} ${info['fcm_start'] ?? ''}',
+      'sparade telefoner: $devices',
+      'firebase-projekt: ${info['project'] ?? ''}',
+      'bundle: ${info['bundle'] ?? ''}',
+      'firebase-appar: ${info['firebase_apps'] ?? ''}',
+      'senaste fel: ${info['last_error'] ?? ''}',
+      'apns-fel: ${info['apns_error'] ?? ''}',
+      'fcm-fel: ${info['fcm_error'] ?? ''}',
+      'skickat: $send',
+      'logg:',
+      ...notes,
+    ].join('\n');
+  }
+
+  String get _meaning {
+    switch (info['code']) {
+      case 'PERMISSION_DENIED':
+        return 'iPhone har blockerat notiser. Gå till Inställningar, PawMatch, Aviseringar och tillåt.';
+      case 'APNS_NULL':
+        return 'Apple gav ingen notisnyckel. Felet sitter i Xcode eller i .p8-nyckeln i Firebase, inte i chatten.';
+      case 'FCM_NULL':
+        return 'Apple svarade, men Firebase gav ingen nyckel. Bundle-id måste vara app.pawmatch.';
+      case 'DB_EMPTY':
+        return 'Nyckeln finns i telefonen men sparades inte. Servern har ingen telefon att skicka till.';
+      case 'DB_FAIL':
+        return 'Kunde inte läsa sparade telefoner. Kopiera texten och skicka den.';
+      case 'TOKEN_OK':
+        return 'Telefonen är registrerad. Skicka en testnotis, stäng appen och vänta.';
+      case 'SEND_0':
+        return 'Servern körde men hittade ingen telefon. Svaret är sent 0.';
+      case 'SEND_1':
+        return 'Servern skickade. Kolla låsskärmen. Syns inget är det Apple som stoppar leveransen.';
+      case 'FIREBASE_FAIL':
+        return 'Firebase startade inte. Feltexten nedan är den viktiga.';
+      default:
+        return 'Kör testet och kopiera texten.';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final code = info['code'] ?? '';
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+      children: [
+        Text(code.isEmpty ? 'Läser…' : code, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: _coral)),
+        const SizedBox(height: 8),
+        Text(_meaning, style: const TextStyle(height: 1.35, color: Color(0xFF3D4A57))),
+        const SizedBox(height: 14),
+        _line('Tillstånd', info['permission'] ?? ''),
+        _line('Apple-nyckel', info['apns'] ?? ''),
+        _line('Firebase-nyckel', '${info['fcm'] ?? ''} ${info['fcm_start'] ?? ''}'.trim()),
+        _line('Sparade telefoner', devices < 0 ? 'kunde inte läsa' : '$devices'),
+        _line('Projekt', info['project'] ?? ''),
+        _line('Bundle', info['bundle'] ?? ''),
+        if ((info['last_error'] ?? '').isNotEmpty) _line('Senaste fel', info['last_error'] ?? ''),
+        if ((info['apns_error'] ?? '').isNotEmpty) _line('Apple-fel', info['apns_error'] ?? ''),
+        if ((info['fcm_error'] ?? '').isNotEmpty) _line('Firebase-fel', info['fcm_error'] ?? ''),
+        if (send.isNotEmpty) _line('Serversvar', send),
+        const SizedBox(height: 8),
+        FilledButton(onPressed: busy ? null : _run, child: const Text('Kör testet igen')),
+        const SizedBox(height: 8),
+        FilledButton(onPressed: busy ? null : _send, child: const Text('Skicka testnotis till den här telefonen')),
+        const SizedBox(height: 8),
+        OutlinedButton(
+          onPressed: () async {
+            await Clipboard.setData(ClipboardData(text: _report));
+            if (!context.mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kopierat. Klistra in det i chatten.')));
+          },
+          child: const Text('Kopiera allt'),
+        ),
+        const SizedBox(height: 16),
+        const Text('Senaste loggen', style: TextStyle(fontWeight: FontWeight.w800)),
+        const SizedBox(height: 6),
+        if (notes.isEmpty) const Text('Ingen logg ännu.'),
+        for (final line in notes)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Text(line, style: const TextStyle(fontSize: 12, color: Color(0xFF3D4A57))),
+          ),
+      ],
+    );
+  }
+
+  Widget _line(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(width: 140, child: Text(label, style: const TextStyle(fontWeight: FontWeight.w800, color: _ink))),
+          Expanded(child: Text(value.isEmpty ? '—' : value, style: const TextStyle(color: _ink))),
+        ],
+      ),
+    );
+  }
+}
+
 
 
 

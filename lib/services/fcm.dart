@@ -81,6 +81,58 @@ class Fcm {
     flush();
   }
 
+  static Future<Map<String, String>> diagnose() async {
+    final out = <String, String>{
+      'project': DefaultFirebaseOptions.ios.projectId,
+      'bundle': DefaultFirebaseOptions.ios.iosBundleId ?? '',
+    };
+    try {
+      await _open();
+      final m = FirebaseMessaging.instance;
+      final settings = await m.getNotificationSettings();
+      out['permission'] = settings.authorizationStatus.name;
+      out['alert'] = settings.alert.name;
+      String? apns;
+      try {
+        apns = await m.getAPNSToken();
+      } catch (e) {
+        out['apns_error'] = '$e';
+      }
+      final hasApns = apns != null && apns.isNotEmpty;
+      out['apns'] = hasApns ? 'FINNS' : 'SAKNAS';
+      if (hasApns && (token == null || token!.isEmpty)) {
+        try {
+          token = await m.getToken();
+          lastError = token == null ? 'ingen token' : null;
+        } catch (e) {
+          out['fcm_error'] = '$e';
+          lastError = '$e';
+        }
+      }
+      final t = token;
+      final hasFcm = t != null && t.isNotEmpty;
+      out['fcm'] = hasFcm ? 'FINNS' : 'SAKNAS';
+      out['fcm_start'] = hasFcm ? t!.substring(0, 10) : '';
+      out['last_error'] = lastError ?? '';
+      out['firebase_apps'] = '${Firebase.apps.length}';
+      if (settings.authorizationStatus == AuthorizationStatus.denied) {
+        out['code'] = 'PERMISSION_DENIED';
+      } else if (!hasApns) {
+        out['code'] = 'APNS_NULL';
+      } else if (!hasFcm) {
+        out['code'] = 'FCM_NULL';
+      } else {
+        out['code'] = 'TOKEN_OK';
+      }
+      flush();
+    } catch (e) {
+      out['code'] = 'FIREBASE_FAIL';
+      out['last_error'] = '$e';
+      out['firebase_apps'] = '${Firebase.apps.length}';
+    }
+    return out;
+  }
+
   static void flush() {
     final t = token;
     final cb = onToken;
