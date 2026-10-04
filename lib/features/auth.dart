@@ -107,8 +107,13 @@ class _AuthScreenState extends State<AuthScreen> {
           debugPrint('Apple-koppling: $e');
         }
       }
-      if (cred.givenName != null) widget.state.firstName = cred.givenName!;
-      if (cred.familyName != null) widget.state.lastName = cred.familyName!;
+      if (cred.givenName != null && cred.givenName!.trim().isNotEmpty) {
+        widget.state.firstName = cred.givenName!.trim();
+      }
+      if (cred.familyName != null && cred.familyName!.trim().isNotEmpty) {
+        widget.state.lastName = cred.familyName!.trim();
+      }
+      widget.state.idConsent = true;
       widget.state.signIn(used);
     } catch (_) {
       if (mounted) {
