@@ -62,7 +62,9 @@ class DiscoverPage extends StatelessWidget {
       ),
       body: Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-        child: deck.isEmpty
+        child: !state.dogsReady
+            ? const SizedBox.expand()
+            : deck.isEmpty
             ? const Center(child: Text('Inga registrerade hundar här ännu.', textAlign: TextAlign.center))
             : Column(
                 children: [

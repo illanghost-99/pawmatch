@@ -146,10 +146,14 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
           if (d.photoUrl.isNotEmpty)
             Image.network(
               d.photoUrl,
+              key: ValueKey(d.photoUrl),
               fit: BoxFit.cover,
-              gaplessPlayback: true,
-              filterQuality: FilterQuality.low,
+              filterQuality: FilterQuality.medium,
               cacheWidth: (MediaQuery.sizeOf(context).width * MediaQuery.devicePixelRatioOf(context)).round(),
+              loadingBuilder: (context, child, progress) {
+                if (progress == null) return child;
+                return const ColoredBox(color: Color(0xFFE7D3C4));
+              },
               errorBuilder: (_, __, ___) => _fallback(),
             )
           else

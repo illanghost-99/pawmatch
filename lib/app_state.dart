@@ -8,6 +8,7 @@ import 'services/location.dart';
 import 'services/network.dart';
 import 'services/fcm.dart';
 import 'services/push.dart';
+import 'services/badge.dart';
 import 'services/session.dart';
 import 'v2/circle_models.dart';
 
@@ -48,6 +49,7 @@ class AppState extends ChangeNotifier {
   String feedSort = 'forYou';
   List<DogProfile> liveDogs = [];
   List<DogProfile> deck = [];
+  bool dogsReady = false;
   final List<MatchThread> matches = [];
   final List<GroupChat> groups = [];
   final List<MatchThread> incoming = [];
@@ -122,6 +124,17 @@ class AppState extends ChangeNotifier {
   int get chatBadge {
     final likes = isPremium ? incoming.length : (incoming.isEmpty ? 0 : 1);
     return likes + matches.where((m) => m.unread > 0).length + groups.where((g) => g.unread > 0).length;
+  }
+
+  int _iconBadge = -1;
+
+  @override
+  void notifyListeners() {
+    super.notifyListeners();
+    final n = signedIn ? chatBadge : 0;
+    if (n == _iconBadge) return;
+    _iconBadge = n;
+    BadgeCount.set(n);
   }
 
   List<MatchThread> get deals => matches.where((m) => m.deal != null).toList();
@@ -225,6 +238,7 @@ class AppState extends ChangeNotifier {
       return;
     }
     liveDogs = await Network.liveDogs(email);
+    dogsReady = true;
     final remote = await Network.ownerProfile(email);
     final remotePhoto = '${remote?['photo_url'] ?? ''}';
     if (remotePhoto.startsWith('http')) {
