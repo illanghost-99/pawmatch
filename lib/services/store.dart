@@ -11,19 +11,25 @@ class Store {
   static ProductDetails? product;
   static String status = '';
   static Future<ProductDetails?>? _loading;
+  static void Function(bool ok)? _onOwned;
 
   static Future<void> boot(void Function(bool ok) onOwned) async {
-    _sub?.cancel();
+    _onOwned = onOwned;
+    _listen();
     final ok = await iap.isAvailable();
     if (!ok) {
       status = 'Butiken är inte redo än.';
       return;
     }
     await load();
+  }
+
+  static void _listen() {
+    if (_sub != null) return;
     _sub = iap.purchaseStream.listen((buys) async {
       for (final p in buys) {
         if (p.status == PurchaseStatus.purchased || p.status == PurchaseStatus.restored) {
-          onOwned(true);
+          _onOwned?.call(true);
         }
         if (p.pendingCompletePurchase) await iap.completePurchase(p);
       }
@@ -37,10 +43,16 @@ class Store {
 
   static Future<ProductDetails?> _fetch() async {
     try {
-      final resp = await iap.queryProductDetails({kPremiumId});
-      if (resp.productDetails.isNotEmpty) product = resp.productDetails.first;
+      final resp = await iap.queryProductDetails({kPremiumId}).timeout(const Duration(seconds: 12));
+      if (resp.productDetails.isNotEmpty) {
+        product = resp.productDetails.first;
+        status = '';
+      } else {
+        status = 'Produkten saknas i App Store Connect.';
+      }
       return product;
     } catch (e) {
+      status = 'App Store svarade inte.';
       debugPrint('IAP load $e');
       return null;
     } finally {
@@ -49,21 +61,25 @@ class Store {
   }
 
   static Future<bool> buy() async {
+    _listen();
     try {
       final item = await load();
       if (item == null) {
-        status = 'Produkten saknas i App Store Connect.';
+        if (status.isEmpty) status = 'Produkten saknas i App Store Connect.';
         return false;
       }
-      return iap.buyNonConsumable(purchaseParam: PurchaseParam(productDetails: item));
+      return await iap
+          .buyNonConsumable(purchaseParam: PurchaseParam(productDetails: item))
+          .timeout(const Duration(seconds: 20), onTimeout: () => false);
     } catch (e) {
-      status = e.toString();
+      status = 'App Store svarade inte.';
       debugPrint('IAP $e');
       return false;
     }
   }
 
   static Future<String> restore() async {
+    _listen();
     try {
       final ok = await iap.isAvailable();
       if (!ok) return 'App Store svarar inte just nu. Försök igen om en stund.';
@@ -74,7 +90,7 @@ class Store {
           if (p.pendingCompletePurchase) iap.completePurchase(p);
         }
       });
-      await iap.restorePurchases();
+      await iap.restorePurchases().timeout(const Duration(seconds: 15));
       await Future<void>.delayed(const Duration(seconds: 2));
       await sub.cancel();
       if (hit) return 'Köpet är återställt. Premium gäller på den här telefonen.';

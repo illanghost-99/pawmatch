@@ -49,7 +49,7 @@ class _PremiumPageState extends State<PremiumPage> with TickerProviderStateMixin
     });
     final storeOk = await Store.buy();
     if (!storeOk) {
-      note = 'Apple hittar inte prenumerationen än. Ingen betalning har gjorts.';
+      note = Store.status.isEmpty ? 'Apple hittar inte prenumerationen än. Ingen betalning har gjorts.' : Store.status;
     }
     if (mounted) setState(() => busy = false);
   }
