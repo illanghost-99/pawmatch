@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../app_state.dart';
 import '../models.dart';
+import '../widgets/dog_photo.dart';
 import '../widgets/verified_mark.dart';
 import 'dog_detail.dart';
 
@@ -25,6 +26,12 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
   void initState() {
     super.initState();
     fly = AnimationController(vsync: this, duration: const Duration(milliseconds: 520));
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    warmDogPhotos(context, widget.state.deck.take(4).map((d) => d.photoUrl));
   }
 
   @override
@@ -144,18 +151,7 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
         fit: StackFit.expand,
         children: [
           if (d.photoUrl.isNotEmpty)
-            Image.network(
-              d.photoUrl,
-              key: ValueKey(d.photoUrl),
-              fit: BoxFit.cover,
-              filterQuality: FilterQuality.medium,
-              cacheWidth: (MediaQuery.sizeOf(context).width * MediaQuery.devicePixelRatioOf(context)).round(),
-              loadingBuilder: (context, child, progress) {
-                if (progress == null) return child;
-                return const ColoredBox(color: Color(0xFFE7D3C4));
-              },
-              errorBuilder: (_, __, ___) => _fallback(),
-            )
+            DogPhoto(url: d.photoUrl)
           else
             _fallback(),
           const DecoratedBox(

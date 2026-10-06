@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../models.dart';
+import '../widgets/dog_photo.dart';
 import '../widgets/verified_mark.dart';
 
 const _ink = Color(0xFF14202B);
@@ -41,7 +42,7 @@ class _DogDetailPageState extends State<DogDetailPage> {
                         if (pics.isEmpty) {
                           return Container(color: const Color(0xFF2A3344), alignment: Alignment.center, child: const Icon(Icons.pets, size: 80, color: Color(0xFFC9A24A)));
                         }
-                        return Image.network(pics[i], fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: const Color(0xFF2A3344)));
+                        return DogPhoto(url: pics[i], memWidth: (MediaQuery.sizeOf(context).width * MediaQuery.devicePixelRatioOf(context)).round().clamp(480, 1400));
                       },
                     ),
                     if (pics.length > 1)

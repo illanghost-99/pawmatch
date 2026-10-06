@@ -1,6 +1,8 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
+import 'package:image/image.dart' as img;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models.dart';
 import 'cloud.dart';
@@ -37,12 +39,12 @@ class Network {
     try {
       final file = File(path);
       if (!file.existsSync()) return null;
-      final bytes = await file.readAsBytes();
+      final bytes = await compute(_shrinkPhoto, await file.readAsBytes());
       final name = 'dogs/${DateTime.now().microsecondsSinceEpoch}.jpg';
       await c.storage.from('dog-photos').uploadBinary(
             name,
             bytes,
-            fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: true),
+            fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: true, cacheControl: '31536000'),
           );
       return c.storage.from('dog-photos').getPublicUrl(name);
     } catch (e) {
@@ -58,13 +60,13 @@ class Network {
     try {
       final file = File(path);
       if (!file.existsSync()) return null;
-      final bytes = await file.readAsBytes();
+      final bytes = await compute(_shrinkPhoto, await file.readAsBytes());
       final id = email.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_');
       final name = 'owners/$id.jpg';
       await c.storage.from('dog-photos').uploadBinary(
             name,
             bytes,
-            fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: true),
+            fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: true, cacheControl: '31536000'),
           );
       return c.storage.from('dog-photos').getPublicUrl(name);
     } catch (e) {
@@ -1083,5 +1085,20 @@ class Network {
     } catch (e) {
       debugPrint('signOut $e');
     }
+  }
+}
+
+Uint8List _shrinkPhoto(Uint8List bytes) {
+  try {
+    final decoded = img.decodeImage(bytes);
+    if (decoded == null) return bytes;
+    final wide = decoded.width >= decoded.height;
+    final longest = wide ? decoded.width : decoded.height;
+    final sized = longest > 1280
+        ? img.copyResize(decoded, width: wide ? 1280 : null, height: wide ? null : 1280)
+        : decoded;
+    return Uint8List.fromList(img.encodeJpg(sized, quality: 72));
+  } catch (_) {
+    return bytes;
   }
 }

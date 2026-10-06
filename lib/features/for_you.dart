@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../models.dart';
+import '../widgets/dog_photo.dart';
 import '../widgets/verified_mark.dart';
 import 'dog_detail.dart';
 
@@ -75,12 +76,7 @@ class _WarmListState extends State<_WarmList> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final width = (MediaQuery.sizeOf(context).width * MediaQuery.devicePixelRatioOf(context)).round();
-    for (final dog in widget.items.take(6)) {
-      final url = dog.photoUrl;
-      if (!url.startsWith('http')) continue;
-      precacheImage(ResizeImage(NetworkImage(url), width: width), context);
-    }
+    warmDogPhotos(context, widget.items.take(8).map((d) => d.photoUrl));
   }
 
   @override
@@ -190,17 +186,7 @@ class _DogCard extends StatelessWidget {
 
   Widget _photo(BuildContext context, String url) {
     final width = (MediaQuery.sizeOf(context).width * MediaQuery.devicePixelRatioOf(context)).round();
-    return Image.network(
-      url,
-      width: double.infinity,
-      height: double.infinity,
-      fit: BoxFit.cover,
-      alignment: Alignment.center,
-      gaplessPlayback: true,
-      filterQuality: FilterQuality.medium,
-      cacheWidth: width,
-      errorBuilder: (_, __, ___) => _fallback(),
-    );
+    return DogPhoto(url: url, memWidth: width);
   }
 
   Widget _fallback() => const ColoredBox(color: Color(0xFF8B3A32), child: Center(child: Text('🐾', style: TextStyle(fontSize: 72))));
