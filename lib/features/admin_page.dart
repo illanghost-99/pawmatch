@@ -572,32 +572,6 @@ class _AccountsState extends State<_Accounts> {
     return rows.where((r) => '${r['name']} ${r['email']}'.toLowerCase().contains(text)).toList();
   }
 
-  Future<void> _server(Map<String, dynamic> row, String action) async {
-    final name = '${row['name']}';
-    final photos = action == 'photos';
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(photos ? 'Radera bilder för $name?' : 'Radera $name?'),
-        content: Text(photos
-            ? 'Profilbild och hundbilder tas bort. Kontot finns kvar.'
-            : 'Kontot, bilderna och inloggningen tas bort. Personen kan inte logga in igen.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Avbryt')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Ja')),
-        ],
-      ),
-    );
-    if (ok != true || !mounted) return;
-    final error = await Network.adminAccount('${row['email']}', action);
-    if (!mounted) return;
-    if (error.isNotEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.contains('admin-accounts') ? 'Ladda upp funktionen admin-accounts först.' : error)));
-      return;
-    }
-    await _load();
-  }
-
   Future<void> _act(Map<String, dynamic> row, String mode) async {
     final name = '${row['name']}';
     final word = switch (mode) {
@@ -610,7 +584,12 @@ class _AccountsState extends State<_Accounts> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('${word[0].toUpperCase()}${word.substring(1)} $name?'),
-        content: Text(mode == 'delete' ? 'Hundarna tas bort och kontot kan inte användas.' : 'Personen ser ändringen nästa gång appen öppnas.'),
+        content: Text(switch (mode) {
+          'off' => 'Hunden och kontot döljs i appen. Ingenting raderas. Aktivera igen så kommer de tillbaka.',
+          'on' => 'Hunden och kontot syns i appen igen.',
+          'closed' => 'Kontot stängs och hunden döljs tills du aktiverar det igen.',
+          _ => 'Personen ser ändringen nästa gång appen öppnas.',
+        }),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Avbryt')),
           FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Ja')),
@@ -674,9 +653,6 @@ class _AccountsState extends State<_Accounts> {
                                 ListTile(title: Text('${r['name']}', style: const TextStyle(fontWeight: FontWeight.w800)), subtitle: Text('${r['email']}')),
                                 ListTile(leading: const Icon(Icons.check_circle_outline), title: const Text('Aktivera'), onTap: () { Navigator.pop(ctx); _act(r, 'on'); }),
                                 ListTile(leading: const Icon(Icons.pause_circle_outline), title: const Text('Avaktivera'), onTap: () { Navigator.pop(ctx); _act(r, 'off'); }),
-                                ListTile(leading: const Icon(Icons.block), title: const Text('Stäng kontot'), onTap: () { Navigator.pop(ctx); _act(r, 'closed'); }),
-                                ListTile(leading: const Icon(Icons.image_not_supported_outlined), title: const Text('Radera bilder'), onTap: () { Navigator.pop(ctx); _server(r, 'photos'); }),
-                                ListTile(leading: const Icon(Icons.delete_outline, color: _coral), title: const Text('Radera kontot helt'), onTap: () { Navigator.pop(ctx); _server(r, 'delete'); }),
                               ],
                             ),
                           ),

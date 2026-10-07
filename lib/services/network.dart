@@ -778,22 +778,6 @@ class Network {
     return accounts();
   }
 
-  static Future<String> adminAccount(String email, String action) async {
-    final c = _c;
-    final who = email.trim().toLowerCase();
-    if (c == null || !who.contains('@')) return 'Ingen kontakt med servern.';
-    try {
-      final res = await c.functions.invoke('admin-accounts', body: {'action': action, 'email': who});
-      final data = res.data;
-      if (data is Map && data['ok'] == true) return '';
-      final error = data is Map ? '${data['error'] ?? ''}' : '$data';
-      return error.isEmpty ? 'Det gick inte.' : error;
-    } catch (e) {
-      debugPrint('adminAccount $e');
-      return '$e';
-    }
-  }
-
   static Future<List<Map<String, dynamic>>> accounts() async {
     final c = _c;
     if (c == null) return [];
@@ -1009,6 +993,10 @@ class Network {
       if (row['permanent'] == true) return 'Kontot är stängt efter upprepade regelbrott.';
       final until = DateTime.tryParse('${row['banned_until'] ?? ''}');
       if (until != null && until.toUtc().isAfter(DateTime.now().toUtc())) {
+        final reason = '${row['reason'] ?? ''}'.toLowerCase();
+        if (reason.contains('avaktiver')) {
+          return 'Kontot är avaktiverat och syns inte i appen. Support kan aktivera det igen.';
+        }
         final local = until.toLocal();
         final day = '${local.day}/${local.month}';
         return 'Kontot är avstängt till $day. ${row['reason'] ?? ''}';
