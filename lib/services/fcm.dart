@@ -10,6 +10,9 @@ class Fcm {
   static String? token;
   static String? lastError;
   static void Function(String token)? onToken;
+  static void Function(Map<String, String> data)? onOpen;
+  static Map<String, String>? _waiting;
+  static bool _tapsBound = false;
   static Future<void>? _opening;
   static bool _backgroundReady = false;
 
@@ -41,6 +44,7 @@ class Fcm {
       await m.setForegroundNotificationPresentationOptions(alert: true, badge: true, sound: true);
       token = await _token(m);
       lastError = token == null ? 'ingen token' : null;
+      _bindTaps(m);
       flush();
       m.onTokenRefresh.listen((t) {
         token = t;
@@ -58,6 +62,7 @@ class Fcm {
     try {
       await _open();
       final m = FirebaseMessaging.instance;
+      _bindTaps(m);
       final settings = await m.getNotificationSettings();
       if (settings.authorizationStatus == AuthorizationStatus.notDetermined) {
         await m.requestPermission(alert: true, badge: true, sound: true);
@@ -131,6 +136,36 @@ class Fcm {
       out['firebase_apps'] = '${Firebase.apps.length}';
     }
     return out;
+  }
+
+  static void bindOpen(void Function(Map<String, String> data) cb) {
+    onOpen = cb;
+    final waiting = _waiting;
+    if (waiting != null) {
+      _waiting = null;
+      cb(waiting);
+    }
+  }
+
+  static void _bindTaps(FirebaseMessaging m) {
+    if (_tapsBound) return;
+    _tapsBound = true;
+    FirebaseMessaging.onMessageOpenedApp.listen((message) => _deliver(message.data));
+    m.getInitialMessage().then((message) {
+      if (message != null) _deliver(message.data);
+    });
+  }
+
+  static void _deliver(Map<String, dynamic> raw) {
+    final data = <String, String>{
+      for (final e in raw.entries) e.key: '${e.value}',
+    };
+    final cb = onOpen;
+    if (cb == null) {
+      _waiting = data;
+      return;
+    }
+    cb(data);
   }
 
   static void flush() {

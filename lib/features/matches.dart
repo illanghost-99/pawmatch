@@ -560,16 +560,22 @@ class _ChatPageState extends State<ChatPage> {
             color: Theme.of(context).cardColor,
             padding: const EdgeInsets.fromLTRB(12, 8, 8, 12),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Expanded(
                   child: TextField(
                     controller: c,
                     enabled: t.accepted,
+                    minLines: 1,
+                    maxLines: 5,
+                    keyboardType: TextInputType.multiline,
+                    textInputAction: TextInputAction.newline,
                     textCapitalization: TextCapitalization.sentences,
                     decoration: InputDecoration(
                       hintText: t.accepted ? 'Skriv ett meddelande' : 'Väntar på match',
                       filled: true,
                       fillColor: _cream,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
                     ),
                   ),
@@ -792,15 +798,21 @@ class _GroupChatPageState extends State<GroupChatPage> {
             color: Theme.of(context).cardColor,
             padding: const EdgeInsets.fromLTRB(12, 8, 8, 12),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Expanded(
                   child: TextField(
                     controller: c,
+                    minLines: 1,
+                    maxLines: 5,
+                    keyboardType: TextInputType.multiline,
+                    textInputAction: TextInputAction.newline,
                     textCapitalization: TextCapitalization.sentences,
                     decoration: InputDecoration(
                       hintText: 'Skriv till gruppen',
                       filled: true,
                       fillColor: _cream,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
                     ),
                   ),

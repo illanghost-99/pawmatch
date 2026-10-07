@@ -54,8 +54,11 @@ export default {
     try {
       const payload = await req.json();
       const email = String(payload.to_email ?? "").trim().toLowerCase();
-      const title = String(payload.title ?? "PawMatch").slice(0, 80);
+      const title = "PawMatch";
       const text = String(payload.body ?? "").slice(0, 180);
+      const kind = String(payload.kind ?? "").slice(0, 40);
+      const peer = String(payload.peer ?? "").slice(0, 160);
+      const group = String(payload.group ?? "").slice(0, 80);
       if (!email.includes("@") || !text) {
         return Response.json({ ok: false }, { status: 400 });
       }
@@ -79,6 +82,7 @@ export default {
             message: {
               token,
               notification: { title, body: text },
+              data: { kind, peer, group },
               android: { priority: "HIGH", notification: { sound: "default" } },
               apns: {
                 headers: { "apns-priority": "10", "apns-push-type": "alert" },

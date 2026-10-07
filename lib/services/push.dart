@@ -59,14 +59,14 @@ class PushService {
   }
 
   static Future<void> notifyMatch(String dogName) =>
-      _show('Ny match', 'Någon vill matcha med $dogName');
+      _show('PawMatch', 'Någon vill matcha med $dogName');
 
   static Future<void> notifyMessage(String from) =>
-      _show('Nytt meddelande', '$from har skrivit till dig');
+      _show('PawMatch', '$from har skrivit till dig');
 
   static Future<void> notifyApproved(String dogName) =>
-      _show('Godkänd', '$dogName är godkänd och synlig');
+      _show('PawMatch', '$dogName är godkänd och synlig');
 
   static Future<void> notifyLive(String dogName) =>
-      _show('Publicerad', '$dogName syns nu i PawMatch');
+      _show('PawMatch', '$dogName syns nu i PawMatch');
 }

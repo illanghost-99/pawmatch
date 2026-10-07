@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_state.dart';
+import '../models.dart';
 import 'deals.dart';
 import 'discover.dart';
 import 'for_you.dart';
@@ -15,6 +16,75 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int i = 0;
+  bool _opening = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.state.addListener(_openNotice);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _openNotice());
+  }
+
+  @override
+  void dispose() {
+    widget.state.removeListener(_openNotice);
+    super.dispose();
+  }
+
+  void _openNotice() {
+    if (!mounted || _opening) return;
+    final kind = widget.state.pendingKind;
+    if (kind == null || kind.isEmpty) return;
+    final peer = (widget.state.pendingPeer ?? '').toLowerCase();
+    final groupId = widget.state.pendingGroup ?? '';
+    if (kind == 'group') {
+      GroupChat? group;
+      for (final g in widget.state.groups) {
+        if (g.id == groupId) group = g;
+      }
+      if (group == null) {
+        if (!widget.state.groupsReady) return;
+        widget.state.clearNotice();
+        setState(() => i = 2);
+        return;
+      }
+      final open = group;
+      _opening = true;
+      widget.state.clearNotice();
+      widget.state.markGroupRead(open);
+      setState(() => i = 2);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _opening = false;
+        if (!mounted) return;
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => GroupChatPage(state: widget.state, group: open)));
+      });
+      return;
+    }
+    MatchThread? thread;
+    for (final m in widget.state.matches) {
+      if (m.accepted && peer.isNotEmpty && m.peerEmail.toLowerCase() == peer) {
+        thread = m;
+        break;
+      }
+    }
+    if (thread == null) {
+      if (!widget.state.chatsReady) return;
+      widget.state.clearNotice();
+      setState(() => i = kind == 'match' ? 0 : 2);
+      return;
+    }
+    final open = thread;
+    _opening = true;
+    widget.state.clearNotice();
+    widget.state.markRead(open);
+    setState(() => i = 2);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _opening = false;
+      if (!mounted) return;
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => ChatPage(state: widget.state, thread: open)));
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = widget.state;

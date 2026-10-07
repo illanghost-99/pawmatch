@@ -449,7 +449,14 @@ class Network {
     }
   }
 
-  static Future<void> ping(String toEmail, String title, String body) async {
+  static Future<void> ping(
+    String toEmail,
+    String title,
+    String body, {
+    String kind = '',
+    String peer = '',
+    String group = '',
+  }) async {
     final c = _c;
     final to = toEmail.trim().toLowerCase();
     final text = body.trim();
@@ -457,8 +464,11 @@ class Network {
     try {
       await c.functions.invoke('notify', body: {
         'to_email': to,
-        'title': title,
+        'title': 'PawMatch',
         'body': text.length > 140 ? '${text.substring(0, 137)}...' : text,
+        'kind': kind,
+        'peer': peer.toLowerCase(),
+        'group': group,
       });
     } catch (e) {
       debugPrint('ping $e');
