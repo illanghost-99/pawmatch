@@ -763,6 +763,37 @@ class Network {
     }
   }
 
+  static Future<List<Map<String, dynamic>>> adminAccounts() async {
+    final c = _c;
+    if (c == null) return accounts();
+    try {
+      final res = await c.functions.invoke('admin-accounts', body: {'action': 'list'});
+      final data = res.data;
+      if (data is Map && data['ok'] == true && data['accounts'] is List) {
+        return [for (final row in data['accounts'] as List) Map<String, dynamic>.from(row as Map)];
+      }
+    } catch (e) {
+      debugPrint('adminAccounts $e');
+    }
+    return accounts();
+  }
+
+  static Future<String> adminAccount(String email, String action) async {
+    final c = _c;
+    final who = email.trim().toLowerCase();
+    if (c == null || !who.contains('@')) return 'Ingen kontakt med servern.';
+    try {
+      final res = await c.functions.invoke('admin-accounts', body: {'action': action, 'email': who});
+      final data = res.data;
+      if (data is Map && data['ok'] == true) return '';
+      final error = data is Map ? '${data['error'] ?? ''}' : '$data';
+      return error.isEmpty ? 'Det gick inte.' : error;
+    } catch (e) {
+      debugPrint('adminAccount $e');
+      return '$e';
+    }
+  }
+
   static Future<List<Map<String, dynamic>>> accounts() async {
     final c = _c;
     if (c == null) return [];

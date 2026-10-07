@@ -553,11 +553,15 @@ class _AccountsState extends State<_Accounts> {
     _load();
   }
 
+  String note = '';
+
   Future<void> _load() async {
-    final list = await Network.accounts();
+    final list = await Network.adminAccounts();
     if (!mounted) return;
+    final full = list.any((r) => '${r['created'] ?? ''}'.isNotEmpty);
     setState(() {
       rows = list;
+      note = full ? '' : 'Listan visar bara konton med en hund tills funktionen admin-accounts är uppladdad.';
       loading = false;
     });
   }
@@ -566,6 +570,32 @@ class _AccountsState extends State<_Accounts> {
     final text = q.text.trim().toLowerCase();
     if (text.isEmpty) return rows;
     return rows.where((r) => '${r['name']} ${r['email']}'.toLowerCase().contains(text)).toList();
+  }
+
+  Future<void> _server(Map<String, dynamic> row, String action) async {
+    final name = '${row['name']}';
+    final photos = action == 'photos';
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(photos ? 'Radera bilder för $name?' : 'Radera $name?'),
+        content: Text(photos
+            ? 'Profilbild och hundbilder tas bort. Kontot finns kvar.'
+            : 'Kontot, bilderna och inloggningen tas bort. Personen kan inte logga in igen.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Avbryt')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Ja')),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final error = await Network.adminAccount('${row['email']}', action);
+    if (!mounted) return;
+    if (error.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.contains('admin-accounts') ? 'Ladda upp funktionen admin-accounts först.' : error)));
+      return;
+    }
+    await _load();
   }
 
   Future<void> _act(Map<String, dynamic> row, String mode) async {
@@ -612,6 +642,11 @@ class _AccountsState extends State<_Accounts> {
             decoration: const InputDecoration(hintText: 'Sök namn eller e-post', filled: true, fillColor: Colors.white),
           ),
         ),
+        if (note.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Text(note, style: const TextStyle(color: Color(0xFF3D4A57), height: 1.3)),
+          ),
         Expanded(
           child: list.isEmpty
               ? const Center(child: Text('Inga konton hittades.'))
@@ -620,14 +655,15 @@ class _AccountsState extends State<_Accounts> {
                   itemCount: list.length,
                   itemBuilder: (_, i) {
                     final r = list[i];
-                    final dogs = (r['dogs'] as List).join(', ');
-                    final status = '${r['status']}';
+                    final dogs = (r['dogs'] as List?)?.join(', ') ?? '';
+                    final status = '${r['status'] ?? 'Aktiv'}';
+                    final photos = int.tryParse('${r['photos'] ?? 0}') ?? 0;
                     return Card(
                       color: Colors.white,
                       child: ListTile(
                         title: Text('${r['name']}', style: const TextStyle(fontWeight: FontWeight.w800)),
-                        subtitle: Text('${r['email']}${dogs.isEmpty ? '' : '\n$dogs'}'),
-                        isThreeLine: dogs.isNotEmpty,
+                        subtitle: Text('${r['email']}${dogs.isEmpty ? '' : '\n$dogs'}${photos > 0 ? '\n$photos bilder' : ''}'),
+                        isThreeLine: dogs.isNotEmpty || photos > 0,
                         trailing: Text(status, style: TextStyle(color: status == 'Aktiv' ? const Color(0xFF1F8A4C) : _coral, fontWeight: FontWeight.w800)),
                         onTap: () => showModalBottomSheet<void>(
                           context: context,
@@ -639,7 +675,8 @@ class _AccountsState extends State<_Accounts> {
                                 ListTile(leading: const Icon(Icons.check_circle_outline), title: const Text('Aktivera'), onTap: () { Navigator.pop(ctx); _act(r, 'on'); }),
                                 ListTile(leading: const Icon(Icons.pause_circle_outline), title: const Text('Avaktivera'), onTap: () { Navigator.pop(ctx); _act(r, 'off'); }),
                                 ListTile(leading: const Icon(Icons.block), title: const Text('Stäng kontot'), onTap: () { Navigator.pop(ctx); _act(r, 'closed'); }),
-                                ListTile(leading: const Icon(Icons.delete_outline, color: _coral), title: const Text('Radera kontot'), onTap: () { Navigator.pop(ctx); _act(r, 'delete'); }),
+                                ListTile(leading: const Icon(Icons.image_not_supported_outlined), title: const Text('Radera bilder'), onTap: () { Navigator.pop(ctx); _server(r, 'photos'); }),
+                                ListTile(leading: const Icon(Icons.delete_outline, color: _coral), title: const Text('Radera kontot helt'), onTap: () { Navigator.pop(ctx); _server(r, 'delete'); }),
                               ],
                             ),
                           ),
