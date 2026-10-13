@@ -131,6 +131,8 @@ class Network {
     ];
     final vaccinated = _flag(r['vaccinated']);
     final pedigree = _flag(r['has_pedigree']);
+    final intent = r['intent'] as String? ?? 'friends';
+    final breeding = intent == 'puppies' || intent == 'both';
     return DogProfile(
       id: r['id'] as String? ?? '',
       name: r['name'] as String? ?? '',
@@ -147,8 +149,9 @@ class Network {
       photoUrl: photos.isEmpty ? '' : photos.first,
       sex: r['sex'] as String? ?? '',
       weightKg: (r['weight_kg'] as num?)?.toDouble() ?? 0,
-      intent: r['intent'] as String? ?? 'friends',
-      availableForBreeding: (r['intent'] as String? ?? '') == 'puppies',
+      intent: intent,
+      availableForBreeding: breeding,
+      availableForFriends: intent != 'puppies',
       chipped: _flag(r['chipped']),
       vaccinated: vaccinated,
       dewormed: _flag(r['dewormed']),
@@ -179,7 +182,13 @@ class Network {
     final id = '${email.toLowerCase()}-${dog.name.toLowerCase()}';
     try {
       final urls = await publicPhotos(dog.photos);
-      if (urls.isNotEmpty) dog.photos = urls;
+      final kept = urls.isNotEmpty ? urls : [for (final p in dog.photos) if (p.startsWith('http')) p];
+      if (kept.isNotEmpty) dog.photos = kept;
+      final intent = dog.availableForBreeding && dog.availableForFriends
+          ? 'both'
+          : dog.availableForBreeding
+              ? 'puppies'
+              : 'friends';
       await c.from('pm_dogs').upsert({
         'id': id,
         'owner_email': email.toLowerCase(),
@@ -190,9 +199,9 @@ class Network {
         'age': dog.age,
         'weight_kg': dog.weightKg,
         'city': dog.city,
-        'intent': dog.availableForBreeding ? 'puppies' : 'friends',
+        'intent': intent,
         'bio': dog.bio,
-        'photos': urls,
+        'photos': kept,
         'lat': lat,
         'lng': lng,
         'chipped': dog.chipped,
@@ -209,6 +218,62 @@ class Network {
       });
     } catch (e) {
       debugPrint('upsertDog $e');
+    }
+  }
+
+  static String dogId(String email, String name) => '${email.toLowerCase()}-${name.trim().toLowerCase()}';
+
+  static MyDog myDogFromRow(Map<String, dynamic> r) {
+    final photos = <String>[
+      for (final p in List.from(r['photos'] ?? const []))
+        if ('$p'.startsWith('http')) '$p',
+    ];
+    final intent = r['intent'] as String? ?? 'friends';
+    return MyDog(
+      name: r['name'] as String? ?? '',
+      breed: r['breed'] as String? ?? '',
+      age: (r['age'] as num?)?.toInt() ?? 1,
+      city: r['city'] as String? ?? '',
+      bio: r['bio'] as String? ?? '',
+      sex: r['sex'] as String? ?? '',
+      weightKg: (r['weight_kg'] as num?)?.toDouble() ?? 0,
+      photos: photos,
+      availableForFriends: intent != 'puppies',
+      availableForBreeding: intent == 'puppies' || intent == 'both',
+      pedigreeNote: r['pedigree_note'] as String? ?? '',
+      vaccineNote: r['vaccine_note'] as String? ?? '',
+      allergyNote: r['allergy_note'] as String? ?? '',
+      healthNote: r['health_note'] as String? ?? '',
+      hasPedigree: _flag(r['has_pedigree']),
+      vaccinated: _flag(r['vaccinated']),
+      dewormed: _flag(r['dewormed']),
+      chipped: _flag(r['chipped']),
+      neutered: _flag(r['neutered']),
+      hasAllergies: _flag(r['has_allergies']),
+    );
+  }
+
+  static Future<List<MyDog>?> ownDogs(String email) async {
+    final c = _c;
+    if (c == null || !email.contains('@')) return null;
+    try {
+      final rows = await c.from('pm_dogs').select().eq('owner_email', email.toLowerCase());
+      return [
+        for (final r in rows) myDogFromRow(Map<String, dynamic>.from(r as Map)),
+      ];
+    } catch (e) {
+      debugPrint('ownDogs $e');
+      return null;
+    }
+  }
+
+  static Future<void> deleteDog({required String email, required String name}) async {
+    final c = _c;
+    if (c == null || !email.contains('@') || name.trim().isEmpty) return;
+    try {
+      await c.from('pm_dogs').delete().eq('id', dogId(email, name));
+    } catch (e) {
+      debugPrint('deleteDog $e');
     }
   }
 

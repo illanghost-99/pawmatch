@@ -186,6 +186,41 @@ class AppState extends ChangeNotifier {
       final decoded = jsonDecode(rawDeals);
       if (decoded is Map) _dealCache = Map<String, dynamic>.from(decoded);
     }
+    _readDogs(p);
+  }
+
+  void _readDogs(SharedPreferences p) {
+    if (!email.contains('@')) return;
+    final raw = p.getString('pmMyDogs:${email.toLowerCase()}');
+    if (raw == null || raw.isEmpty) return;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return;
+      myDogs
+        ..clear()
+        ..addAll([
+          for (final item in decoded)
+            if (item is Map) MyDog.fromJson(Map<String, dynamic>.from(item)),
+        ]);
+    } catch (e) {
+      debugPrint('readDogs $e');
+    }
+  }
+
+  Future<void> _saveDogs() async {
+    if (!email.contains('@')) return;
+    final p = await SharedPreferences.getInstance();
+    await p.setString('pmMyDogs:${email.toLowerCase()}', jsonEncode([for (final d in myDogs) d.toJson()]));
+  }
+
+  MyDog _mergeOwn(MyDog? local, MyDog remote) {
+    if (local == null) return remote;
+    remote.pedigreeDoc = local.pedigreeDoc;
+    remote.vaccineDoc = local.vaccineDoc;
+    remote.pedigreeStatus = local.pedigreeStatus;
+    remote.vaccineStatus = local.vaccineStatus;
+    if (remote.photos.isEmpty) remote.photos = List.of(local.photos);
+    return remote;
   }
 
   Future<void> setDarkMode(bool on) async {
@@ -253,6 +288,24 @@ class AppState extends ChangeNotifier {
     }
     for (final d in myDogs) {
       await Network.upsertDog(email: email, owner: fullName, dog: d, lat: lat, lng: lng);
+    }
+    final own = await Network.ownDogs(email);
+    if (own != null) {
+      final local = {for (final d in myDogs) d.name.toLowerCase(): d};
+      final seen = <String>{};
+      final merged = <MyDog>[];
+      for (final remote in own) {
+        final key = remote.name.toLowerCase();
+        if (key.isEmpty || !seen.add(key)) continue;
+        merged.add(_mergeOwn(local[key], remote));
+      }
+      for (final entry in local.entries) {
+        if (!seen.contains(entry.key)) merged.add(entry.value);
+      }
+      myDogs
+        ..clear()
+        ..addAll(merged);
+      await _saveDogs();
     }
     if (isPremium) await Network.markPremium(email, true);
     applyFilters();
@@ -463,9 +516,12 @@ class AppState extends ChangeNotifier {
     return true;
   }
 
-  void signIn(String e) {
+  Future<void> signIn(String e) async {
     email = e;
     signedIn = true;
+    myDogs.clear();
+    final p = await SharedPreferences.getInstance();
+    _readDogs(p);
     PushService.init();
     _armPush();
     persist();
@@ -530,6 +586,8 @@ class AppState extends ChangeNotifier {
   void signOut() {
     _inbox?.cancel();
     signedIn = false;
+    myDogs.clear();
+    liveDogs.clear();
     persist();
     Network.signOut();
     notifyListeners();
@@ -562,6 +620,7 @@ class AppState extends ChangeNotifier {
     await prefs.remove('photoUrl');
     await prefs.remove('readMessages');
     await prefs.remove('pmDeals');
+    await _saveDogs();
     await persist();
     notifyListeners();
   }
@@ -616,6 +675,7 @@ class AppState extends ChangeNotifier {
       return false;
     }
     myDogs.add(d);
+    _saveDogs();
     if (notifyOn) PushService.notifyLive(d.name);
     Network.upsertDog(email: email, owner: fullName, dog: d, lat: lat, lng: lng);
     applyFilters();
@@ -624,14 +684,22 @@ class AppState extends ChangeNotifier {
 
   void updateMyDog(int index, MyDog d) {
     if (index < 0 || index >= myDogs.length) return;
+    final previous = myDogs[index].name;
     myDogs[index] = d;
+    if (previous.toLowerCase() != d.name.toLowerCase()) {
+      Network.deleteDog(email: email, name: previous);
+    }
+    _saveDogs();
     Network.upsertDog(email: email, owner: fullName, dog: d, lat: lat, lng: lng);
     applyFilters();
   }
 
   void removeMyDog(int index) {
     if (index < 0 || index >= myDogs.length) return;
+    final name = myDogs[index].name;
     myDogs.removeAt(index);
+    Network.deleteDog(email: email, name: name);
+    _saveDogs();
     applyFilters();
   }
 

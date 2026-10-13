@@ -328,4 +328,65 @@ class MyDog {
   ReviewStatus vaccineStatus;
 
   bool get breedingReady => sex.isNotEmpty && weightKg > 0 && vaccinated;
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'breed': breed,
+        'age': age,
+        'city': city,
+        'bio': bio,
+        'sex': sex,
+        'weightKg': weightKg,
+        'photos': photos,
+        'availableForFriends': availableForFriends,
+        'availableForBreeding': availableForBreeding,
+        'pedigreeNote': pedigreeNote,
+        'vaccineNote': vaccineNote,
+        'allergyNote': allergyNote,
+        'healthNote': healthNote,
+        'hasPedigree': hasPedigree,
+        'vaccinated': vaccinated,
+        'dewormed': dewormed,
+        'chipped': chipped,
+        'neutered': neutered,
+        'hasAllergies': hasAllergies,
+        'pedigreeDoc': pedigreeDoc,
+        'vaccineDoc': vaccineDoc,
+        'pedigreeStatus': pedigreeStatus.name,
+        'vaccineStatus': vaccineStatus.name,
+      };
+
+  static ReviewStatus _status(dynamic v) {
+    for (final s in ReviewStatus.values) {
+      if (s.name == v) return s;
+    }
+    return ReviewStatus.pending;
+  }
+
+  factory MyDog.fromJson(Map<String, dynamic> j) => MyDog(
+        name: j['name'] as String? ?? '',
+        breed: j['breed'] as String? ?? '',
+        age: (j['age'] as num?)?.toInt() ?? 1,
+        city: j['city'] as String? ?? '',
+        bio: j['bio'] as String? ?? '',
+        sex: j['sex'] as String? ?? '',
+        weightKg: (j['weightKg'] as num?)?.toDouble() ?? 0,
+        photos: [for (final p in List.from(j['photos'] ?? const [])) '$p'],
+        availableForFriends: j['availableForFriends'] != false,
+        availableForBreeding: j['availableForBreeding'] == true,
+        pedigreeNote: j['pedigreeNote'] as String? ?? '',
+        vaccineNote: j['vaccineNote'] as String? ?? '',
+        allergyNote: j['allergyNote'] as String? ?? '',
+        healthNote: j['healthNote'] as String? ?? '',
+        hasPedigree: j['hasPedigree'] == true,
+        vaccinated: j['vaccinated'] == true,
+        dewormed: j['dewormed'] == true,
+        chipped: j['chipped'] == true,
+        neutered: j['neutered'] == true,
+        hasAllergies: j['hasAllergies'] == true,
+        pedigreeDoc: j['pedigreeDoc'] as String? ?? '',
+        vaccineDoc: j['vaccineDoc'] as String? ?? '',
+        pedigreeStatus: _status(j['pedigreeStatus']),
+        vaccineStatus: _status(j['vaccineStatus']),
+      );
 }
