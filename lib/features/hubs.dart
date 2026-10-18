@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../app_state.dart';
 import '../v2/ai_vet_page.dart';
 import '../v2/community_page.dart';
@@ -10,6 +11,7 @@ import 'legal.dart';
 import 'support.dart';
 
 const _cream = Color(0xFFFFF4EC);
+const _supportMail = 'pawmatchhelp@mail.grokbot.com';
 
 class _Row {
   const _Row(this.color, this.icon, this.title, this.sub, this.open);
@@ -61,7 +63,7 @@ void openSupportHub(BuildContext context, AppState state) {
           _Row(const Color(0xFFE25C3A), Icons.smart_toy_outlined, 'AI-chatt', 'Svar dygnet runt om appen', () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => const SupportPage()));
           }),
-          _Row(const Color(0xFF2A9D8F), Icons.mail_outline, 'E-post', 'support@pawmatch.app', () => _askMail(context, state)),
+          _Row(const Color(0xFF2A9D8F), Icons.mail_outline, 'E-post', _supportMail, () => _askMail(context, state)),
           _Row(const Color(0xFF3D5A80), Icons.phone_outlined, 'Telefon', 'Vi ringer upp dig', () => _askCall(context, state)),
         ],
       ),
@@ -105,15 +107,23 @@ Future<void> _askMail(BuildContext context, AppState state) async {
     context: context,
     builder: (ctx) => AlertDialog(
       title: const Text('Skriv till support'),
-      content: TextField(
-        controller: text,
-        minLines: 3,
-        maxLines: 6,
-        decoration: const InputDecoration(labelText: 'Ditt meddelande', alignLabelWithHint: true),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(_supportMail, style: TextStyle(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 12),
+          TextField(
+            controller: text,
+            minLines: 3,
+            maxLines: 6,
+            decoration: const InputDecoration(labelText: 'Ditt meddelande', alignLabelWithHint: true),
+          ),
+        ],
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Avbryt')),
-        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('support@pawmatch.app')),
+        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Skicka')),
       ],
     ),
   );
@@ -125,8 +135,10 @@ Future<void> _askMail(BuildContext context, AppState state) async {
     return;
   }
   final sent = await Network.fileReport(state.email, state.fullName, body, kind: 'mejl');
+  final uri = Uri(scheme: 'mailto', path: _supportMail, queryParameters: {'subject': 'PawMatch support', 'body': body});
+  if (await canLaunchUrl(uri)) await launchUrl(uri);
   if (!context.mounted) return;
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(sent ? 'Mejlet ligger i supportinkorgen.' : 'Kunde inte skicka. Försök igen.')));
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(sent ? 'Mejlet skickas till $_supportMail.' : 'Kunde inte spara i appen. Mejla $_supportMail.')));
 }
 
 void openDogHub(BuildContext context, AppState state) {

@@ -28,7 +28,7 @@ class _SupportPageState extends State<SupportPage> {
   String _answer(String q) {
     final t = q.toLowerCase();
     if (t.contains('gdpr') || t.contains('integritet') || t.contains('personuppg') || t.contains('data')) {
-      return 'PawMatch följer GDPR. Vi sparar bara det som behövs för konto, matchning och avtal. Du kan begära registerutdrag eller radering via Profil eller support@pawmatch.app. Vi säljer inte dina uppgifter.';
+      return 'PawMatch följer GDPR. Vi sparar bara det som behövs för konto, matchning och avtal. Du kan begära registerutdrag eller radering via Profil eller pawmatchhelp@mail.grokbot.com. Vi säljer inte dina uppgifter.';
     }
     if (t.contains('radera') || t.contains('ta bort konto')) {
       return 'Gå till Profil → Radera konto. Då tas profil, hundar och chattar bort. Det kan ta några dagar innan backup rensas.';
@@ -57,7 +57,7 @@ class _SupportPageState extends State<SupportPage> {
     if (t.contains('hej') || t.contains('hjälp')) {
       return 'Hej! Vad vill du veta — matchning, avel, GDPR eller konto?';
     }
-    return 'Jag hjälper med appen, matchning, avel, GDPR och konto. För sjukdom: kontakta veterinär. Mejla support@pawmatch.app om du vill prata med en människa.';
+    return 'Jag hjälper med appen, matchning, avel, GDPR och konto. För sjukdom: kontakta veterinär. Mejla pawmatchhelp@mail.grokbot.com om du vill prata med en människa.';
   }
 
   bool busy = false;
@@ -85,11 +85,11 @@ class _SupportPageState extends State<SupportPage> {
   }
 
   Future<void> _mail() async {
-    final uri = Uri(scheme: 'mailto', path: 'support@pawmatch.app', queryParameters: {'subject': 'PawMatch support'});
+    final uri = Uri(scheme: 'mailto', path: 'pawmatchhelp@mail.grokbot.com', queryParameters: {'subject': 'PawMatch support'});
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Skriv till support@pawmatch.app')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Skriv till pawmatchhelp@mail.grokbot.com')));
     }
   }
 

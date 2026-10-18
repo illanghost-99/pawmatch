@@ -36,7 +36,7 @@ Avel och eventuell försäljning sker mellan användarna. Följ djurskyddslagen,
 Trakasserier, bedrägeri, förfalskade intyg, olagligt innehåll, sexuellt innehåll, djurplågeri och att locka minderåriga. Brott anmäls och kontot stängs.
 
 6. Moderering
-Vi kan ta bort innehåll och stänga konton. Du kan överklaga till support@pawmatch.app.
+Vi kan ta bort innehåll och stänga konton. Du kan överklaga till pawmatchhelp@mail.grokbot.com.
 
 7. App Store
 Appen följer Apples riktlinjer. Kontot kan raderas i appen, integritetspolicyn finns i appen, och känsliga uppgifter begärs bara när de behövs för tjänsten.
@@ -47,7 +47,7 @@ Tjänsten tillhandahålls i befintligt skick. Vi ansvarar inte för möten, avel
 9. Ändringar
 Vi kan uppdatera villkoren. De aktuella villkoren finns alltid i appen. Fortsätter du använda PawMatch efter en uppdatering gäller de nya villkoren.
 
-Kontakt: support@pawmatch.app
+Kontakt: pawmatchhelp@mail.grokbot.com
 Samma text finns på https://illanghost-99.github.io/pawmatch/
 Senast uppdaterad: 2 oktober 2026
 ''';
@@ -56,7 +56,7 @@ const kPrivacy = '''
 Integritetspolicy — PawMatch
 
 Personuppgiftsansvarig: PawMatch.
-Kontakt: support@pawmatch.app.
+Kontakt: pawmatchhelp@mail.grokbot.com.
 
 Vad vi samlar in
 • E-post och inloggning
@@ -97,5 +97,5 @@ Communityregler
 • Dela inte andras personuppgifter utan samtycke.
 • Inga hot, hat, nakenhet eller sexuellt innehåll.
 • Avel ska sätta djurskydd först. Misstänkt vanvård rapporteras.
-• Anmäl bedrägeri till support@pawmatch.app.
+• Anmäl bedrägeri till pawmatchhelp@mail.grokbot.com.
 ''';
