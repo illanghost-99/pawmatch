@@ -36,30 +36,34 @@ class Cloud {
   static Future<String> _create(GoTrueClient auth, String mail, String password) async {
     try {
       final res = await auth.signUp(email: mail, password: password).timeout(const Duration(seconds: 15));
-      if (res.session != null) return 'cloud';
-      if (res.user != null) {
+      if (res.session != null && _sessionIs(auth, mail)) return 'cloud';
+      if (res.user != null || res.session != null) {
         try {
+          await auth.signOut();
           await auth.signInWithPassword(email: mail, password: password).timeout(const Duration(seconds: 15));
-          return 'cloud';
+          if (_sessionIs(auth, mail)) return 'cloud';
         } catch (e) {
-          final text = _text(e);
-          if (text.contains('bekräfta')) return text;
+          return _text(e);
         }
-        return 'cloud';
       }
       return 'Kontot kunde inte skapas. Försök igen om en stund.';
     } on AuthException catch (e) {
       final low = e.message.toLowerCase();
       if (low.contains('already') || low.contains('registered') || low.contains('exists')) {
         try {
+          await auth.signOut();
           await auth.signInWithPassword(email: mail, password: password).timeout(const Duration(seconds: 15));
-          return 'cloud';
+          if (_sessionIs(auth, mail)) return 'cloud';
         } catch (_) {
           return 'Den e-posten har redan ett konto. Tryck Logga in och använd det lösenord du valde då.';
         }
       }
       return _text(e);
     }
+  }
+
+  static bool _sessionIs(GoTrueClient auth, String mail) {
+    return (auth.currentUser?.email ?? '').toLowerCase() == mail;
   }
 
   static String _text(Object e) {

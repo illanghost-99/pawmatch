@@ -517,8 +517,37 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> signIn(String e) async {
-    email = e;
+    final next = e.trim();
+    final changed = email.toLowerCase() != next.toLowerCase();
+    email = next;
     signedIn = true;
+    if (changed) {
+      firstName = '';
+      lastName = '';
+      ownerBio = '';
+      photoUrl = '';
+      displayName = '';
+      personalNumber = '';
+      address = '';
+      phone = '';
+      idConsent = false;
+      onboarded = false;
+      identityPending = false;
+      myDogs.clear();
+      matches.clear();
+      incoming.clear();
+      groups.clear();
+      saved.clear();
+      liveDogs.clear();
+      interests.clear();
+      handledPeers.clear();
+      _readMessageIds.clear();
+      celebrate = '';
+      lastNotice = '';
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('photoUrl');
+      await prefs.remove('readMessages');
+    }
     myDogs.clear();
     final p = await SharedPreferences.getInstance();
     _readDogs(p);
