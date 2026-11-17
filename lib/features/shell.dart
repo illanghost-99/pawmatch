@@ -37,6 +37,11 @@ class _AppShellState extends State<AppShell> {
     if (kind == null || kind.isEmpty) return;
     final peer = (widget.state.pendingPeer ?? '').toLowerCase();
     final groupId = widget.state.pendingGroup ?? '';
+    if (kind == 'support') {
+      widget.state.clearNotice();
+      setState(() => i = 4);
+      return;
+    }
     if (kind == 'group') {
       GroupChat? group;
       for (final g in widget.state.groups) {

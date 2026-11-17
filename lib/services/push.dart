@@ -58,11 +58,20 @@ class PushService {
     }
   }
 
+  static Future<void> notifyLike(String dogName) =>
+      _show('Någon vill matcha', dogName.trim().isEmpty ? 'Någon vill matcha med din hund.' : 'Någon vill matcha med $dogName');
+
   static Future<void> notifyMatch(String dogName) =>
-      _show('PawMatch', 'Någon vill matcha med $dogName');
+      _show('Ny matchning', dogName.trim().isEmpty ? 'Ni matchade. Öppna chatten.' : 'Ny matchning med $dogName');
 
   static Future<void> notifyMessage(String from) =>
-      _show('PawMatch', '$from har skrivit till dig');
+      _show('Nytt meddelande', '$from har skrivit till dig');
+
+  static Future<void> notifyGroup(String name) =>
+      _show('Grupp', 'Nytt meddelande i $name');
+
+  static Future<void> notifySupport() =>
+      _show('Support', 'PawMatch har svarat på ditt ärende');
 
   static Future<void> notifyApproved(String dogName) =>
       _show('PawMatch', '$dogName är godkänd och synlig');

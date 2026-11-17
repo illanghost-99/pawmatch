@@ -529,7 +529,7 @@ class Network {
     try {
       await c.functions.invoke('notify', body: {
         'to_email': to,
-        'title': 'PawMatch',
+        'title': title.trim().isEmpty ? 'PawMatch' : title.trim(),
         'body': text.length > 140 ? '${text.substring(0, 137)}...' : text,
         'kind': kind,
         'peer': peer.toLowerCase(),
@@ -1100,10 +1100,16 @@ class Network {
     final c = _c;
     if (c == null || id.isEmpty) return;
     try {
-      await c.from('pm_reports').update({
+      final rows = await c.from('pm_reports').update({
         'reply': reply.trim(),
         'replied_at': DateTime.now().toUtc().toIso8601String(),
-      }).eq('id', id);
+      }).eq('id', id).select('from_email');
+      if (rows.isNotEmpty) {
+        final to = '${rows.first['from_email'] ?? ''}';
+        if (to.contains('@')) {
+          await ping(to, 'Support', 'PawMatch har svarat på ditt ärende.', kind: 'support');
+        }
+      }
     } catch (e) {
       debugPrint('replyReport $e');
     }

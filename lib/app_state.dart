@@ -447,7 +447,7 @@ class AppState extends ChangeNotifier {
       incoming.insert(0, MatchThread(dog, [], accepted: false, outgoing: false, peerEmail: from));
       changed = true;
       if (_seenLikes.add(from)) {
-        if (notifyOn) PushService.notifyMatch(dog.name);
+        if (notifyOn) PushService.notifyLike(dog.name);
         lastNotice = '${dog.owner} vill matcha med dig';
       }
     }
@@ -1045,9 +1045,9 @@ class AppState extends ChangeNotifier {
     final mutual = await Network.like(fromEmail: email, toEmail: peer, dogId: d.id);
     await Network.ping(
       peer,
-      'PawMatch',
+      mutual ? 'Ny matchning' : 'Någon vill matcha',
       mutual ? 'Ni matchade. Öppna chatten.' : '$fullName vill matcha med ${d.name}.',
-      kind: mutual ? 'chat' : 'match',
+      kind: mutual ? 'matched' : 'match',
       peer: email,
     );
     if (!mutual) return;
@@ -1080,7 +1080,7 @@ class AppState extends ChangeNotifier {
     if (!peer.contains('@')) return;
     Network.forgetLike(fromEmail: peer, toEmail: email);
     Network.like(fromEmail: email, toEmail: peer, dogId: t.dog.id).then((_) async {
-      await Network.ping(peer, 'PawMatch', '$fullName godkände matchningen.', kind: 'chat', peer: email);
+      await Network.ping(peer, 'Ny matchning', '$fullName godkände matchningen. Öppna chatten.', kind: 'matched', peer: email);
       final id = await Network.ensureMatch(a: email, b: peer, dogJson: _dogJson(t.dog, peer));
       if (id == null || id.isEmpty) return;
       await Network.unhideMatch(id, email);
@@ -1133,7 +1133,7 @@ class AppState extends ChangeNotifier {
     await Network.sendMessage(t.cloudMatchId, email, body);
     if (t.peerEmail.contains('@')) {
       final who = fullName.trim().isEmpty ? 'Någon' : fullName.trim();
-      await Network.ping(t.peerEmail, 'PawMatch', '$who: $body', kind: 'chat', peer: email);
+      await Network.ping(t.peerEmail, 'Nytt meddelande', '$who: $body', kind: 'chat', peer: email);
     }
     await refreshChat(t);
   }
@@ -1198,7 +1198,7 @@ class AppState extends ChangeNotifier {
       final fresh = lines.where((m) => !m.fromMe && m.id.isNotEmpty && !prev.contains(m.id) && !m.recalled).length;
       if (fresh > 0 && prev.isNotEmpty) {
         g.unread += fresh;
-        if (notifyOn) PushService.notifyMessage(g.name);
+        if (notifyOn) PushService.notifyGroup(g.name);
       }
     }
     g.messages
@@ -1238,7 +1238,7 @@ class AppState extends ChangeNotifier {
     final id = await Network.createGroup(name: title, ownerEmail: email, ownerName: fullName, members: people);
     if (id == null) return false;
     for (final person in people) {
-      await Network.ping(person.email, 'PawMatch', '$fullName bjöd in dig till gruppen $title.', kind: 'group', peer: email, group: id);
+      await Network.ping(person.email, 'Grupp', '$fullName bjöd in dig till gruppen $title.', kind: 'group', peer: email, group: id);
     }
     await pullGroups();
     return true;
@@ -1254,7 +1254,7 @@ class AppState extends ChangeNotifier {
     final who = fullName.trim().isEmpty ? 'Någon' : fullName.trim();
     for (final m in g.members) {
       if (m.email == email.toLowerCase()) continue;
-      await Network.ping(m.email, 'PawMatch', '$who i ${g.name}: $body', kind: 'group', peer: email, group: g.id);
+      await Network.ping(m.email, 'Grupp', '$who i ${g.name}: $body', kind: 'group', peer: email, group: g.id);
     }
     await refreshGroup(g);
   }
@@ -1264,7 +1264,7 @@ class AppState extends ChangeNotifier {
     if (g.members.any((m) => m.email == member.email.toLowerCase())) return;
     await Network.addGroupMember(g.id, member);
     await Network.sendGroupMessage(g.id, email, '${member.name} lades till i gruppen.');
-    await Network.ping(member.email, 'PawMatch', '$fullName bjöd in dig till gruppen ${g.name}.', kind: 'group', peer: email, group: g.id);
+    await Network.ping(member.email, 'Grupp', '$fullName bjöd in dig till gruppen ${g.name}.', kind: 'group', peer: email, group: g.id);
     await pullGroups();
   }
 

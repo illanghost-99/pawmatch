@@ -54,11 +54,19 @@ export default {
     try {
       const payload = await req.json();
       const email = String(payload.to_email ?? "").trim().toLowerCase();
-      const title = "PawMatch";
       const text = String(payload.body ?? "").slice(0, 180);
       const kind = String(payload.kind ?? "").slice(0, 40);
       const peer = String(payload.peer ?? "").slice(0, 160);
       const group = String(payload.group ?? "").slice(0, 80);
+      const named: Record<string, string> = {
+        chat: "Nytt meddelande",
+        match: "Någon vill matcha",
+        matched: "Ny matchning",
+        group: "Grupp",
+        support: "Support",
+      };
+      const incoming = String(payload.title ?? "").trim();
+      const title = (incoming && incoming !== "PawMatch" ? incoming : (named[kind] ?? "PawMatch")).slice(0, 60);
       if (!email.includes("@") || !text) {
         return Response.json({ ok: false }, { status: 400 });
       }
