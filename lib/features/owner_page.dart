@@ -74,6 +74,11 @@ class _OwnerPageState extends State<OwnerPage> {
     final name = dog.owner.trim().isEmpty ? 'Hundägare' : dog.owner.trim();
     final adDog = ad;
     final photos = adDog.gallery.where((p) => p.startsWith('http')).toList();
+    final intent = adDog.availableForBreeding && adDog.availableForFriends
+        ? 'Vänner och avel'
+        : adDog.availableForBreeding
+            ? 'Avel'
+            : 'Vänner';
     final facts = <(String, String)>[
       ('Ras', adDog.breed.trim().isEmpty ? 'Inte angiven' : adDog.breed.trim()),
       ('Ålder', adDog.age > 0 ? '${adDog.age} år' : 'Inte angiven'),
@@ -94,11 +99,6 @@ class _OwnerPageState extends State<OwnerPage> {
     } else {
       facts.add(('Allergier', 'Inga angivna'));
     }
-    final intent = adDog.availableForBreeding && adDog.availableForFriends
-        ? 'Vänner och avel'
-        : adDog.availableForBreeding
-            ? 'Avel'
-            : 'Vänner';
     return Scaffold(
       backgroundColor: _cream,
       appBar: AppBar(title: const Text('Hundägare', style: TextStyle(fontWeight: FontWeight.w800)), backgroundColor: Colors.transparent),
