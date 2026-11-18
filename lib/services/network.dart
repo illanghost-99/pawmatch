@@ -837,12 +837,48 @@ class Network {
       final res = await c.functions.invoke('admin-accounts', body: {'action': 'list'});
       final data = res.data;
       if (data is Map && data['ok'] == true && data['accounts'] is List) {
-        return [for (final row in data['accounts'] as List) Map<String, dynamic>.from(row as Map)];
+        final list = [for (final row in data['accounts'] as List) Map<String, dynamic>.from(row as Map)];
+        await _fillAccountNames(list);
+        return list;
       }
     } catch (e) {
       debugPrint('adminAccounts $e');
     }
     return accounts();
+  }
+
+  static Future<void> _fillAccountNames(List<Map<String, dynamic>> list) async {
+    final c = _c;
+    if (c == null || list.isEmpty) return;
+    final names = <String, String>{};
+    try {
+      final profiles = await c.from('pm_profiles').select('email,first_name,last_name');
+      for (final raw in profiles) {
+        final r = Map<String, dynamic>.from(raw as Map);
+        final email = '${r['email'] ?? ''}'.toLowerCase();
+        final name = '${r['first_name'] ?? ''} ${r['last_name'] ?? ''}'.trim();
+        if (email.contains('@') && name.isNotEmpty) names[email] = name;
+      }
+    } catch (e) {
+      debugPrint('account names profile $e');
+    }
+    try {
+      final dogs = await c.from('pm_dogs').select('owner_email,owner_name');
+      for (final raw in dogs) {
+        final r = Map<String, dynamic>.from(raw as Map);
+        final email = '${r['owner_email'] ?? ''}'.toLowerCase();
+        final owner = '${r['owner_name'] ?? ''}'.trim();
+        if (email.contains('@') && owner.isNotEmpty && !names.containsKey(email)) names[email] = owner;
+      }
+    } catch (e) {
+      debugPrint('account names dog $e');
+    }
+    for (final row in list) {
+      final email = '${row['email'] ?? ''}'.toLowerCase();
+      final current = '${row['name'] ?? ''}'.trim();
+      final better = names[email];
+      if (better != null && better.isNotEmpty && (current.isEmpty || current.contains('@'))) row['name'] = better;
+    }
   }
 
   static Future<List<Map<String, dynamic>>> accounts() async {
@@ -861,10 +897,11 @@ class Network {
         final r = Map<String, dynamic>.from(raw as Map);
         final email = '${r['owner_email'] ?? ''}'.toLowerCase();
         if (!email.contains('@')) continue;
-        final item = by.putIfAbsent(email, () => {'email': email, 'name': '${r['owner'] ?? email}', 'dogs': <String>[], 'status': 'Aktiv'});
+        final item = by.putIfAbsent(email, () => {'email': email, 'name': '${r['owner_name'] ?? email}', 'dogs': <String>[], 'status': 'Aktiv'});
         final dog = '${r['name'] ?? ''}'.trim();
         if (dog.isNotEmpty) (item['dogs'] as List<String>).add(dog);
-        if ('${item['name']}'.contains('@') && '${r['owner'] ?? ''}'.trim().isNotEmpty) item['name'] = '${r['owner']}';
+        final owner = '${r['owner_name'] ?? ''}'.trim();
+        if ('${item['name']}'.contains('@') && owner.isNotEmpty) item['name'] = owner;
       }
       for (final raw in bans) {
         final r = Map<String, dynamic>.from(raw as Map);
@@ -874,6 +911,7 @@ class Network {
         item['status'] = _accountStatus(r);
       }
       final list = by.values.toList();
+      await _fillAccountNames(list);
       list.sort((a, b) => '${a['name']}'.toLowerCase().compareTo('${b['name']}'.toLowerCase()));
       return list;
     } catch (e) {
