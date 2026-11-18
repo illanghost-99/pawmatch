@@ -23,6 +23,14 @@ class _OwnerPageState extends State<OwnerPage> {
   String photo = '';
   bool loading = true;
   DogProfile? listing;
+  final pager = PageController();
+  int photoPage = 0;
+
+  @override
+  void dispose() {
+    pager.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -66,13 +74,26 @@ class _OwnerPageState extends State<OwnerPage> {
     final name = dog.owner.trim().isEmpty ? 'Hundägare' : dog.owner.trim();
     final adDog = ad;
     final photos = adDog.gallery.where((p) => p.startsWith('http')).toList();
-    final facts = [
-      if (adDog.breed.isNotEmpty) adDog.breed,
-      if (adDog.age > 0) '${adDog.age} år',
-      if (adDog.sexLabel.isNotEmpty) adDog.sexLabel,
-      if (adDog.weightKg > 0) adDog.weightLabel,
-      if (adDog.city.isNotEmpty) adDog.city,
-    ].join(' · ');
+    final facts = <(String, String)>[
+      ('Ras', adDog.breed.trim().isEmpty ? 'Inte angiven' : adDog.breed.trim()),
+      ('Ålder', adDog.age > 0 ? '${adDog.age} år' : 'Inte angiven'),
+      ('Kön', adDog.sexLabel.isEmpty ? 'Inte angivet' : adDog.sexLabel),
+      ('Vikt', adDog.weightKg > 0 ? adDog.weightLabel : 'Inte angiven'),
+      ('Ort', adDog.city.trim().isEmpty ? 'Inte angiven' : adDog.city.trim()),
+      ('Söker', intent),
+      ('Chipmärkt', adDog.chipped ? 'Ja' : 'Nej'),
+      ('Vaccinerad', adDog.vaccinated ? 'Ja' : 'Nej'),
+      ('Avmaskad', adDog.dewormed ? 'Ja' : 'Nej'),
+      ('Kastrerad', adDog.neutered ? 'Ja' : 'Nej'),
+      ('Stamtavla', adDog.hasPedigree ? (adDog.pedigreeNote.trim().isEmpty ? 'Ja' : adDog.pedigreeNote.trim()) : 'Nej'),
+    ];
+    if (adDog.vaccineNote.trim().isNotEmpty) facts.add(('Senaste vaccin', adDog.vaccineNote.trim()));
+    if (adDog.healthNote.trim().isNotEmpty) facts.add(('Hälsotest', adDog.healthNote.trim()));
+    if (adDog.hasAllergies || adDog.allergyNote.trim().isNotEmpty) {
+      facts.add(('Allergier', adDog.allergyNote.trim().isEmpty ? 'Ja' : adDog.allergyNote.trim()));
+    } else {
+      facts.add(('Allergier', 'Inga angivna'));
+    }
     final intent = adDog.availableForBreeding && adDog.availableForFriends
         ? 'Vänner och avel'
         : adDog.availableForBreeding
@@ -114,57 +135,76 @@ class _OwnerPageState extends State<OwnerPage> {
           const SizedBox(height: 8),
           if (photos.isEmpty)
             Container(
-              height: 180,
+              height: 220,
               alignment: Alignment.center,
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: const Color(0xFFE7C7B4), width: 2),
+              ),
               child: const Icon(Icons.pets, color: _muted, size: 42),
             )
           else
-            SizedBox(
-              height: 280,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: photos.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 10),
-                itemBuilder: (_, i) => ClipRRect(
-                  borderRadius: BorderRadius.circular(18),
-                  child: Image.network(photos[i], width: 240, height: 280, fit: BoxFit.cover),
-                ),
+            Container(
+              height: 320,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: const Color(0xFFE7C7B4), width: 2),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Stack(
+                children: [
+                  PageView.builder(
+                    controller: pager,
+                    itemCount: photos.length,
+                    onPageChanged: (i) => setState(() => photoPage = i),
+                    itemBuilder: (_, i) => Image.network(photos[i], fit: BoxFit.cover, width: double.infinity),
+                  ),
+                  Positioned(
+                    right: 12,
+                    bottom: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(color: const Color(0xCC14202B), borderRadius: BorderRadius.circular(99)),
+                      child: Text('${photoPage + 1} / ${photos.length}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+                    ),
+                  ),
+                ],
               ),
             ),
-          const SizedBox(height: 12),
-          if (facts.isNotEmpty) Text(facts, style: const TextStyle(color: _muted, height: 1.35)),
-          const SizedBox(height: 6),
-          Text(intent, style: const TextStyle(fontWeight: FontWeight.w700, color: _ink)),
+          if (photos.length > 1)
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text('Svep i ramen för att se alla bilder.', textAlign: TextAlign.center, style: TextStyle(color: _muted, fontWeight: FontWeight.w600)),
+            ),
           if (adDog.bio.trim().isNotEmpty) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 14),
             Text(adDog.bio.trim(), style: const TextStyle(height: 1.4, fontSize: 16, color: _ink)),
           ],
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              if (adDog.vaccinated) _chip('Vaccinerad'),
-              if (adDog.dewormed) _chip('Avmaskad'),
-              if (adDog.chipped) _chip('Chipmärkt'),
-              if (adDog.neutered) _chip('Kastrerad'),
-              if (adDog.hasPedigree) _chip(adDog.pedigreeNote.isEmpty ? 'Stamtavla' : 'Stamtavla: ${adDog.pedigreeNote}'),
-              if (adDog.vaccineNote.isNotEmpty) _chip('Vaccin: ${adDog.vaccineNote}'),
-              if (adDog.healthNote.isNotEmpty) _chip(adDog.healthNote),
-              if (adDog.hasAllergies) _chip(adDog.allergyNote.isEmpty ? 'Allergier' : adDog.allergyNote),
-            ],
+          const SizedBox(height: 14),
+          Container(
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
+            child: Column(
+              children: [
+                for (var i = 0; i < facts.length; i++)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      border: i == facts.length - 1 ? null : const Border(bottom: BorderSide(color: Color(0xFFF0E2D8))),
+                    ),
+                    child: Row(
+                      children: [
+                        SizedBox(width: 118, child: Text(facts[i].$1, style: const TextStyle(color: _muted, fontWeight: FontWeight.w700))),
+                        Expanded(child: Text(facts[i].$2, textAlign: TextAlign.right, style: const TextStyle(color: _ink, fontWeight: FontWeight.w800))),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
-}
-
-Widget _chip(String text) {
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(99)),
-    child: Text(text, style: const TextStyle(fontWeight: FontWeight.w700, color: _ink)),
-  );
 }
