@@ -291,7 +291,18 @@ class MyDogsPage extends StatelessWidget {
               itemCount: state.myDogs.length,
               itemBuilder: (_, i) {
                 final d = state.myDogs[i];
-                final pic = d.photos.isNotEmpty ? d.photos.first : '';
+                var pic = '';
+                for (final p in d.photos) {
+                  if (p.trim().isNotEmpty) {
+                    pic = p.trim();
+                    break;
+                  }
+                }
+                final ImageProvider? face = pic.startsWith('http')
+                    ? NetworkImage(pic)
+                    : pic.isEmpty
+                        ? null
+                        : FileImage(File(pic));
                 return Card(
                   color: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -300,8 +311,8 @@ class MyDogsPage extends StatelessWidget {
                     leading: CircleAvatar(
                       radius: 28,
                       backgroundColor: const Color(0xFFFFE4DF),
-                      backgroundImage: pic.isEmpty ? null : FileImage(File(pic)),
-                      child: pic.isEmpty ? Text(d.name.isEmpty ? '?' : d.name[0].toUpperCase(), style: const TextStyle(color: _rose, fontWeight: FontWeight.w800)) : null,
+                      backgroundImage: face,
+                      child: face == null ? Text(d.name.isEmpty ? '?' : d.name[0].toUpperCase(), style: const TextStyle(color: _rose, fontWeight: FontWeight.w800)) : null,
                     ),
                     title: Text('${d.name} · ${d.breed}', style: const TextStyle(fontWeight: FontWeight.w800)),
                     subtitle: Text(
