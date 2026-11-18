@@ -298,11 +298,12 @@ class MyDogsPage extends StatelessWidget {
                     break;
                   }
                 }
-                final ImageProvider? face = pic.startsWith('http')
-                    ? NetworkImage(pic)
-                    : pic.isEmpty
-                        ? null
-                        : FileImage(File(pic));
+                ImageProvider? face;
+                if (pic.startsWith('http')) {
+                  face = NetworkImage(pic);
+                } else if (pic.isNotEmpty) {
+                  face = FileImage(File(pic));
+                }
                 return Card(
                   color: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
