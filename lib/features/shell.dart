@@ -75,13 +75,19 @@ class _AppShellState extends State<AppShell> {
     if (thread == null) {
       if (!widget.state.chatsReady) return;
       widget.state.clearNotice();
-      setState(() => i = kind == 'match' ? 0 : 2);
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+      setState(() => i = 2);
       return;
     }
     final open = thread;
     _opening = true;
     widget.state.clearNotice();
     widget.state.markRead(open);
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
     setState(() => i = 2);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _opening = false;
