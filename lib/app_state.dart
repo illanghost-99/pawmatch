@@ -219,7 +219,11 @@ class AppState extends ChangeNotifier {
     remote.vaccineDoc = local.vaccineDoc;
     remote.pedigreeStatus = local.pedigreeStatus;
     remote.vaccineStatus = local.vaccineStatus;
-    if (remote.photos.isEmpty) remote.photos = List.of(local.photos);
+    if (local.photos.any((p) => p.trim().isNotEmpty && !p.startsWith('http'))) {
+      remote.photos = List.of(local.photos);
+    } else if (remote.photos.isEmpty) {
+      remote.photos = List.of(local.photos);
+    }
     return remote;
   }
 

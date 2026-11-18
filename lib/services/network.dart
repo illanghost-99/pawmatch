@@ -183,13 +183,14 @@ class Network {
     try {
       final urls = await publicPhotos(dog.photos);
       final kept = urls.isNotEmpty ? urls : [for (final p in dog.photos) if (p.startsWith('http')) p];
-      if (kept.isNotEmpty) dog.photos = kept;
+      final hasLocal = dog.photos.any((p) => p.trim().isNotEmpty && !p.startsWith('http'));
+      if (kept.isNotEmpty && !hasLocal) dog.photos = kept;
       final intent = dog.availableForBreeding && dog.availableForFriends
           ? 'both'
           : dog.availableForBreeding
               ? 'puppies'
               : 'friends';
-      await c.from('pm_dogs').upsert({
+      final row = <String, dynamic>{
         'id': id,
         'owner_email': email.toLowerCase(),
         'owner_name': owner,
@@ -201,7 +202,6 @@ class Network {
         'city': dog.city,
         'intent': intent,
         'bio': dog.bio,
-        'photos': kept,
         'lat': lat,
         'lng': lng,
         'chipped': dog.chipped,
@@ -215,7 +215,9 @@ class Network {
         'vaccine_note': dog.vaccineNote,
         'pedigree_note': dog.pedigreeNote,
         'updated_at': DateTime.now().toIso8601String(),
-      });
+      };
+      if (kept.isNotEmpty) row['photos'] = kept;
+      await c.from('pm_dogs').upsert(row);
     } catch (e) {
       debugPrint('upsertDog $e');
     }

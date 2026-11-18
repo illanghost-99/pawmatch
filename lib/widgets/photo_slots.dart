@@ -85,7 +85,9 @@ class PhotoSlots extends StatelessWidget {
                   Text('Lägg till', style: TextStyle(fontWeight: FontWeight.w700)),
                 ],
               )
-            : Image.file(File(path), fit: BoxFit.cover, width: double.infinity, height: 120),
+            : path.startsWith('http')
+                ? Image.network(path, fit: BoxFit.cover, width: double.infinity, height: 120)
+                : Image.file(File(path), fit: BoxFit.cover, width: double.infinity, height: 120),
       ),
     );
   }

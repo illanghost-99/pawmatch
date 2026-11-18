@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 
 class Media {
   static final _picker = ImagePicker();
@@ -7,9 +9,24 @@ class Media {
   static Future<String?> pick({ImageSource source = ImageSource.gallery}) async {
     try {
       final file = await _picker.pickImage(source: source, imageQuality: 80, maxWidth: 1800);
-      return file?.path;
+      final path = file?.path;
+      if (path == null || path.isEmpty) return null;
+      return _keep(path);
     } catch (_) {
       return null;
+    }
+  }
+
+  static Future<String> _keep(String path) async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final folder = Directory('${dir.path}/paw-photos');
+      if (!folder.existsSync()) folder.createSync(recursive: true);
+      final dest = File('${folder.path}/${DateTime.now().microsecondsSinceEpoch}.jpg');
+      await File(path).copy(dest.path);
+      return dest.path;
+    } catch (_) {
+      return path;
     }
   }
 
