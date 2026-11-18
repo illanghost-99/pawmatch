@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -219,7 +220,10 @@ class AppState extends ChangeNotifier {
     remote.vaccineDoc = local.vaccineDoc;
     remote.pedigreeStatus = local.pedigreeStatus;
     remote.vaccineStatus = local.vaccineStatus;
-    if (local.photos.any((p) => p.trim().isNotEmpty && !p.startsWith('http'))) {
+    if (local.photos.any((p) {
+      final t = p.trim();
+      return t.isNotEmpty && !t.startsWith('http') && File(t).existsSync();
+    })) {
       remote.photos = List.of(local.photos);
     } else if (remote.photos.isEmpty) {
       remote.photos = List.of(local.photos);

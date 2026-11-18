@@ -292,9 +292,11 @@ class MyDogsPage extends StatelessWidget {
               itemBuilder: (_, i) {
                 final d = state.myDogs[i];
                 var pic = '';
-                for (final p in d.photos) {
-                  if (p.trim().isNotEmpty) {
-                    pic = p.trim();
+                for (final raw in d.photos) {
+                  final p = raw.trim();
+                  if (p.isEmpty) continue;
+                  if (p.startsWith('http') || File(p).existsSync()) {
+                    pic = p;
                     break;
                   }
                 }
