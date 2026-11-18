@@ -164,8 +164,8 @@ class Network {
       pedigreeNote: r['pedigree_note'] as String? ?? '',
       vaccineStatus: vaccinated ? ReviewStatus.approved : ReviewStatus.none,
       pedigreeStatus: pedigree ? ReviewStatus.approved : ReviewStatus.none,
-      ownerVerified: r['owner_verified'] == true,
-      dogVerified: r['dog_verified'] == true,
+      ownerVerified: _yes(r['owner_verified']),
+      dogVerified: _yes(r['dog_verified']),
       ownerPremium: r['owner_premium'] == true,
     );
   }
@@ -1151,23 +1151,29 @@ class Network {
     }
   }
 
-  static Future<void> verifyOwner(String email, bool on) async {
+  static bool _yes(dynamic v) => v == true || v == 1 || v == 'true' || v == 't';
+
+  static Future<bool> verifyOwner(String email, bool on) async {
     final c = _c;
-    if (c == null || !email.contains('@')) return;
+    if (c == null || !email.contains('@')) return false;
     try {
-      await c.from('pm_dogs').update({'owner_verified': on}).eq('owner_email', email.toLowerCase());
+      final rows = await c.from('pm_dogs').update({'owner_verified': on}).eq('owner_email', email.toLowerCase()).select('id');
+      return rows.isNotEmpty;
     } catch (e) {
       debugPrint('verifyOwner $e');
+      return false;
     }
   }
 
-  static Future<void> verifyDog(String id, bool on) async {
+  static Future<bool> verifyDog(String id, bool on) async {
     final c = _c;
-    if (c == null || id.isEmpty) return;
+    if (c == null || id.isEmpty) return false;
     try {
-      await c.from('pm_dogs').update({'dog_verified': on}).eq('id', id);
+      final rows = await c.from('pm_dogs').update({'dog_verified': on}).eq('id', id).select('id');
+      return rows.isNotEmpty;
     } catch (e) {
       debugPrint('verifyDog $e');
+      return false;
     }
   }
 

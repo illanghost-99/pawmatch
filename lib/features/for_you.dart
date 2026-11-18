@@ -127,7 +127,7 @@ class _DogCard extends StatelessWidget {
             ),
             Positioned(
               left: 16,
-              right: 16,
+              right: 64,
               bottom: 16,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -141,7 +141,6 @@ class _DogCard extends StatelessWidget {
                   Row(
                     children: [
                       Flexible(child: Text('${dog.name}, ${dog.age}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800))),
-                      VerifiedMark(owner: dog.ownerVerified, dog: dog.dogVerified),
                     ],
                   ),
                   Text('${dog.breed} · ${dog.city} · ${state.kmTo(dog).round()} km', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70)),
@@ -177,6 +176,11 @@ class _DogCard extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+            Positioned(
+              right: 14,
+              bottom: 86,
+              child: VerifiedMark(owner: dog.ownerVerified, dog: dog.dogVerified, size: 36, corner: true),
             ),
           ],
         ),

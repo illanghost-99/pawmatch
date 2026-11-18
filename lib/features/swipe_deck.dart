@@ -165,7 +165,7 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
           ),
           Positioned(
             left: 18,
-            right: 18,
+            right: 64,
             bottom: 16,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,7 +173,6 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
                 Row(
                   children: [
                     Flexible(child: Text(d.name, style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800))),
-                    VerifiedMark(owner: d.ownerVerified, dog: d.dogVerified),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -194,6 +193,11 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
                 Text(d.bio, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70)),
               ],
             ),
+          ),
+          Positioned(
+            right: 14,
+            bottom: 14,
+            child: VerifiedMark(owner: d.ownerVerified, dog: d.dogVerified, size: 36, corner: true),
           ),
         ],
       ),

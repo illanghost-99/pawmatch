@@ -250,9 +250,14 @@ class _DogsState extends State<_Dogs> {
                 ),
                 FilledButton(
                   onPressed: () async {
-                    await Network.verifyOwner(d.ownerEmail, owner);
-                    await Network.verifyDog(d.id, dog);
-                    if (ctx.mounted) Navigator.pop(ctx);
+                    final ownerOk = await Network.verifyOwner(d.ownerEmail, owner);
+                    final dogOk = await Network.verifyDog(d.id, dog);
+                    if (!ctx.mounted) return;
+                    if (!ownerOk || !dogOk) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Verifieringen sparades inte. Öppna hunden igen och prova en gång till.')));
+                      return;
+                    }
+                    Navigator.pop(ctx);
                   },
                   child: const Text('Spara'),
                 ),

@@ -106,11 +106,25 @@ class _OwnerPageState extends State<OwnerPage> {
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
           Center(
-            child: CircleAvatar(
-              radius: 54,
-              backgroundColor: const Color(0xFFFFE0D4),
-              backgroundImage: photo.startsWith('http') ? NetworkImage(photo) : null,
-              child: photo.startsWith('http') ? null : Text(name.isEmpty ? '?' : name[0].toUpperCase(), style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w800, color: _ink)),
+            child: SizedBox(
+              width: 108,
+              height: 108,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  CircleAvatar(
+                    radius: 54,
+                    backgroundColor: const Color(0xFFFFE0D4),
+                    backgroundImage: photo.startsWith('http') ? NetworkImage(photo) : null,
+                    child: photo.startsWith('http') ? null : Text(name.isEmpty ? '?' : name[0].toUpperCase(), style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w800, color: _ink)),
+                  ),
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: VerifiedMark(owner: dog.ownerVerified || adDog.ownerVerified, dog: false, size: 32, corner: true),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 14),
@@ -118,7 +132,6 @@ class _OwnerPageState extends State<OwnerPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Flexible(child: Text(name, textAlign: TextAlign.center, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: _ink))),
-              VerifiedMark(owner: dog.ownerVerified, dog: false, size: 22),
             ],
           ),
           if (city.isNotEmpty) Text(city, textAlign: TextAlign.center, style: const TextStyle(color: _muted)),
@@ -129,7 +142,6 @@ class _OwnerPageState extends State<OwnerPage> {
           Row(
             children: [
               Flexible(child: Text(adDog.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: _ink))),
-              VerifiedMark(owner: false, dog: adDog.dogVerified, size: 18),
             ],
           ),
           const SizedBox(height: 8),
@@ -162,13 +174,18 @@ class _OwnerPageState extends State<OwnerPage> {
                     itemBuilder: (_, i) => Image.network(photos[i], fit: BoxFit.cover, width: double.infinity),
                   ),
                   Positioned(
-                    right: 12,
+                    left: 12,
                     bottom: 12,
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(color: const Color(0xCC14202B), borderRadius: BorderRadius.circular(99)),
                       child: Text('${photoPage + 1} / ${photos.length}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
                     ),
+                  ),
+                  Positioned(
+                    right: 12,
+                    bottom: 12,
+                    child: VerifiedMark(owner: false, dog: adDog.dogVerified || dog.dogVerified, size: 36, corner: true),
                   ),
                 ],
               ),
