@@ -1117,6 +1117,27 @@ class Network {
     }
   }
 
+  static Future<DogProfile?> listingFor(DogProfile dog) async {
+    final c = _c;
+    if (c == null) return null;
+    try {
+      final id = dog.id;
+      if (id.isNotEmpty && !id.startsWith('match-')) {
+        final row = await c.from('pm_dogs').select().eq('id', id).maybeSingle();
+        if (row != null) return dogFromRow(Map<String, dynamic>.from(row));
+      }
+      final owner = dog.ownerEmail.toLowerCase();
+      final name = dog.name.trim();
+      if (!owner.contains('@') || name.isEmpty) return null;
+      final rows = await c.from('pm_dogs').select().eq('owner_email', owner).eq('name', name).limit(1);
+      if (rows.isEmpty) return null;
+      return dogFromRow(Map<String, dynamic>.from(rows.first as Map));
+    } catch (e) {
+      debugPrint('listingFor $e');
+      return null;
+    }
+  }
+
   static Future<List<DogProfile>> searchDogs(String query) async {
     final c = _c;
     final q = query.trim().replaceAll(RegExp(r'[^a-zA-Z0-9@.\- åäöÅÄÖ]'), '');
