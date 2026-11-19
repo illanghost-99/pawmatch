@@ -240,7 +240,7 @@ class MatchThread {
     this.cloudMatchId = '',
     this.peerEmail = '',
   }) : createdAt = createdAt ?? DateTime.now();
-  final DogProfile dog;
+  DogProfile dog;
   final List<ChatLine> messages;
   bool accepted;
   final bool outgoing;

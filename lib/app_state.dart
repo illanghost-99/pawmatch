@@ -357,6 +357,7 @@ class AppState extends ChangeNotifier {
         'owner': d.owner,
         'id': d.id,
         'owner_email': peer,
+        'photo': d.photoUrl,
         'from_name': fullName,
         'from_email': email.toLowerCase(),
         'from_dog': myDogs.isEmpty ? fullName : myDogs.first.name,
@@ -364,31 +365,32 @@ class AppState extends ChangeNotifier {
 
   DogProfile _dogFromMatch(Map<String, dynamic> r, String peer) {
     final json = Map<String, dynamic>.from(r['dog_json'] ?? {});
-    final storedId = '${json['id'] ?? ''}';
-    final storedName = '${json['name'] ?? ''}'.toLowerCase();
-    for (final d in liveDogs) {
-      if (storedId.isNotEmpty && d.id == storedId) return d;
-    }
-    for (final d in liveDogs) {
-      if (d.ownerEmail.toLowerCase() == peer && storedName.isNotEmpty && d.name.toLowerCase() == storedName) return d;
-    }
-    for (final d in liveDogs) {
-      if (d.ownerEmail.toLowerCase() == peer) return d;
-    }
     final me = email.toLowerCase();
-    final ownerEmail = (json['owner_email'] as String? ?? '').toLowerCase();
-    final mine = ownerEmail == me;
+    final ownerEmail = '${json['owner_email'] ?? ''}'.toLowerCase();
+    final aboutPeer = ownerEmail.isEmpty || ownerEmail == peer;
+    final storedId = '${json['id'] ?? ''}';
+    final storedName = (aboutPeer ? '${json['name'] ?? ''}' : '${json['from_dog'] ?? ''}').trim();
+    final storedKey = storedName.toLowerCase();
+    for (final d in liveDogs) {
+      if (aboutPeer && storedId.isNotEmpty && d.id == storedId && d.ownerEmail.toLowerCase() == peer) return d;
+    }
+    for (final d in liveDogs) {
+      if (d.ownerEmail.toLowerCase() == peer && storedKey.isNotEmpty && d.name.toLowerCase() == storedKey) return d;
+    }
     return DogProfile(
-      id: (json['id'] as String?) ?? 'match-$peer',
-      name: mine ? (json['from_dog'] as String? ?? json['from_name'] as String? ?? 'Match') : (json['name'] as String? ?? 'Hund'),
-      breed: mine ? '' : (json['breed'] as String? ?? ''),
+      id: !aboutPeer || storedId.isEmpty ? 'match-$peer' : storedId,
+      name: storedName.isEmpty ? 'Hund' : storedName,
+      breed: aboutPeer ? '${json['breed'] ?? ''}' : '',
       age: 1,
       city: '',
       lat: lat,
       lng: lng,
       bio: '',
-      owner: mine ? (json['from_name'] as String? ?? peer) : (json['owner'] as String? ?? peer),
+      owner: aboutPeer
+          ? ('${json['owner'] ?? ''}'.trim().isEmpty ? peer : '${json['owner']}')
+          : ('${json['from_name'] ?? ''}'.trim().isEmpty ? peer : '${json['from_name']}'),
       tags: const [],
+      photoUrl: aboutPeer ? '${json['photo'] ?? ''}' : '',
       ownerEmail: peer,
     );
   }
@@ -424,6 +426,8 @@ class AppState extends ChangeNotifier {
       } else {
         thread.accepted = true;
         thread.cloudMatchId = id;
+        final dog = _dogFromMatch(r, peer);
+        if (dog.name.isNotEmpty && dog.name != 'Hund' && dog.name != 'Match') thread.dog = dog;
       }
       attachDeal(thread);
       incoming.removeWhere((m) => m.peerEmail.toLowerCase() == peer);
