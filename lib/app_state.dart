@@ -449,16 +449,56 @@ class AppState extends ChangeNotifier {
 
   DogProfile _dogFromMatch(Map<String, dynamic> r, String peer) {
     final json = Map<String, dynamic>.from(r['dog_json'] ?? {});
+    final me = email.toLowerCase();
+    final mine = <String>{for (final d in myDogs) d.name.trim().toLowerCase()};
+    bool own(String name, String id, String key) {
+      final n = name.trim().toLowerCase();
+      if (n.isNotEmpty && mine.contains(n)) return true;
+      if (id.toLowerCase().startsWith('$me-')) return true;
+      return key == me;
+    }
+
+    final candidates = <Map<String, dynamic>>[];
+    void add(String name, String id, String photo, String owner, String key) {
+      final title = name.trim();
+      if (title.isEmpty) return;
+      candidates.add({'name': title, 'id': id, 'photo': photo, 'owner': owner, 'key': key.toLowerCase()});
+    }
+
     final dogs = json['dogs'];
+    if (dogs is Map) {
+      for (final e in dogs.entries) {
+        if (e.value is! Map) continue;
+        final v = Map<String, dynamic>.from(e.value as Map);
+        add('${v['name'] ?? ''}', '${v['id'] ?? ''}', '${v['photo'] ?? ''}', '${v['owner'] ?? ''}', '${e.key}');
+      }
+    }
+    add('${json['name'] ?? ''}', '${json['id'] ?? ''}', '${json['photo'] ?? ''}', '${json['owner'] ?? ''}', '${json['owner_email'] ?? ''}');
+    add('${json['from_dog'] ?? ''}', '${json['from_dog_id'] ?? ''}', '${json['from_photo'] ?? ''}', '${json['from_name'] ?? ''}', '${json['from_email'] ?? ''}');
+
     Map<String, dynamic> entry = {};
-    if (dogs is Map && dogs[peer] is Map) entry = Map<String, dynamic>.from(dogs[peer] as Map);
+    for (final c in candidates) {
+      final id = '${c['id']}';
+      final key = '${c['key']}';
+      if (key == peer && !own('${c['name']}', id, key)) {
+        entry = c;
+        break;
+      }
+    }
     if ('${entry['name'] ?? ''}'.trim().isEmpty) {
-      final ownerEmail = '${json['owner_email'] ?? ''}'.toLowerCase();
-      final fromEmail = '${json['from_email'] ?? ''}'.toLowerCase();
-      if (ownerEmail == peer || ownerEmail.isEmpty) {
-        entry = {'name': json['name'], 'id': json['id'], 'photo': json['photo'], 'owner': json['owner']};
-      } else if (fromEmail == peer) {
-        entry = {'name': json['from_dog'], 'id': json['from_dog_id'], 'photo': json['from_photo'], 'owner': json['from_name']};
+      for (final c in candidates) {
+        if ('${c['id']}'.toLowerCase().startsWith('$peer-')) {
+          entry = c;
+          break;
+        }
+      }
+    }
+    if ('${entry['name'] ?? ''}'.trim().isEmpty) {
+      for (final c in candidates) {
+        if (!own('${c['name']}', '${c['id']}', '${c['key']}')) {
+          entry = c;
+          break;
+        }
       }
     }
     final storedId = '${entry['id'] ?? ''}';
