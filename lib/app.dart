@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'app_state.dart';
 import 'features/auth.dart';
@@ -31,8 +32,20 @@ class _PawMatchAppState extends State<PawMatchApp> {
       });
     };
     Fcm.bindOpen(state.openFromNotice);
+    const notice = MethodChannel('pawmatch/notice');
+    notice.setMethodCallHandler((call) async {
+      if (call.method == 'open') _fromNotice(call.arguments);
+    });
+    notice.invokeMethod<dynamic>('ready').then((value) => _fromNotice(value), onError: (_) {});
     Store.boot((ok) {
       if (ok) state.startLaunchOffer();
+    });
+  }
+
+  void _fromNotice(dynamic raw) {
+    if (raw is! Map) return;
+    state.openFromNotice({
+      for (final e in raw.entries) '${e.key}': '${e.value}',
     });
   }
 

@@ -24,6 +24,8 @@ class AppState extends ChangeNotifier {
   String? pendingKind;
   String? pendingPeer;
   String? pendingGroup;
+  String _lastNoticeKey = '';
+  DateTime? _lastNoticeAt;
   bool gpsOn = false;
   DateTime? premiumUntil;
   int swipesToday = 0;
@@ -1030,18 +1032,22 @@ class AppState extends ChangeNotifier {
   }
 
   void openFromNotice(Map<String, String> data) {
-    final kind = (data['kind'] ?? '').trim();
-    final peer = (data['peer'] ?? '').trim().toLowerCase();
-    final group = (data['group'] ?? '').trim();
-    if (kind.isEmpty && peer.isEmpty && group.isEmpty) {
-      pendingKind = 'chat';
-      pendingPeer = null;
-      pendingGroup = null;
-    } else {
-      pendingKind = kind.isEmpty ? 'chat' : kind;
-      pendingPeer = peer;
-      pendingGroup = group;
-    }
+    var kind = (data['kind'] ?? '').trim();
+    var peer = (data['peer'] ?? '').trim().toLowerCase();
+    var group = (data['group'] ?? '').trim();
+    final route = (data['payload'] ?? '').split('|');
+    if (kind.isEmpty && route.isNotEmpty) kind = route.first.trim();
+    if (peer.isEmpty && route.length > 1) peer = route[1].trim().toLowerCase();
+    if (group.isEmpty && route.length > 2) group = route[2].trim();
+    if (kind.isEmpty) kind = group.isNotEmpty ? 'group' : 'chat';
+    final key = '$kind|$peer|$group';
+    final now = DateTime.now();
+    if (key == _lastNoticeKey && _lastNoticeAt != null && now.difference(_lastNoticeAt!) < const Duration(seconds: 2)) return;
+    _lastNoticeKey = key;
+    _lastNoticeAt = now;
+    pendingKind = kind;
+    pendingPeer = peer;
+    pendingGroup = group;
     notifyListeners();
   }
 
