@@ -55,9 +55,11 @@ class PushService {
     }
   }
 
-  static Future<void> _show(String title, String body, {String kind = ''}) async {
+  static Future<void> _show(String title, String body, {String kind = '', String peer = ''}) async {
     if (!ready) await init();
     if (!ready) return;
+    final who = peer.trim().toLowerCase();
+    final payload = who.isEmpty ? kind : '$kind|$who';
     try {
       await _plugin.show(
         _id++,
@@ -78,7 +80,7 @@ class PushService {
             playSound: true,
           ),
         ),
-        payload: kind,
+        payload: payload,
       );
       await SystemSound.play(SystemSoundType.alert);
     } catch (e) {
@@ -86,14 +88,14 @@ class PushService {
     }
   }
 
-  static Future<void> notifyLike(String dogName) =>
-      _show('Någon vill matcha', dogName.trim().isEmpty ? 'Någon vill matcha med din hund.' : 'Någon vill matcha med $dogName', kind: 'match');
+  static Future<void> notifyLike(String dogName, {String peer = ''}) =>
+      _show('Någon vill matcha', dogName.trim().isEmpty ? 'Någon vill matcha med din hund.' : 'Någon vill matcha med $dogName', kind: 'match', peer: peer);
 
-  static Future<void> notifyMatch(String dogName) =>
-      _show('Ny matchning', dogName.trim().isEmpty ? 'Ni matchade. Öppna chatten.' : 'Ny matchning med $dogName', kind: 'matched');
+  static Future<void> notifyMatch(String dogName, {String peer = ''}) =>
+      _show('Ny matchning', dogName.trim().isEmpty ? 'Ni matchade. Öppna chatten.' : 'Ny matchning med $dogName', kind: 'matched', peer: peer);
 
-  static Future<void> notifyMessage(String from) =>
-      _show('Nytt meddelande', '$from har skrivit till dig', kind: 'chat');
+  static Future<void> notifyMessage(String from, {String peer = ''}) =>
+      _show('Nytt meddelande', '$from har skrivit till dig', kind: 'chat', peer: peer);
 
   static Future<void> notifyGroup(String name) =>
       _show('Grupp', 'Nytt meddelande i $name', kind: 'group');

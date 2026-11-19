@@ -22,7 +22,13 @@ class _PawMatchAppState extends State<PawMatchApp> {
   void initState() {
     super.initState();
     state.restore();
-    PushService.onTap = (kind) => state.openFromNotice({'kind': kind});
+    PushService.onTap = (raw) {
+      final parts = raw.split('|');
+      state.openFromNotice({
+        'kind': parts.isEmpty ? '' : parts.first,
+        'peer': parts.length > 1 ? parts[1] : '',
+      });
+    };
     Fcm.bindOpen(state.openFromNotice);
     Store.boot((ok) {
       if (ok) state.startLaunchOffer();

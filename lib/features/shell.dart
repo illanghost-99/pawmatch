@@ -65,6 +65,15 @@ class _AppShellState extends State<AppShell> {
       });
       return;
     }
+    if (kind == 'match') {
+      widget.state.clearNotice();
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+      setState(() => i = 2);
+      return;
+    }
+    if ((kind == 'chat' || kind == 'matched') && !widget.state.chatsReady) return;
     MatchThread? thread;
     for (final m in widget.state.matches) {
       if (m.accepted && peer.isNotEmpty && m.peerEmail.toLowerCase() == peer) {

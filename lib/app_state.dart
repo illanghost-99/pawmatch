@@ -455,7 +455,7 @@ class AppState extends ChangeNotifier {
       incoming.insert(0, MatchThread(dog, [], accepted: false, outgoing: false, peerEmail: from));
       changed = true;
       if (_seenLikes.add(from)) {
-        if (notifyOn) PushService.notifyLike(dog.name);
+        if (notifyOn) PushService.notifyLike(dog.name, peer: from);
         lastNotice = '${dog.owner} vill matcha med dig';
       }
     }
@@ -478,7 +478,7 @@ class AppState extends ChangeNotifier {
         if (fresh > 0) {
           t.unread += fresh;
           final who = t.dog.owner.trim().isEmpty ? 'Någon' : t.dog.owner.trim();
-          if (notifyOn) PushService.notifyMessage(who);
+          if (notifyOn) PushService.notifyMessage(who, peer: t.peerEmail);
         }
       }
     } else if (markSeen) {
