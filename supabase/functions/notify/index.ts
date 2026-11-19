@@ -80,6 +80,7 @@ export default {
       for (const row of data ?? []) {
         const token = String(row.token ?? "");
         if (!token) continue;
+        const route = [kind, peer, group].join("|");
         const res = await fetch(`https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`, {
           method: "POST",
           headers: {
@@ -90,7 +91,7 @@ export default {
             message: {
               token,
               notification: { title, body: text },
-              data: { kind, peer, group },
+              data: { kind, peer, group, payload: route },
               android: { priority: "HIGH", notification: { sound: "default" } },
               apns: {
                 headers: { "apns-priority": "10", "apns-push-type": "alert" },
@@ -99,6 +100,7 @@ export default {
                   kind,
                   peer,
                   group,
+                  payload: route,
                 },
               },
             },

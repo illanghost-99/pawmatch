@@ -160,6 +160,12 @@ class Fcm {
     final data = <String, String>{
       for (final e in raw.entries) e.key: '${e.value}',
     };
+    if ((data['kind'] ?? '').isEmpty) {
+      final route = (data['payload'] ?? '').split('|');
+      if (route.isNotEmpty && route.first.isNotEmpty) data['kind'] = route.first;
+      if ((data['peer'] ?? '').isEmpty && route.length > 1) data['peer'] = route[1];
+      if ((data['group'] ?? '').isEmpty && route.length > 2) data['group'] = route[2];
+    }
     final cb = onOpen;
     if (cb == null) {
       _waiting = data;

@@ -27,6 +27,7 @@ class _PawMatchAppState extends State<PawMatchApp> {
       state.openFromNotice({
         'kind': parts.isEmpty ? '' : parts.first,
         'peer': parts.length > 1 ? parts[1] : '',
+        'group': parts.length > 2 ? parts[2] : '',
       });
     };
     Fcm.bindOpen(state.openFromNotice);
