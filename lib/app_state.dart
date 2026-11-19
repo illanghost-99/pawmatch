@@ -351,46 +351,137 @@ class AppState extends ChangeNotifier {
     pullGroups();
   }
 
-  Map<String, dynamic> _dogJson(DogProfile d, String peer) => {
-        'name': d.name,
-        'breed': d.breed,
-        'owner': d.owner,
-        'id': d.id,
-        'owner_email': peer,
-        'photo': d.photoUrl,
-        'from_name': fullName,
-        'from_email': email.toLowerCase(),
-        'from_dog': myDogs.isEmpty ? fullName : myDogs.first.name,
-      };
+  Map<String, dynamic> _dogJson(DogProfile d, String peer, {MyDog? mine}) {
+    final me = email.toLowerCase();
+    final mineName = mine?.name.trim() ?? '';
+    final minePhoto = mine == null ? '' : _dogPhoto(mine);
+    final mineId = mineName.isEmpty ? '' : '$me-${mineName.toLowerCase()}';
+    return {
+      'name': d.name,
+      'breed': d.breed,
+      'owner': d.owner,
+      'id': d.id,
+      'owner_email': peer,
+      'photo': d.photoUrl,
+      'from_name': fullName,
+      'from_email': me,
+      'from_dog': mineName,
+      'from_dog_id': mineId,
+      'from_photo': minePhoto,
+      'dogs': {
+        peer: {'name': d.name, 'id': d.id, 'photo': d.photoUrl, 'owner': d.owner},
+        if (mineName.isNotEmpty) me: {'name': mineName, 'id': mineId, 'photo': minePhoto, 'owner': fullName},
+      },
+    };
+  }
+
+  String _dogPhoto(MyDog dog) {
+    for (final p in dog.photos) {
+      final t = p.trim();
+      if (t.isNotEmpty) return t;
+    }
+    return '';
+  }
+
+  MyDog? _myMatchedDog(String dogId) {
+    if (myDogs.isEmpty) return null;
+    if (dogId.isNotEmpty) {
+      final id = dogId.toLowerCase();
+      for (final d in myDogs) {
+        if ('${email.toLowerCase()}-${d.name.toLowerCase()}' == id) return d;
+      }
+    }
+    return myDogs.length == 1 ? myDogs.first : null;
+  }
+
+  Future<Map<String, dynamic>> _pairJson(DogProfile theirs, String peer) async {
+    final myId = await Network.likedDogId(peer, email);
+    return _dogJson(theirs, peer, mine: _myMatchedDog(myId));
+  }
+
+  Future<void> _fillPair(Map<String, dynamic> row, String peer) async {
+    final json = Map<String, dynamic>.from(row['dog_json'] ?? {});
+    final dogs = <String, dynamic>{};
+    final raw = json['dogs'];
+    if (raw is Map) {
+      for (final e in raw.entries) {
+        if (e.value is Map) dogs['${e.key}'.toLowerCase()] = e.value;
+      }
+    }
+    final me = email.toLowerCase();
+    var changed = false;
+    if (dogs[peer] is! Map) {
+      final id = await Network.likedDogId(email, peer);
+      DogProfile? live;
+      for (final d in liveDogs) {
+        if (id.isNotEmpty && d.id == id) live = d;
+      }
+      var name = live?.name ?? '';
+      if (name.isEmpty) {
+        final prefix = '$peer-';
+        if (id.toLowerCase().startsWith(prefix) && id.length > prefix.length) name = id.substring(prefix.length);
+      }
+      if (name.isEmpty && '${json['owner_email']}'.toLowerCase() == peer) name = '${json['name'] ?? ''}'.trim();
+      if (name.isEmpty && '${json['from_email']}'.toLowerCase() == peer) name = '${json['from_dog'] ?? ''}'.trim();
+      if (name.isNotEmpty) {
+        dogs[peer] = {
+          'name': name,
+          'id': live?.id ?? id,
+          'photo': (live?.photoUrl ?? '').isNotEmpty ? live!.photoUrl : '${json['photo'] ?? ''}',
+          'owner': (live?.owner ?? '').isNotEmpty ? live!.owner : '${json['owner'] ?? ''}',
+        };
+        changed = true;
+      }
+    }
+    if (dogs[me] is! Map) {
+      final id = await Network.likedDogId(peer, email);
+      final mine = _myMatchedDog(id);
+      if (mine != null) {
+        dogs[me] = {'name': mine.name, 'id': '$me-${mine.name.toLowerCase()}', 'photo': _dogPhoto(mine), 'owner': fullName};
+        changed = true;
+      }
+    }
+    if (!changed) return;
+    json['dogs'] = dogs;
+    row['dog_json'] = json;
+    await Network.saveMatchDogs('${row['id']}', json);
+  }
 
   DogProfile _dogFromMatch(Map<String, dynamic> r, String peer) {
     final json = Map<String, dynamic>.from(r['dog_json'] ?? {});
-    final me = email.toLowerCase();
-    final ownerEmail = '${json['owner_email'] ?? ''}'.toLowerCase();
-    final aboutPeer = ownerEmail.isEmpty || ownerEmail == peer;
-    final storedId = '${json['id'] ?? ''}';
-    final storedName = (aboutPeer ? '${json['name'] ?? ''}' : '${json['from_dog'] ?? ''}').trim();
+    final dogs = json['dogs'];
+    Map<String, dynamic> entry = {};
+    if (dogs is Map && dogs[peer] is Map) entry = Map<String, dynamic>.from(dogs[peer] as Map);
+    if ('${entry['name'] ?? ''}'.trim().isEmpty) {
+      final ownerEmail = '${json['owner_email'] ?? ''}'.toLowerCase();
+      final fromEmail = '${json['from_email'] ?? ''}'.toLowerCase();
+      if (ownerEmail == peer || ownerEmail.isEmpty) {
+        entry = {'name': json['name'], 'id': json['id'], 'photo': json['photo'], 'owner': json['owner']};
+      } else if (fromEmail == peer) {
+        entry = {'name': json['from_dog'], 'id': json['from_dog_id'], 'photo': json['from_photo'], 'owner': json['from_name']};
+      }
+    }
+    final storedId = '${entry['id'] ?? ''}';
+    final storedName = '${entry['name'] ?? ''}'.trim();
     final storedKey = storedName.toLowerCase();
     for (final d in liveDogs) {
-      if (aboutPeer && storedId.isNotEmpty && d.id == storedId && d.ownerEmail.toLowerCase() == peer) return d;
+      if (storedId.isNotEmpty && d.id == storedId && d.ownerEmail.toLowerCase() == peer) return d;
     }
     for (final d in liveDogs) {
       if (d.ownerEmail.toLowerCase() == peer && storedKey.isNotEmpty && d.name.toLowerCase() == storedKey) return d;
     }
     return DogProfile(
-      id: !aboutPeer || storedId.isEmpty ? 'match-$peer' : storedId,
+      id: storedId.isEmpty ? 'match-$peer' : storedId,
       name: storedName.isEmpty ? 'Hund' : storedName,
-      breed: aboutPeer ? '${json['breed'] ?? ''}' : '',
+      breed: '${json['breed'] ?? ''}',
       age: 1,
       city: '',
       lat: lat,
       lng: lng,
       bio: '',
-      owner: aboutPeer
-          ? ('${json['owner'] ?? ''}'.trim().isEmpty ? peer : '${json['owner']}')
-          : ('${json['from_name'] ?? ''}'.trim().isEmpty ? peer : '${json['from_name']}'),
+      owner: '${entry['owner'] ?? ''}'.trim().isEmpty ? peer : '${entry['owner']}',
       tags: const [],
-      photoUrl: aboutPeer ? '${json['photo'] ?? ''}' : '',
+      photoUrl: '${entry['photo'] ?? ''}',
       ownerEmail: peer,
     );
   }
@@ -413,6 +504,7 @@ class AppState extends ChangeNotifier {
         continue;
       }
       if (hidden.contains(me)) Network.unhideMatch(id, email);
+      await _fillPair(r, peer);
       MatchThread? thread;
       for (final m in matches) {
         if (m.cloudMatchId == id || (peer.isNotEmpty && m.peerEmail.toLowerCase() == peer)) {
@@ -1102,7 +1194,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _openCloud(MatchThread thread, DogProfile d, String peer) async {
-    final id = await Network.ensureMatch(a: email, b: peer, dogJson: _dogJson(d, peer));
+    final id = await Network.ensureMatch(a: email, b: peer, dogJson: await _pairJson(d, peer));
     if (id == null || id.isEmpty) return;
     thread.cloudMatchId = id;
     thread.accepted = true;
@@ -1155,7 +1247,7 @@ class AppState extends ChangeNotifier {
     Network.forgetLike(fromEmail: peer, toEmail: email);
     Network.like(fromEmail: email, toEmail: peer, dogId: t.dog.id).then((_) async {
       await Network.ping(peer, 'Ny matchning', '$fullName godkände matchningen. Öppna chatten.', kind: 'matched', peer: email);
-      final id = await Network.ensureMatch(a: email, b: peer, dogJson: _dogJson(t.dog, peer));
+      final id = await Network.ensureMatch(a: email, b: peer, dogJson: await _pairJson(t.dog, peer));
       if (id == null || id.isEmpty) return;
       await Network.unhideMatch(id, email);
       t.cloudMatchId = id;

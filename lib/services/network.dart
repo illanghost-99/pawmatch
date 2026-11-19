@@ -351,6 +351,32 @@ class Network {
     }
   }
 
+  static Future<String> likedDogId(String fromEmail, String toEmail) async {
+    final c = _c;
+    if (c == null || !fromEmail.contains('@') || !toEmail.contains('@')) return '';
+    try {
+      final rows = await c
+          .from('pm_likes')
+          .select('dog_id')
+          .eq('from_email', fromEmail.toLowerCase())
+          .eq('to_email', toEmail.toLowerCase());
+      if (rows.isEmpty) return '';
+      return '${rows.first['dog_id'] ?? ''}';
+    } catch (e) {
+      debugPrint('likedDogId $e');
+      return '';
+    }
+  }
+
+  static Future<void> saveMatchDogs(String id, Map<String, dynamic> dogJson) async {
+    final c = _c;
+    if (c == null || id.isEmpty) return;
+    try {
+      await c.from('pm_matches').update({'dog_json': dogJson}).eq('id', id);
+    } catch (e) {
+      debugPrint('saveMatchDogs $e');
+    }
+  }
   static Future<void> forgetLike({required String fromEmail, required String toEmail}) async {
     final c = _c;
     if (c == null || !fromEmail.contains('@') || !toEmail.contains('@')) return;
@@ -359,6 +385,36 @@ class Network {
     } catch (e) {
       debugPrint('forgetLike $e');
     }
+  }
+
+  static Future<void> _keepBothDogs(Map row, Map<String, dynamic> incoming) async {
+    final c = _c;
+    final id = '${row['id'] ?? ''}';
+    if (c == null || id.isEmpty) return;
+    final current = Map<String, dynamic>.from(row['dog_json'] ?? {});
+    final dogs = <String, dynamic>{};
+    void take(dynamic raw) {
+      if (raw is! Map) return;
+      for (final e in raw.entries) {
+        if (e.value is Map && '${e.key}'.contains('@')) dogs['${e.key}'.toLowerCase()] = Map<String, dynamic>.from(e.value as Map);
+      }
+    }
+    take(current['dogs']);
+    take(incoming['dogs']);
+    void one(String who, String name, String dogId, String photo, String owner) {
+      final mail = who.toLowerCase().trim();
+      final title = name.trim();
+      if (!mail.contains('@') || title.isEmpty) return;
+      final prev = dogs[mail];
+      if (prev is Map && '${prev['name'] ?? ''}'.trim().isNotEmpty) return;
+      dogs[mail] = {'name': title, 'id': dogId, 'photo': photo, 'owner': owner};
+    }
+    one('${incoming['owner_email']}', '${incoming['name']}', '${incoming['id']}', '${incoming['photo']}', '${incoming['owner']}');
+    one('${incoming['from_email']}', '${incoming['from_dog']}', '${incoming['from_dog_id']}', '${incoming['from_photo']}', '${incoming['from_name']}');
+    one('${current['owner_email']}', '${current['name']}', '${current['id']}', '${current['photo']}', '${current['owner']}');
+    one('${current['from_email']}', '${current['from_dog']}', '${current['from_dog_id'] ?? ''}', '${current['from_photo'] ?? ''}', '${current['from_name']}');
+    current['dogs'] = dogs;
+    await c.from('pm_matches').update({'dog_json': current}).eq('id', id);
   }
 
   static Future<void> unhideMatch(String matchId, String email) async {
@@ -388,9 +444,15 @@ class Network {
     final bb = b.toLowerCase();
     try {
       final one = await c.from('pm_matches').select().eq('user_a', aa).eq('user_b', bb);
-      if (one.isNotEmpty) return one.first['id'] as String?;
+      if (one.isNotEmpty) {
+        await _keepBothDogs(one.first, dogJson);
+        return one.first['id'] as String?;
+      }
       final two = await c.from('pm_matches').select().eq('user_a', bb).eq('user_b', aa);
-      if (two.isNotEmpty) return two.first['id'] as String?;
+      if (two.isNotEmpty) {
+        await _keepBothDogs(two.first, dogJson);
+        return two.first['id'] as String?;
+      }
       final row = await c.from('pm_matches').insert({
         'user_a': aa,
         'user_b': bb,
