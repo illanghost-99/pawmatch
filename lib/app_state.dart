@@ -72,6 +72,7 @@ class AppState extends ChangeNotifier {
   String celebrate = '';
   Timer? _inbox;
   final Set<String> _seenLikes = {};
+  bool _seenLikesReady = false;
 
   static const freeSwipesPerDay = 12;
 
@@ -182,6 +183,13 @@ class AppState extends ChangeNotifier {
     discoverable = p.getBool('discoverable') ?? true;
     notifyOn = p.getBool('notifyOn') ?? true;
     _readMessageIds.addAll(p.getStringList('readMessages') ?? const []);
+    if (email.contains('@')) {
+      final seenKey = 'seenLikes:${email.toLowerCase()}';
+      _seenLikes
+        ..clear()
+        ..addAll(p.getStringList(seenKey) ?? const []);
+      _seenLikesReady = p.containsKey(seenKey);
+    }
     blocked.addAll(p.getStringList('blockedDogs') ?? const []);
     blockedOwners.addAll(p.getStringList('blockedOwners') ?? const []);
     final rawDeals = p.getString('pmDeals');
@@ -456,12 +464,24 @@ class AppState extends ChangeNotifier {
       );
       incoming.insert(0, MatchThread(dog, [], accepted: false, outgoing: false, peerEmail: from));
       changed = true;
-      if (_seenLikes.add(from)) {
+      if (_seenLikes.add(from) && _seenLikesReady) {
         if (notifyOn) PushService.notifyLike(dog.name, peer: from);
         lastNotice = '${dog.owner} vill matcha med dig';
+        _storeSeenLikes();
       }
     }
+    if (!_seenLikesReady) {
+      _seenLikesReady = true;
+      _storeSeenLikes();
+    }
     if (changed) notifyListeners();
+  }
+
+  void _storeSeenLikes() {
+    if (!email.contains('@')) return;
+    final key = 'seenLikes:${email.toLowerCase()}';
+    final list = _seenLikes.toList();
+    SharedPreferences.getInstance().then((p) => p.setStringList(key, list));
   }
 
   Future<void> refreshChat(MatchThread t, {bool countUnread = false, bool markSeen = false}) async {
@@ -552,6 +572,8 @@ class AppState extends ChangeNotifier {
       interests.clear();
       handledPeers.clear();
       _readMessageIds.clear();
+      _seenLikes.clear();
+      _seenLikesReady = false;
       celebrate = '';
       lastNotice = '';
       final prefs = await SharedPreferences.getInstance();
@@ -561,6 +583,11 @@ class AppState extends ChangeNotifier {
     myDogs.clear();
     final p = await SharedPreferences.getInstance();
     _readDogs(p);
+    final seenKey = 'seenLikes:${email.toLowerCase()}';
+    _seenLikes
+      ..clear()
+      ..addAll(p.getStringList(seenKey) ?? const []);
+    _seenLikesReady = p.containsKey(seenKey);
     PushService.init();
     _armPush();
     persist();
