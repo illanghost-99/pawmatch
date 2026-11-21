@@ -19,6 +19,7 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
   Offset drag = Offset.zero;
   bool flying = false;
   late final AnimationController fly;
+  String _warmed = '';
 
   DogProfile? get dog => widget.state.deck.isEmpty ? null : widget.state.deck.first;
 
@@ -31,7 +32,14 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    warmDogPhotos(context, widget.state.deck.take(4).map((d) => d.photoUrl));
+    final urls = [
+      for (final d in widget.state.deck.take(2))
+        if (d.photoUrl.startsWith('http')) d.photoUrl,
+    ];
+    final key = urls.join('|');
+    if (key.isEmpty || key == _warmed) return;
+    _warmed = key;
+    warmDogPhotos(context, urls);
   }
 
   @override
@@ -94,14 +102,18 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
     final next = widget.state.deck.length > 1 ? widget.state.deck[1] : null;
     final pull = (drag.dx.abs() / 320).clamp(0.0, 1.0);
 
+    final showNext = next != null && (flying || drag.dx != 0);
+
     return Stack(
       children: [
-        if (next != null)
+        if (showNext)
           Transform.scale(
+            key: ValueKey('under-${next.id}'),
             scale: 0.93 + (0.07 * pull),
             child: Opacity(opacity: 0.5 + (0.5 * pull), child: _photo(next, widget.state.kmTo(next).round())),
           ),
         GestureDetector(
+          key: ValueKey('top-${current.id}'),
           onTap: () => _open(current),
           onPanUpdate: (d) {
             if (flying) return;
@@ -150,6 +162,7 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
       child: Stack(
         fit: StackFit.expand,
         children: [
+          const ColoredBox(color: Color(0xFF2A3344)),
           if (d.photoUrl.isNotEmpty)
             DogPhoto(url: d.photoUrl)
           else
