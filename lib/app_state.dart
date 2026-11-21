@@ -198,6 +198,7 @@ class AppState extends ChangeNotifier {
       if (decoded is Map) _dealCache = Map<String, dynamic>.from(decoded);
     }
     _readDogs(p);
+    _readHidden(p);
   }
 
   void _readDogs(SharedPreferences p) {
@@ -222,6 +223,32 @@ class AppState extends ChangeNotifier {
     if (!email.contains('@')) return;
     final p = await SharedPreferences.getInstance();
     await p.setString('pmMyDogs:${email.toLowerCase()}', jsonEncode([for (final d in myDogs) d.toJson()]));
+  }
+
+  void _readHidden(SharedPreferences p) {
+    hiddenUntil.clear();
+    if (!email.contains('@')) return;
+    final raw = p.getString('hiddenUntil:${email.toLowerCase()}');
+    if (raw == null || raw.isEmpty) return;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return;
+      final now = DateTime.now();
+      for (final e in decoded.entries) {
+        final until = DateTime.tryParse('${e.value}');
+        if (until != null && until.isAfter(now)) hiddenUntil['${e.key}'] = until;
+      }
+    } catch (e) {
+      debugPrint('readHidden $e');
+    }
+  }
+
+  void _storeHidden() {
+    if (!email.contains('@')) return;
+    final now = DateTime.now();
+    hiddenUntil.removeWhere((_, until) => !until.isAfter(now));
+    final saved = {for (final e in hiddenUntil.entries) e.key: e.value.toIso8601String()};
+    SharedPreferences.getInstance().then((p) => p.setString('hiddenUntil:${email.toLowerCase()}', jsonEncode(saved)));
   }
 
   MyDog _mergeOwn(MyDog? local, MyDog remote) {
@@ -719,6 +746,7 @@ class AppState extends ChangeNotifier {
     myDogs.clear();
     final p = await SharedPreferences.getInstance();
     _readDogs(p);
+    _readHidden(p);
     final seenKey = 'seenLikes:${email.toLowerCase()}';
     _seenLikes
       ..clear()
@@ -1178,6 +1206,7 @@ class AppState extends ChangeNotifier {
     }
     swipesToday += 1;
     hiddenUntil[d.id] = DateTime.now().add(const Duration(days: 7));
+    _storeHidden();
     deck.removeWhere((x) => x.id == d.id);
     if (!like) {
       lastPassed = d;
@@ -1225,6 +1254,7 @@ class AppState extends ChangeNotifier {
     if (!isPremium || d == null) return false;
     lastPassed = null;
     hiddenUntil.remove(d.id);
+    _storeHidden();
     if (swipesToday > 0) swipesToday -= 1;
     deck.removeWhere((x) => x.id == d.id);
     deck.insert(0, d);
@@ -1305,6 +1335,7 @@ class AppState extends ChangeNotifier {
     if (peer.isNotEmpty) handledPeers.add(peer);
     incoming.removeWhere((m) => m.peerEmail.toLowerCase() == peer);
     hiddenUntil[t.dog.id] = DateTime.now().add(const Duration(days: 7));
+    _storeHidden();
     notifyListeners();
     if (peer.contains('@')) Network.forgetLike(fromEmail: peer, toEmail: email);
   }
