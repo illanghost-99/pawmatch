@@ -74,9 +74,6 @@ class DealSheet {
                     partyB: thread.dog.owner,
                     body: body,
                   );
-                  if (thread.messages.isEmpty || !thread.messages.last.text.startsWith('Avtal skapat')) {
-                    thread.messages.add(ChatLine(true, 'Avtal skapat. Kopia kan skickas till ${state.email}.'));
-                  }
                   state.bump();
                   state.publishDeal(thread, tell: false);
                   Navigator.pop(ctx);
@@ -289,10 +286,6 @@ class DealSheet {
     }
     thread.deal = deal;
     final done = deal.fullySigned;
-    final note = done ? 'Avtalet är signerat.' : 'Du har signerat. Väntar på $otherName.';
-    if (thread.messages.isEmpty || thread.messages.last.text != note) {
-      thread.messages.add(ChatLine(true, note));
-    }
     state.bump();
     setLocal(() {});
     await state.publishDeal(thread, tell: true);

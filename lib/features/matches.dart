@@ -112,6 +112,57 @@ class TalkBubble extends StatelessWidget {
   }
 }
 
+bool _localDealNote(ChatLine m) {
+  if (m.id.isNotEmpty) return false;
+  final t = m.text;
+  return t.startsWith('Avtal skapat') || t.startsWith('Du har signerat') || t.startsWith('Avtalet är signerat');
+}
+
+class _SignedDealCard extends StatelessWidget {
+  const _SignedDealCard({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        color: const Color(0xFFE5F6EE),
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 12, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.verified_rounded, color: Color(0xFF1F7A6C)),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text('Avtalet är signerat', style: TextStyle(color: Color(0xFF14202B), fontWeight: FontWeight.w800, fontSize: 16)),
+                    ),
+                    const Icon(Icons.chevron_right, color: Color(0xFF1F7A6C)),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                const Text('Båda har skrivit på. Tryck för att öppna avtalet.', style: TextStyle(color: Color(0xFF1F7A6C), fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                const Align(
+                  alignment: Alignment.centerRight,
+                  child: Text('Levererat', style: TextStyle(color: Color(0xFF8A939C), fontSize: 11, fontWeight: FontWeight.w700)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 String _preview(MatchThread m) {
   if (m.messages.isEmpty) return m.dog.breed.isEmpty ? 'Tryck för att skriva' : m.dog.breed;
   final last = m.messages.last;
@@ -528,7 +579,13 @@ class _ChatPageState extends State<ChatPage> {
               child: ListTile(
                 leading: const Icon(Icons.handshake_outlined, color: _coral),
                 title: Text(
-                  t.deal == null ? 'Tryck för att förhandla och signera avtal' : (t.deal!.signedByMe.isEmpty ? 'Avtal skapat — väntar på signering' : 'Avtal signerat'),
+                  t.deal == null
+                      ? 'Tryck för att förhandla och signera avtal'
+                      : t.deal!.fullySigned
+                          ? 'Avtalet är signerat. Tryck för att öppna'
+                          : t.deal!.signedByMe.isEmpty
+                              ? 'Avtal att signera. Din tur'
+                              : 'Du har signerat. Väntar på motpart',
                   style: const TextStyle(fontWeight: FontWeight.w800, color: _ink),
                 ),
                 trailing: const Icon(Icons.chevron_right, color: _coral),
@@ -539,14 +596,23 @@ class _ChatPageState extends State<ChatPage> {
             ),
           Expanded(
             child: Builder(builder: (context) {
-              final lines = _byTime(t.messages);
+              final lines = _byTime(t.messages).where((m) => !_localDealNote(m)).toList();
+              final signed = t.deal?.fullySigned == true;
               return ListView.builder(
                 reverse: true,
                 controller: scroll,
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                itemCount: lines.length,
+                itemCount: lines.length + (signed ? 1 : 0),
                 itemBuilder: (context, i) {
-                  final m = lines[lines.length - 1 - i];
+                  if (signed && i == 0) {
+                    return _SignedDealCard(
+                      onTap: () => DealSheet.open(context, widget.state, t).then((_) {
+                        if (mounted) setState(() {});
+                      }),
+                    );
+                  }
+                  final offset = signed ? i - 1 : i;
+                  final m = lines[lines.length - 1 - offset];
                   return TalkBubble(
                     line: m,
                     otherName: _personName(t),

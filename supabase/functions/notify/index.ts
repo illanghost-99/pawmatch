@@ -54,10 +54,25 @@ export default {
     try {
       const payload = await req.json();
       const email = String(payload.to_email ?? "").trim().toLowerCase();
+      const from = String(payload.from_email ?? "").trim().toLowerCase();
+      const device = String(payload.device_token ?? "").trim();
+      const oldToken = String(payload.old_token ?? "").trim();
       const text = String(payload.body ?? "").slice(0, 180);
       const kind = String(payload.kind ?? "").slice(0, 40);
       const peer = String(payload.peer ?? "").slice(0, 160);
       const group = String(payload.group ?? "").slice(0, 80);
+      if (oldToken && oldToken !== device) {
+        await ctx.supabaseAdmin.from("pm_devices").delete().eq("token", oldToken);
+      }
+      if (device && from.includes("@")) {
+        await ctx.supabaseAdmin.from("pm_devices").delete().eq("token", device).neq("email", from);
+        await ctx.supabaseAdmin.from("pm_devices").upsert({
+          token: device,
+          email: from,
+          updated_at: new Date().toISOString(),
+        });
+      }
+      if (payload.claim_only === true) return Response.json({ ok: true, claimed: true });
       const named: Record<string, string> = {
         chat: "Nytt meddelande",
         match: "Någon vill matcha",
@@ -70,6 +85,7 @@ export default {
       if (!email.includes("@") || !text) {
         return Response.json({ ok: false }, { status: 400 });
       }
+      if (from && email === from) return Response.json({ ok: true, sent: 0 });
       const { data, error } = await ctx.supabaseAdmin.from("pm_devices").select("token").eq("email", email);
       if (error) throw error;
       const raw = Deno.env.get("FIREBASE_SERVICE_ACCOUNT");
@@ -79,7 +95,7 @@ export default {
       let sent = 0;
       for (const row of data ?? []) {
         const token = String(row.token ?? "");
-        if (!token) continue;
+        if (!token || (device && token === device)) continue;
         const route = [kind, peer, group].join("|");
         const res = await fetch(`https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`, {
           method: "POST",

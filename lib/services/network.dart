@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models.dart';
 import 'cloud.dart';
+import 'fcm.dart';
 
 class Network {
   static SupabaseClient? get _c {
@@ -652,9 +653,17 @@ class Network {
     final text = body.trim();
     if (c == null || !to.contains('@') || text.isEmpty) return;
     if (ownerEmail.isNotEmpty && to == ownerEmail) return;
+    var previous = '';
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      previous = prefs.getString('pmDeviceToken') ?? '';
+    } catch (_) {}
     try {
       await c.functions.invoke('notify', body: {
         'to_email': to,
+        'from_email': ownerEmail,
+        'device_token': Fcm.token ?? '',
+        'old_token': previous,
         'title': title.trim().isEmpty ? 'PawMatch' : title.trim(),
         'body': text.length > 140 ? '${text.substring(0, 137)}...' : text,
         'kind': kind,
