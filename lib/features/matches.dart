@@ -586,6 +586,13 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   @override
+  void deactivate() {
+    FocusManager.instance.primaryFocus?.unfocus();
+    SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
+    super.deactivate();
+  }
+
+  @override
   void dispose() {
     Fcm.readingChat(false);
     poll?.cancel();
@@ -1010,6 +1017,13 @@ class _GroupChatPageState extends State<GroupChatPage> {
       if (!force && !atLatest) return;
       if (scroll.offset > 0) scroll.jumpTo(0);
     });
+  }
+
+  @override
+  void deactivate() {
+    FocusManager.instance.primaryFocus?.unfocus();
+    SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
+    super.deactivate();
   }
 
   @override
