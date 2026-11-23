@@ -100,7 +100,7 @@ class DiscoverPage extends StatelessWidget {
                       _RoundAction(
                         color: const Color(0xFF2F6B4F),
                         icon: Icons.thumb_up_alt_rounded,
-                        label: 'Like',
+                        label: 'Gilla',
                         onTap: () {
                           HapticFeedback.mediumImpact();
                           state.swipe(deck.first, like: true);

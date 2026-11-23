@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../models.dart';
@@ -176,6 +177,37 @@ class _SignedDealCard extends StatelessWidget {
       ),
     );
   }
+}
+
+Widget _pickedPhoto(String path, VoidCallback clear) {
+  return Padding(
+    padding: const EdgeInsets.only(left: 4, bottom: 8),
+    child: Align(
+      alignment: Alignment.centerLeft,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.file(File(path), width: 72, height: 72, fit: BoxFit.cover),
+          ),
+          Positioned(
+            top: -6,
+            right: -6,
+            child: GestureDetector(
+              onTap: clear,
+              child: Container(
+                width: 22,
+                height: 22,
+                decoration: const BoxDecoration(color: Color(0xFF14202B), shape: BoxShape.circle),
+                child: const Icon(Icons.close, size: 14, color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 String _preview(MatchThread m) {
@@ -438,6 +470,7 @@ class _ChatPageState extends State<ChatPage> {
   Timer? poll;
   bool _nearBottom = true;
   double _inset = 0;
+  String? _photo;
 
   @override
   void initState() {
@@ -651,7 +684,12 @@ class _ChatPageState extends State<ChatPage> {
           Container(
             color: Theme.of(context).cardColor,
             padding: EdgeInsets.fromLTRB(12, 8, 8, MediaQuery.viewInsetsOf(context).bottom > 0 ? 8 : 28),
-            child: Row(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (_photo != null) _pickedPhoto(_photo!, () => setState(() => _photo = null)),
+                Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 IconButton(
@@ -661,15 +699,8 @@ class _ChatPageState extends State<ChatPage> {
                       ? null
                       : () async {
                           final path = await Media.choose(context, title: 'Skicka bild');
-                          if (path == null || !context.mounted) return;
-                          final ok = await widget.state.sendPhoto(t, path);
-                          if (!context.mounted) return;
-                          if (!ok) {
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bilden kunde inte skickas.')));
-                            return;
-                          }
-                          setState(() {});
-                          _follow(force: true);
+                          if (path == null || !mounted) return;
+                          setState(() => _photo = path);
                         },
                 ),
                 Expanded(
@@ -701,14 +732,32 @@ class _ChatPageState extends State<ChatPage> {
                   icon: const Icon(Icons.send_rounded, color: _coral),
                   onPressed: !t.accepted
                       ? null
-                      : () {
-                          if (c.text.trim().isEmpty) return;
-                          widget.state.send(t, c.text.trim());
-                          c.clear();
-                          setState(() {});
-                          _follow(force: true);
+                      : () async {
+                          final photo = _photo;
+                          final text = c.text.trim();
+                          if ((photo == null || photo.isEmpty) && text.isEmpty) return;
+                          if (photo != null) {
+                            setState(() => _photo = null);
+                            final ok = await widget.state.sendPhoto(t, photo);
+                            if (!mounted) return;
+                            if (!ok) {
+                              setState(() => _photo = photo);
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bilden kunde inte skickas.')));
+                              return;
+                            }
+                          }
+                          if (text.isNotEmpty) {
+                            widget.state.send(t, text);
+                            c.clear();
+                          }
+                          if (mounted) {
+                            setState(() {});
+                            _follow(force: true);
+                          }
                         },
                 ),
+              ],
+            ),
               ],
             ),
           ),
@@ -825,6 +874,7 @@ class _GroupChatPageState extends State<GroupChatPage> {
   final c = TextEditingController();
   final scroll = ScrollController();
   Timer? poll;
+  String? _photo;
 
   bool atLatest = true;
 
@@ -914,7 +964,12 @@ class _GroupChatPageState extends State<GroupChatPage> {
           Container(
             color: Theme.of(context).cardColor,
             padding: const EdgeInsets.fromLTRB(12, 8, 8, 12),
-            child: Row(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (_photo != null) _pickedPhoto(_photo!, () => setState(() => _photo = null)),
+                Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 IconButton(
@@ -922,15 +977,8 @@ class _GroupChatPageState extends State<GroupChatPage> {
                   icon: const Icon(Icons.add_photo_alternate_outlined, color: _coral),
                   onPressed: () async {
                     final path = await Media.choose(context, title: 'Skicka bild');
-                    if (path == null || !context.mounted) return;
-                    final ok = await widget.state.sendGroupPhoto(group, path);
-                    if (!context.mounted) return;
-                    if (!ok) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bilden kunde inte skickas.')));
-                      return;
-                    }
-                    setState(() {});
-                    _jump(force: true);
+                    if (path == null || !mounted) return;
+                    setState(() => _photo = path);
                   },
                 ),
                 Expanded(
@@ -952,14 +1000,32 @@ class _GroupChatPageState extends State<GroupChatPage> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.send_rounded, color: _coral),
-                  onPressed: () {
-                    if (c.text.trim().isEmpty) return;
-                    widget.state.sendGroup(group, c.text.trim());
-                    c.clear();
-                    setState(() {});
-                    _jump(force: true);
+                  onPressed: () async {
+                    final photo = _photo;
+                    final text = c.text.trim();
+                    if ((photo == null || photo.isEmpty) && text.isEmpty) return;
+                    if (photo != null) {
+                      setState(() => _photo = null);
+                      final ok = await widget.state.sendGroupPhoto(group, photo);
+                      if (!mounted) return;
+                      if (!ok) {
+                        setState(() => _photo = photo);
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bilden kunde inte skickas.')));
+                        return;
+                      }
+                    }
+                    if (text.isNotEmpty) {
+                      widget.state.sendGroup(group, text);
+                      c.clear();
+                    }
+                    if (mounted) {
+                      setState(() {});
+                      _jump(force: true);
+                    }
                   },
                 ),
+              ],
+            ),
               ],
             ),
           ),
