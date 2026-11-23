@@ -1470,9 +1470,9 @@ class AppState extends ChangeNotifier {
     }
     if (t.cloudMatchId.isEmpty) return;
     await Network.sendMessage(t.cloudMatchId, email, body);
-    if (t.peerEmail.contains('@')) {
+    if (t.peerEmail.contains('@') && t.peerEmail.toLowerCase() != email.toLowerCase()) {
       final who = fullName.trim().isEmpty ? 'Någon' : fullName.trim();
-      await Network.ping(t.peerEmail, 'Nytt meddelande', '$who: $body', kind: 'chat', peer: email);
+      await Network.pingChat(t.peerEmail, email, '$who: $body', peer: email);
     }
     await refreshChat(t);
   }

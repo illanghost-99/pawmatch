@@ -653,17 +653,9 @@ class Network {
     final text = body.trim();
     if (c == null || !to.contains('@') || text.isEmpty) return;
     if (ownerEmail.isNotEmpty && to == ownerEmail) return;
-    var previous = '';
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      previous = prefs.getString('pmDeviceToken') ?? '';
-    } catch (_) {}
     try {
       await c.functions.invoke('notify', body: {
         'to_email': to,
-        'from_email': ownerEmail,
-        'device_token': Fcm.token ?? '',
-        'old_token': previous,
         'title': title.trim().isEmpty ? 'PawMatch' : title.trim(),
         'body': text.length > 140 ? '${text.substring(0, 137)}...' : text,
         'kind': kind,
@@ -672,6 +664,27 @@ class Network {
       });
     } catch (e) {
       debugPrint('ping $e');
+    }
+  }
+
+  static Future<void> pingChat(String toEmail, String fromEmail, String body, {String peer = ''}) async {
+    final c = _c;
+    final to = toEmail.trim().toLowerCase();
+    final from = fromEmail.trim().toLowerCase();
+    final text = body.trim();
+    if (c == null || !to.contains('@') || !from.contains('@') || to == from || text.isEmpty) return;
+    try {
+      await c.functions.invoke('notify', body: {
+        'to_email': to,
+        'from_email': from,
+        'device_token': Fcm.token ?? '',
+        'title': 'Nytt meddelande',
+        'body': text.length > 140 ? '${text.substring(0, 137)}...' : text,
+        'kind': 'chat',
+        'peer': (peer.isEmpty ? from : peer).toLowerCase(),
+      });
+    } catch (e) {
+      debugPrint('pingChat $e');
     }
   }
 
