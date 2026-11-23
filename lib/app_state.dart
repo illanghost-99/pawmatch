@@ -979,7 +979,12 @@ class AppState extends ChangeNotifier {
 
   void _takeCloudDeal(MatchThread t, Map<String, dynamic> row) {
     final json = row['dog_json'];
-    if (json is! Map || json['deal'] is! Map) return;
+    if (json is! Map) return;
+    if (json['dealGone'] == true) {
+      t.deal = null;
+      return;
+    }
+    if (json['deal'] is! Map) return;
     final next = _dealForMe(Map<String, dynamic>.from(json['deal'] as Map));
     final prev = t.deal;
     if (prev != null && prev.signedByMe.isNotEmpty && next.signedByMe.isEmpty) return;
@@ -1035,6 +1040,21 @@ class AppState extends ChangeNotifier {
       kind: 'deal',
       peer: email,
     );
+  }
+
+  Future<void> deleteDeal(MatchThread t) async {
+    final peer = t.peerEmail.trim().toLowerCase();
+    final id = t.cloudMatchId;
+    t.deal = null;
+    notifyListeners();
+    await _saveDeals();
+    if (id.isNotEmpty) await Network.clearDeal(id);
+    if (peer.contains('@')) {
+      await Network.ping(peer, 'Avtal raderat', '$fullName har raderat avelsavtalet.', kind: 'deal', peer: email);
+    }
+    if (email.contains('@')) {
+      await Network.ping(email, 'Avtal raderat', 'Avtalet är raderat.', kind: 'deal', peer: peer);
+    }
   }
 
   void markRead(MatchThread t) {

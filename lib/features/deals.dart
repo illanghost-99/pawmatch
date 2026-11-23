@@ -41,7 +41,30 @@ class DealsPage extends StatelessWidget {
                     subtitle: Text(
                       '${t.dog.name} · ${d.pricePerPuppy} kr/valp · ${d.fullySigned ? 'Signerat av båda' : d.signedByMe.isEmpty ? 'Väntar på din signatur' : 'Väntar på motpart'}',
                     ),
-                    trailing: const Icon(Icons.chevron_right),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          tooltip: 'Radera avtal',
+                          icon: const Icon(Icons.delete_outline, color: Color(0xFF8B3A32)),
+                          onPressed: () async {
+                            final ok = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text('Radera avtalet?'),
+                                content: const Text('Avtalet försvinner för er båda. Båda får en notis.'),
+                                actions: [
+                                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Avbryt')),
+                                  TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Radera')),
+                                ],
+                              ),
+                            );
+                            if (ok == true) state.deleteDeal(t);
+                          },
+                        ),
+                        const Icon(Icons.chevron_right),
+                      ],
+                    ),
                     onTap: () => DealSheet.open(context, state, t),
                   ),
                 );

@@ -398,9 +398,24 @@ class Network {
       final row = await c.from('pm_matches').select('dog_json').eq('id', id).maybeSingle();
       final json = Map<String, dynamic>.from(row?['dog_json'] ?? {});
       json['deal'] = deal;
+      json.remove('dealGone');
       await c.from('pm_matches').update({'dog_json': json}).eq('id', id);
     } catch (e) {
       debugPrint('saveDeal $e');
+    }
+  }
+
+  static Future<void> clearDeal(String id) async {
+    final c = _c;
+    if (c == null || id.isEmpty) return;
+    try {
+      final row = await c.from('pm_matches').select('dog_json').eq('id', id).maybeSingle();
+      final json = Map<String, dynamic>.from(row?['dog_json'] ?? {});
+      json.remove('deal');
+      json['dealGone'] = true;
+      await c.from('pm_matches').update({'dog_json': json}).eq('id', id);
+    } catch (e) {
+      debugPrint('clearDeal $e');
     }
   }
   static Future<void> forgetLike({required String fromEmail, required String toEmail}) async {
