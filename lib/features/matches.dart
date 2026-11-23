@@ -636,7 +636,7 @@ class _ChatPageState extends State<ChatPage> {
           ),
           Container(
             color: Theme.of(context).cardColor,
-            padding: const EdgeInsets.fromLTRB(12, 8, 8, 12),
+            padding: EdgeInsets.fromLTRB(12, 8, 8, MediaQuery.viewInsetsOf(context).bottom > 0 ? 8 : 28),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
