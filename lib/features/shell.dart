@@ -184,7 +184,19 @@ class _AppShellState extends State<AppShell> {
             ),
             label: 'Chatt',
           ),
-          const NavigationDestination(icon: Icon(Icons.description_outlined), selectedIcon: Icon(Icons.description, color: Color(0xFFE25C3A)), label: 'Avtal'),
+          NavigationDestination(
+            icon: Badge(
+              isLabelVisible: s.dealBadge > 0,
+              label: Text('${s.dealBadge}'),
+              child: const Icon(Icons.description_outlined),
+            ),
+            selectedIcon: Badge(
+              isLabelVisible: s.dealBadge > 0,
+              label: Text('${s.dealBadge}'),
+              child: const Icon(Icons.description, color: Color(0xFFE25C3A)),
+            ),
+            label: 'Avtal',
+          ),
           const NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person, color: Color(0xFFE25C3A)), label: 'Profil'),
         ],
       ),

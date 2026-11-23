@@ -157,7 +157,6 @@ class DealSheet {
   static Future<void> _showContract(BuildContext context, AppState state, MatchThread thread) {
     final deal = thread.deal;
     if (deal == null) return Future.value();
-    final name = TextEditingController(text: deal.signedByMe.isEmpty ? state.fullName : deal.signedByMe);
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -197,10 +196,10 @@ class DealSheet {
                   Container(
                     padding: const EdgeInsets.fromLTRB(18, 20, 18, 20),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFBF6EA),
+                      color: deal.fullySigned ? const Color(0xFFE5F6EE) : const Color(0xFFFBF6EA),
                       borderRadius: BorderRadius.circular(10),
                       boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 12, offset: Offset(0, 6))],
-                      border: Border.all(color: const Color(0xFFD9C8A3)),
+                      border: Border.all(color: deal.fullySigned ? const Color(0xFF1F7A6C) : const Color(0xFFD9C8A3), width: deal.fullySigned ? 2.5 : 1),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -213,91 +212,50 @@ class DealSheet {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  if (deal.signedByMe.isEmpty) ...[
-                    TextField(controller: name, decoration: _dec('Fullständigt namn')),
-                    const SizedBox(height: 10),
-                    GestureDetector(
-                      onTap: () async {
-                        final paths = await _signPopup(context, deal.signature);
-                        if (paths != null) {
-                          deal.signature = paths;
-                          setLocal(() {});
-                        }
-                      },
-                      child: _sigBox(deal.signature, 'Tryck för att signera med fingret'),
-                    ),
-                  ] else
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Text(deal.signedByMe, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFFF4E7D3), fontWeight: FontWeight.w700)),
-                              const SizedBox(height: 6),
-                              _sigBox(deal.signature, '—'),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Text(deal.fullySigned ? deal.signedByOther : deal.partyB, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFFF4E7D3), fontWeight: FontWeight.w700)),
-                              const SizedBox(height: 6),
-                              _sigBox(deal.signatureOther, 'Inväntas'),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                  Row(
+                    children: [
+                      Expanded(child: _signColumn(
+                        label: state.fullName.isEmpty ? 'Du' : state.fullName,
+                        name: deal.signedByMe,
+                        strokes: deal.signature,
+                        empty: 'Tryck för att signera',
+                        onTap: deal.signedByMe.isNotEmpty
+                            ? null
+                            : () async {
+                                final paths = await _signPopup(context, deal.signature);
+                                if (paths == null || paths.isEmpty) return;
+                                deal.signature = paths;
+                                deal.signedByMe = state.fullName.isEmpty ? 'Signerat' : state.fullName;
+                                final done = deal.fullySigned;
+                                thread.messages.add(ChatLine(true, done ? 'Avtalet är signerat.' : 'Du har signerat. Väntar på $otherName.'));
+                                state.bump();
+                                setLocal(() {});
+                                await state.publishDeal(thread, tell: true);
+                                if (!ctx.mounted) return;
+                                await showDialog<void>(
+                                  context: ctx,
+                                  barrierDismissible: false,
+                                  builder: (d) => _SignedOk(
+                                    label: done ? 'Avtalet är signerat. Du kan ladda ner det.' : 'Din del är signerad',
+                                  ),
+                                );
+                              },
+                      )),
+                      const SizedBox(width: 8),
+                      Expanded(child: _signColumn(
+                        label: otherName,
+                        name: deal.signedByOther,
+                        strokes: deal.signatureOther,
+                        empty: 'Inte signerad',
+                      )),
+                    ],
+                  ),
                   const SizedBox(height: 12),
                   FilledButton(
-                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFF1F7A6C), minimumSize: const Size.fromHeight(52)),
-                    onPressed: () async {
-                      if (deal.signedByMe.isNotEmpty) {
-                        Navigator.pop(ctx);
-                        return;
-                      }
-                      if (name.text.trim().isEmpty || deal.signature.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fyll i namn och signatur.')));
-                        return;
-                      }
-                      deal.signedByMe = name.text.trim();
-                      final done = deal.fullySigned;
-                      thread.messages.add(ChatLine(true, done ? 'Avtalet är signerat.' : 'Du har signerat. Väntar på $otherName.'));
-                      state.bump();
-                      setLocal(() {});
-                      await state.publishDeal(thread, tell: true);
-                      if (!ctx.mounted) return;
-                      await showDialog<void>(
-                        context: ctx,
-                        barrierDismissible: false,
-                        builder: (d) => _SignedOk(
-                          label: done ? 'Avtalet är signerat. Du kan ladda ner det.' : 'Din del är signerad',
-                        ),
-                      );
-                    },
-                    child: Text(deal.fullySigned
-                        ? 'Avtalet klart — stäng'
-                        : deal.signedByMe.isEmpty
-                            ? 'Bekräfta min signering'
-                            : 'Stäng — väntar på motpart'),
+                    style: FilledButton.styleFrom(backgroundColor: deal.fullySigned ? const Color(0xFF1F7A6C) : const Color(0xFF5C4033), minimumSize: const Size.fromHeight(48)),
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text(deal.fullySigned ? 'Avtalet är signerat' : 'Stäng'),
                   ),
-                  if (waiting)
-                    TextButton(
-                      onPressed: () {
-                        deal.signedByOther = deal.partyB;
-                        deal.signatureOther = [
-                          [const SigPoint(12, 50), const SigPoint(40, 62), const SigPoint(70, 40), const SigPoint(110, 58), const SigPoint(150, 36)],
-                        ];
-                        thread.messages.add(ChatLine(false, '${deal.partyB} har signerat avtalet.'));
-                        state.bump();
-                        setLocal(() {});
-                      },
-                      child: Text('Simulera ${deal.partyB}s signering (demo)', style: const TextStyle(color: Color(0xFFF4E7D3))),
-                    ),
                   const SizedBox(height: 8),
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFF4E7D3), side: const BorderSide(color: Color(0xFFF4E7D3)), minimumSize: const Size.fromHeight(48)),
@@ -316,6 +274,33 @@ class DealSheet {
           },
         ),
       ),
+    );
+  }
+
+  static Widget _signColumn({
+    required String label,
+    required String name,
+    required List<List<SigPoint>> strokes,
+    required String empty,
+    Future<void> Function()? onTap,
+  }) {
+    final signed = name.isNotEmpty;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(signed ? name : label, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFFF4E7D3), fontWeight: FontWeight.w700)),
+        const SizedBox(height: 6),
+        GestureDetector(
+          onTap: onTap,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: onTap != null ? const Color(0xFFF4E7D3) : Colors.transparent, width: 1.4),
+            ),
+            child: _sigBox(strokes, empty),
+          ),
+        ),
+      ],
     );
   }
 

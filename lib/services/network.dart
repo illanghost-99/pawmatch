@@ -595,6 +595,7 @@ class Network {
     final c = _c;
     if (c == null || !email.contains('@') || token.isEmpty) return;
     try {
+      await c.from('pm_devices').delete().eq('token', token).neq('email', email.toLowerCase());
       await c.from('pm_devices').upsert({
         'token': token,
         'email': email.toLowerCase(),
@@ -619,6 +620,8 @@ class Network {
     }
   }
 
+  static String ownerEmail = '';
+
   static Future<void> ping(
     String toEmail,
     String title,
@@ -631,6 +634,7 @@ class Network {
     final to = toEmail.trim().toLowerCase();
     final text = body.trim();
     if (c == null || !to.contains('@') || text.isEmpty) return;
+    if (ownerEmail.isNotEmpty && to == ownerEmail) return;
     try {
       await c.functions.invoke('notify', body: {
         'to_email': to,

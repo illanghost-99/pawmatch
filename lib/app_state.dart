@@ -135,10 +135,16 @@ class AppState extends ChangeNotifier {
     return likes + matches.where((m) => m.unread > 0).length + groups.where((g) => g.unread > 0).length;
   }
 
+  int get dealBadge => deals.where((t) {
+        final d = t.deal;
+        return d != null && d.signedByMe.isEmpty && d.signedByOther.isNotEmpty;
+      }).length;
+
   int _iconBadge = -1;
 
   @override
   void notifyListeners() {
+    Network.ownerEmail = email.toLowerCase();
     super.notifyListeners();
     final n = signedIn ? chatBadge : 0;
     if (n == _iconBadge) return;
@@ -908,7 +914,6 @@ class AppState extends ChangeNotifier {
     }
     myDogs.add(d);
     _saveDogs();
-    if (notifyOn) PushService.notifyLive(d.name);
     Network.upsertDog(email: email, owner: fullName, dog: d, lat: lat, lng: lng);
     applyFilters();
     return true;
@@ -1049,11 +1054,8 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     await _saveDeals();
     if (id.isNotEmpty) await Network.clearDeal(id);
-    if (peer.contains('@')) {
+    if (peer.contains('@') && peer != email.toLowerCase()) {
       await Network.ping(peer, 'Avtal raderat', '$fullName har raderat avelsavtalet.', kind: 'deal', peer: email);
-    }
-    if (email.contains('@')) {
-      await Network.ping(email, 'Avtal raderat', 'Avtalet är raderat.', kind: 'deal', peer: peer);
     }
   }
 
@@ -1385,7 +1387,6 @@ class AppState extends ChangeNotifier {
     await _openCloud(thread, d, peer);
     lastNotice = '${d.owner} matchade också!';
     celebrate = d.name;
-    if (notifyOn) PushService.notifyMatch(d.name);
     notifyListeners();
   }
 
@@ -1405,7 +1406,6 @@ class AppState extends ChangeNotifier {
     if (!matches.any((m) => m.dog.id == t.dog.id && m.accepted)) {
       matches.insert(0, t);
     }
-    if (notifyOn) PushService.notifyMatch(t.dog.name);
     celebrate = t.dog.name;
     notifyListeners();
     if (!peer.contains('@')) return;
