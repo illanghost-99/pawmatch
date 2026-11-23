@@ -155,10 +155,14 @@ const chatPhotoMark = '[[pm-bild]]';
 List<String> chatPhotoUrls(String text) {
   if (!text.startsWith(chatPhotoMark)) return const [];
   final rest = text.substring(chatPhotoMark.length).trim();
-  return [
-    for (final part in rest.split('||'))
-      if (part.trim().startsWith('http')) part.trim(),
-  ];
+  final urls = <String>[];
+  for (final part in rest.split('||')) {
+    final bit = part.trim();
+    if (bit.startsWith('http')) urls.add(bit);
+  }
+  if (urls.length > 1) return urls;
+  final found = RegExp(r'https?:\/\/[^\s|]+').allMatches(rest).map((m) => m.group(0)!.trim()).where((u) => u.startsWith('http')).toList();
+  return found.isEmpty ? urls : found;
 }
 
 String? chatPhotoUrl(String text) {

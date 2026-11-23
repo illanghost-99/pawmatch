@@ -8,6 +8,7 @@ import '../services/media.dart';
 import '../services/moderator.dart';
 import '../services/network.dart';
 import '../v2/premium_page.dart';
+import '../widgets/dog_photo.dart';
 import '../widgets/verified_mark.dart';
 import 'deal.dart';
 import 'owner_page.dart';
@@ -182,24 +183,46 @@ Widget _chatPhotos(BuildContext context, List<String> urls) {
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => _PhotoPager(urls: urls, start: i))),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(big ? 16 : 10),
-              child: Image.network(
-                urls[i],
-                width: size,
-                height: height,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  width: size,
-                  height: height,
-                  color: const Color(0xFFE7E1DC),
-                  alignment: Alignment.center,
-                  child: const Icon(Icons.broken_image_outlined, color: _ink),
-                ),
-              ),
+              child: _ChatImage(url: urls[i], width: size, height: height, cover: true),
             ),
           ),
       ],
     ),
   );
+}
+
+class _ChatImage extends StatelessWidget {
+  const _ChatImage({required this.url, this.width, this.height, required this.cover});
+  final String url;
+  final double? width;
+  final double? height;
+  final bool cover;
+
+  @override
+  Widget build(BuildContext context) {
+    final fit = cover ? BoxFit.cover : BoxFit.contain;
+    return Image.network(
+      photoUrl(url, width: 1200),
+      width: width,
+      height: height,
+      fit: fit,
+      gaplessPlayback: true,
+      errorBuilder: (_, __, ___) => Image.network(
+        url,
+        width: width,
+        height: height,
+        fit: fit,
+        gaplessPlayback: true,
+        errorBuilder: (_, __, ___) => Container(
+          width: width,
+          height: height,
+          color: const Color(0xFFE7E1DC),
+          alignment: Alignment.center,
+          child: const Icon(Icons.broken_image_outlined, color: _ink),
+        ),
+      ),
+    );
+  }
 }
 
 class _PhotoPager extends StatefulWidget {
@@ -234,7 +257,7 @@ class _PhotoPagerState extends State<_PhotoPager> {
         itemCount: widget.urls.length,
         onPageChanged: (i) => setState(() => index = i),
         itemBuilder: (_, i) => InteractiveViewer(
-          child: Center(child: Image.network(widget.urls[i], fit: BoxFit.contain)),
+          child: Center(child: _ChatImage(url: widget.urls[i], cover: false)),
         ),
       ),
     );
