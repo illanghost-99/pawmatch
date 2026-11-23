@@ -165,8 +165,19 @@ class DealSheet {
         padding: EdgeInsets.fromLTRB(12, 12, 12, MediaQuery.viewInsetsOf(ctx).bottom + 16),
         child: StatefulBuilder(
           builder: (ctx, setLocal) {
-            final otherName = deal.partyA.toLowerCase() == state.fullName.toLowerCase() ? deal.partyB : deal.partyA;
+            final mine = state.fullName.trim().toLowerCase();
+            final nameA = deal.partyA.trim().toLowerCase();
+            final nameB = deal.partyB.trim().toLowerCase();
+            var iAmB = mine.isNotEmpty && mine == nameB;
+            var iAmA = !iAmB && mine.isNotEmpty && mine == nameA;
+            if (!iAmA && !iAmB) {
+              iAmA = state.email.isNotEmpty && deal.body.toLowerCase().contains(state.email.toLowerCase());
+              iAmB = !iAmA;
+            }
+            final otherName = iAmA ? deal.partyB : deal.partyA;
             final waiting = deal.signedByMe.isNotEmpty && !deal.fullySigned;
+            String sideName(bool mineSide) => mineSide ? deal.signedByMe : deal.signedByOther;
+            List<List<SigPoint>> sideSign(bool mineSide) => mineSide ? deal.signature : deal.signatureOther;
             return SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -215,38 +226,19 @@ class DealSheet {
                   Row(
                     children: [
                       Expanded(child: _signColumn(
-                        label: state.fullName.isEmpty ? 'Du' : state.fullName,
-                        name: deal.signedByMe,
-                        strokes: deal.signature,
-                        empty: 'Tryck för att signera',
-                        onTap: deal.signedByMe.isNotEmpty
-                            ? null
-                            : () async {
-                                final paths = await _signPopup(context, deal.signature);
-                                if (paths == null || paths.isEmpty) return;
-                                deal.signature = paths;
-                                deal.signedByMe = state.fullName.isEmpty ? 'Signerat' : state.fullName;
-                                final done = deal.fullySigned;
-                                thread.messages.add(ChatLine(true, done ? 'Avtalet är signerat.' : 'Du har signerat. Väntar på $otherName.'));
-                                state.bump();
-                                setLocal(() {});
-                                await state.publishDeal(thread, tell: true);
-                                if (!ctx.mounted) return;
-                                await showDialog<void>(
-                                  context: ctx,
-                                  barrierDismissible: false,
-                                  builder: (d) => _SignedOk(
-                                    label: done ? 'Avtalet är signerat. Du kan ladda ner det.' : 'Din del är signerad',
-                                  ),
-                                );
-                              },
+                        label: deal.partyA,
+                        name: sideName(iAmA),
+                        strokes: sideSign(iAmA),
+                        empty: iAmA ? 'Tryck för att signera' : 'Inte signerad',
+                        onTap: iAmA && deal.signedByMe.isEmpty ? () => _writeSign(context, ctx, setLocal, state, thread, deal, otherName) : null,
                       )),
                       const SizedBox(width: 8),
                       Expanded(child: _signColumn(
-                        label: otherName,
-                        name: deal.signedByOther,
-                        strokes: deal.signatureOther,
-                        empty: 'Inte signerad',
+                        label: deal.partyB,
+                        name: sideName(iAmB),
+                        strokes: sideSign(iAmB),
+                        empty: iAmB ? 'Tryck för att signera' : 'Inte signerad',
+                        onTap: iAmB && deal.signedByMe.isEmpty ? () => _writeSign(context, ctx, setLocal, state, thread, deal, otherName) : null,
                       )),
                     ],
                   ),
@@ -273,6 +265,43 @@ class DealSheet {
             );
           },
         ),
+      ),
+    );
+  }
+
+  static Future<void> _writeSign(
+    BuildContext context,
+    BuildContext ctx,
+    void Function(void Function()) setLocal,
+    AppState state,
+    MatchThread thread,
+    BreedingDeal deal,
+    String otherName,
+  ) async {
+    final paths = await _signPopup(context, deal.signature);
+    if (paths == null || paths.isEmpty) return;
+    final live = thread.deal;
+    deal.signature = paths;
+    deal.signedByMe = state.fullName.trim().isEmpty ? 'Signerat' : state.fullName.trim();
+    if (live != null && !identical(live, deal) && deal.signedByOther.isEmpty && live.signedByOther.isNotEmpty) {
+      deal.signedByOther = live.signedByOther;
+      deal.signatureOther = live.signatureOther;
+    }
+    thread.deal = deal;
+    final done = deal.fullySigned;
+    final note = done ? 'Avtalet är signerat.' : 'Du har signerat. Väntar på $otherName.';
+    if (thread.messages.isEmpty || thread.messages.last.text != note) {
+      thread.messages.add(ChatLine(true, note));
+    }
+    state.bump();
+    setLocal(() {});
+    await state.publishDeal(thread, tell: true);
+    if (!ctx.mounted) return;
+    await showDialog<void>(
+      context: ctx,
+      barrierDismissible: false,
+      builder: (d) => _SignedOk(
+        label: done ? 'Avtalet är signerat. Du kan ladda ner det.' : 'Din del är signerad',
       ),
     );
   }

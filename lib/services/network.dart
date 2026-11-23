@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models.dart';
 import 'cloud.dart';
@@ -372,7 +373,17 @@ class Network {
     final c = _c;
     if (c == null || id.isEmpty) return;
     try {
-      await c.from('pm_matches').update({'dog_json': dogJson}).eq('id', id);
+      final row = await c.from('pm_matches').select('dog_json').eq('id', id).maybeSingle();
+      final current = Map<String, dynamic>.from(row?['dog_json'] ?? {});
+      final next = Map<String, dynamic>.from(dogJson);
+      if (current['dealGone'] == true) {
+        next.remove('deal');
+        next['dealGone'] = true;
+      } else if (current['deal'] is Map) {
+        next['deal'] = current['deal'];
+        next.remove('dealGone');
+      }
+      await c.from('pm_matches').update({'dog_json': next}).eq('id', id);
     } catch (e) {
       debugPrint('saveMatchDogs $e');
     }
@@ -595,12 +606,18 @@ class Network {
     final c = _c;
     if (c == null || !email.contains('@') || token.isEmpty) return;
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final previous = prefs.getString('pmDeviceToken') ?? '';
+      if (previous.isNotEmpty && previous != token) {
+        await c.from('pm_devices').delete().eq('token', previous);
+      }
       await c.from('pm_devices').delete().eq('token', token).neq('email', email.toLowerCase());
       await c.from('pm_devices').upsert({
         'token': token,
         'email': email.toLowerCase(),
         'updated_at': DateTime.now().toIso8601String(),
       });
+      await prefs.setString('pmDeviceToken', token);
     } catch (e) {
       debugPrint('saveDevice $e');
     }

@@ -670,8 +670,6 @@ class AppState extends ChangeNotifier {
         final fresh = lines.where((m) => !m.fromMe && m.id.isNotEmpty && !prev.contains(m.id) && !m.recalled && !m.seen && !_readMessageIds.contains(m.id)).length;
         if (fresh > 0) {
           t.unread += fresh;
-          final who = t.dog.owner.trim().isEmpty ? 'Någon' : t.dog.owner.trim();
-          if (notifyOn) PushService.notifyMessage(who, peer: t.peerEmail);
         }
       }
     } else if (markSeen) {
@@ -992,7 +990,16 @@ class AppState extends ChangeNotifier {
     if (json['deal'] is! Map) return;
     final next = _dealForMe(Map<String, dynamic>.from(json['deal'] as Map));
     final prev = t.deal;
-    if (prev != null && prev.signedByMe.isNotEmpty && next.signedByMe.isEmpty) return;
+    if (prev != null) {
+      if (prev.signedByMe.isNotEmpty && next.signedByMe.isEmpty) {
+        next.signedByMe = prev.signedByMe;
+        next.signature = prev.signature;
+      }
+      if (prev.signedByOther.isNotEmpty && next.signedByOther.isEmpty) {
+        next.signedByOther = prev.signedByOther;
+        next.signatureOther = prev.signatureOther;
+      }
+    }
     t.deal = next;
   }
 
