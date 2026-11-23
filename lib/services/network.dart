@@ -377,6 +377,32 @@ class Network {
       debugPrint('saveMatchDogs $e');
     }
   }
+
+  static Future<Map<String, dynamic>?> matchDeal(String id) async {
+    final c = _c;
+    if (c == null || id.isEmpty) return null;
+    try {
+      final row = await c.from('pm_matches').select('dog_json').eq('id', id).maybeSingle();
+      final json = row?['dog_json'];
+      if (json is Map && json['deal'] is Map) return Map<String, dynamic>.from(json['deal'] as Map);
+    } catch (e) {
+      debugPrint('matchDeal $e');
+    }
+    return null;
+  }
+
+  static Future<void> saveDeal(String id, Map<String, dynamic> deal) async {
+    final c = _c;
+    if (c == null || id.isEmpty) return;
+    try {
+      final row = await c.from('pm_matches').select('dog_json').eq('id', id).maybeSingle();
+      final json = Map<String, dynamic>.from(row?['dog_json'] ?? {});
+      json['deal'] = deal;
+      await c.from('pm_matches').update({'dog_json': json}).eq('id', id);
+    } catch (e) {
+      debugPrint('saveDeal $e');
+    }
+  }
   static Future<void> forgetLike({required String fromEmail, required String toEmail}) async {
     final c = _c;
     if (c == null || !fromEmail.contains('@') || !toEmail.contains('@')) return;

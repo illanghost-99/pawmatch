@@ -589,10 +589,12 @@ class AppState extends ChangeNotifier {
         if (dog.name.isNotEmpty && dog.name != 'Hund' && dog.name != 'Match') thread.dog = dog;
       }
       attachDeal(thread);
+      _takeCloudDeal(thread, r);
       incoming.removeWhere((m) => m.peerEmail.toLowerCase() == peer);
       await refreshChat(thread, countUnread: true);
     }
     chatsReady = true;
+    if (matches.any((m) => m.deal != null)) _saveDeals();
     applyFilters();
     notifyListeners();
   }
@@ -960,6 +962,79 @@ class AppState extends ChangeNotifier {
     _dealCache = map;
     final p = await SharedPreferences.getInstance();
     await p.setString('pmDeals', jsonEncode(map));
+  }
+
+  BreedingDeal _dealForMe(Map<String, dynamic> raw) {
+    final author = '${raw['author'] ?? ''}'.toLowerCase();
+    if (!author.contains('@')) return BreedingDeal.fromJson(raw);
+    final mine = author == email.toLowerCase() ? raw['signA'] : raw['signB'];
+    final other = author == email.toLowerCase() ? raw['signB'] : raw['signA'];
+    final view = Map<String, dynamic>.from(raw);
+    view['me'] = mine is Map ? '${mine['name'] ?? ''}' : '';
+    view['other'] = other is Map ? '${other['name'] ?? ''}' : '';
+    view['sig'] = mine is Map ? mine['sig'] : const [];
+    view['sigB'] = other is Map ? other['sig'] : const [];
+    return BreedingDeal.fromJson(view);
+  }
+
+  void _takeCloudDeal(MatchThread t, Map<String, dynamic> row) {
+    final json = row['dog_json'];
+    if (json is! Map || json['deal'] is! Map) return;
+    final next = _dealForMe(Map<String, dynamic>.from(json['deal'] as Map));
+    final prev = t.deal;
+    if (prev != null && prev.signedByMe.isNotEmpty && next.signedByMe.isEmpty) return;
+    t.deal = next;
+  }
+
+  Map<String, dynamic> _packSign(String name, List<List<SigPoint>> sig) => {
+        'name': name,
+        'sig': [
+          for (final stroke in sig) [for (final p in stroke) [p.x, p.y]],
+        ],
+      };
+
+  Map<String, dynamic> _sharedDeal(BreedingDeal d, Map<String, dynamic>? remote) {
+    final prior = remote ?? {};
+    final author = '${prior['author'] ?? ''}'.toLowerCase().contains('@') ? '${prior['author']}'.toLowerCase() : email.toLowerCase();
+    final mine = _packSign(d.signedByMe, d.signature);
+    final iAmA = author == email.toLowerCase();
+    final signA = iAmA ? mine : (prior['signA'] is Map ? Map<String, dynamic>.from(prior['signA'] as Map) : {'name': '', 'sig': []});
+    final signB = iAmA ? (prior['signB'] is Map ? Map<String, dynamic>.from(prior['signB'] as Map) : {'name': '', 'sig': []}) : mine;
+    return {
+      'author': author,
+      'price': d.pricePerPuppy,
+      'pups': d.expectedPups,
+      'place': d.place,
+      'notes': d.notes,
+      'a': d.partyA,
+      'b': d.partyB,
+      'body': d.body,
+      'signA': signA,
+      'signB': signB,
+    };
+  }
+
+  Future<void> publishDeal(MatchThread t, {required bool tell}) async {
+    final deal = t.deal;
+    final peer = t.peerEmail.trim().toLowerCase();
+    if (deal == null || !peer.contains('@') || !email.contains('@')) return;
+    if (t.cloudMatchId.isEmpty) {
+      final id = await Network.ensureMatch(a: email, b: peer, dogJson: await _pairJson(t.dog, peer));
+      if (id == null || id.isEmpty) return;
+      t.cloudMatchId = id;
+    }
+    final remote = await Network.matchDeal(t.cloudMatchId);
+    await Network.saveDeal(t.cloudMatchId, _sharedDeal(deal, remote));
+    await _saveDeals();
+    if (!tell) return;
+    final done = deal.fullySigned;
+    await Network.ping(
+      peer,
+      done ? 'Avtalet är signerat' : 'Avtal att signera',
+      done ? '$fullName har signerat. Avtalet är klart och kan laddas ner.' : '$fullName har signerat avelsavtalet. Öppna och signera.',
+      kind: 'deal',
+      peer: email,
+    );
   }
 
   void markRead(MatchThread t) {

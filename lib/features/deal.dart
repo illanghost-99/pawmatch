@@ -78,6 +78,7 @@ class DealSheet {
                     thread.messages.add(ChatLine(true, 'Avtal skapat. Kopia kan skickas till ${state.email}.'));
                   }
                   state.bump();
+                  state.publishDeal(thread, tell: false);
                   Navigator.pop(ctx);
                   _showContract(context, state, thread);
                 },
@@ -165,6 +166,7 @@ class DealSheet {
         padding: EdgeInsets.fromLTRB(12, 12, 12, MediaQuery.viewInsetsOf(ctx).bottom + 16),
         child: StatefulBuilder(
           builder: (ctx, setLocal) {
+            final otherName = deal.partyA.toLowerCase() == state.fullName.toLowerCase() ? deal.partyB : deal.partyA;
             final waiting = deal.signedByMe.isNotEmpty && !deal.fullySigned;
             return SingleChildScrollView(
               child: Column(
@@ -174,10 +176,12 @@ class DealSheet {
                   const SizedBox(height: 8),
                   Text(
                     deal.fullySigned
-                        ? 'Signerat av båda parter'
+                        ? 'Signerat av båda parter. Du kan ladda ner det.'
                         : waiting
-                            ? 'Du har signerat. Väntar på ${deal.partyB}.'
-                            : 'Båda måste signera innan avtalet är klart.',
+                            ? 'Du har signerat. Väntar på $otherName.'
+                            : deal.signedByOther.isNotEmpty
+                                ? '${deal.signedByOther} har signerat. Din tur.'
+                                : 'Båda måste signera innan avtalet är klart.',
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: Color(0xFFF4E7D3)),
                   ),
@@ -261,14 +265,18 @@ class DealSheet {
                         return;
                       }
                       deal.signedByMe = name.text.trim();
-                      thread.messages.add(ChatLine(true, 'Du har signerat. Väntar på ${deal.partyB}.'));
+                      final done = deal.fullySigned;
+                      thread.messages.add(ChatLine(true, done ? 'Avtalet är signerat.' : 'Du har signerat. Väntar på $otherName.'));
                       state.bump();
                       setLocal(() {});
+                      await state.publishDeal(thread, tell: true);
                       if (!ctx.mounted) return;
                       await showDialog<void>(
                         context: ctx,
                         barrierDismissible: false,
-                        builder: (d) => const _SignedOk(label: 'Din del är signerad'),
+                        builder: (d) => _SignedOk(
+                          label: done ? 'Avtalet är signerat. Du kan ladda ner det.' : 'Din del är signerad',
+                        ),
                       );
                     },
                     child: Text(deal.fullySigned
@@ -373,30 +381,46 @@ class _SignedOk extends StatefulWidget {
   State<_SignedOk> createState() => _SignedOkState();
 }
 
-class _SignedOkState extends State<_SignedOk> {
+class _SignedOkState extends State<_SignedOk> with SingleTickerProviderStateMixin {
+  late final AnimationController ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
+
   @override
   void initState() {
     super.initState();
-    Future<void>.delayed(const Duration(milliseconds: 1100), () {
+    ctrl.forward();
+    Future<void>.delayed(Duration(milliseconds: widget.label.contains('ladda ner') ? 2200 : 1100), () {
       if (mounted) Navigator.pop(context);
     });
   }
 
   @override
+  void dispose() {
+    ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final scale = CurvedAnimation(parent: ctrl, curve: Curves.easeOutBack);
     return Center(
       child: Material(
         color: Colors.transparent,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const CircleAvatar(
-              radius: 44,
-              backgroundColor: Color(0xFF1F7A6C),
-              child: Icon(Icons.check_rounded, size: 52, color: Colors.white),
+            ScaleTransition(
+              scale: scale,
+              child: const CircleAvatar(
+                radius: 44,
+                backgroundColor: Color(0xFF1F7A6C),
+                child: Icon(Icons.check_rounded, size: 52, color: Colors.white),
+              ),
             ),
             const SizedBox(height: 14),
-            Text(widget.label, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 28),
+              child: Text(widget.label, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
+            ),
           ],
         ),
       ),

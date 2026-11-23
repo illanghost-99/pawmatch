@@ -39,7 +39,7 @@ class DealsPage extends StatelessWidget {
                     leading: const CircleAvatar(backgroundColor: Color(0xFFE25C3A), child: Icon(Icons.description, color: Colors.white)),
                     title: Text('${d.partyA} × ${d.partyB}', style: const TextStyle(fontWeight: FontWeight.w800)),
                     subtitle: Text(
-                      '${t.dog.name} · ${d.pricePerPuppy} kr/valp · ${d.signedByMe.isEmpty ? 'Ej signerat' : 'Signerat'}',
+                      '${t.dog.name} · ${d.pricePerPuppy} kr/valp · ${d.fullySigned ? 'Signerat av båda' : d.signedByMe.isEmpty ? 'Väntar på din signatur' : 'Väntar på motpart'}',
                     ),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => DealSheet.open(context, state, t),

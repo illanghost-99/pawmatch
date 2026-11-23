@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../models.dart';
+import 'deal.dart';
 import 'deals.dart';
 import 'discover.dart';
 import 'for_you.dart';
@@ -17,6 +18,8 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int i = 0;
   bool _opening = false;
+  bool _dealPull = false;
+  bool _dealTried = false;
 
   @override
   void initState() {
@@ -71,6 +74,46 @@ class _AppShellState extends State<AppShell> {
         Navigator.of(context).popUntil((route) => route.isFirst);
       }
       setState(() => i = 2);
+      return;
+    }
+    if (kind == 'deal') {
+      if (!widget.state.chatsReady) return;
+      MatchThread? thread;
+      for (final m in widget.state.matches) {
+        if (m.accepted && peer.isNotEmpty && m.peerEmail.toLowerCase() == peer) {
+          thread = m;
+          break;
+        }
+      }
+      if (thread == null || thread.deal == null) {
+        if (!_dealTried) {
+          _dealTried = true;
+          _dealPull = true;
+          widget.state.pullChats().whenComplete(() {
+            _dealPull = false;
+            if (mounted) _openNotice();
+          });
+          return;
+        }
+        if (_dealPull) return;
+        _dealTried = false;
+        widget.state.clearNotice();
+        setState(() => i = 3);
+        return;
+      }
+      final open = thread;
+      _dealTried = false;
+      _opening = true;
+      widget.state.clearNotice();
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+      setState(() => i = 3);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _opening = false;
+        if (!mounted) return;
+        DealSheet.open(context, widget.state, open);
+      });
       return;
     }
     if ((kind == 'chat' || kind == 'matched') && !widget.state.chatsReady) return;
