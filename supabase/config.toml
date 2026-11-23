@@ -19,5 +19,8 @@ secret = "env(APPLE_SECRET)"
 [functions.notify]
 verify_jwt = false
 
+[functions.claim-device]
+verify_jwt = false
+
 [functions.delete-account]
 verify_jwt = true

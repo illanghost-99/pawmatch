@@ -609,16 +609,33 @@ class Network {
     try {
       final prefs = await SharedPreferences.getInstance();
       final previous = prefs.getString('pmDeviceToken') ?? '';
-      if (previous.isNotEmpty && previous != token) {
-        await c.from('pm_devices').delete().eq('token', previous);
+      final known = prefs.getStringList('pmDeviceTokens') ?? <String>[];
+      if (previous.isNotEmpty && previous != token && !known.contains(previous)) known.add(previous);
+      if (!known.contains(token)) known.add(token);
+      try {
+        if (previous.isNotEmpty && previous != token) {
+          await c.from('pm_devices').delete().eq('token', previous);
+        }
+        await c.from('pm_devices').delete().eq('token', token).neq('email', email.toLowerCase());
+        await c.from('pm_devices').upsert({
+          'token': token,
+          'email': email.toLowerCase(),
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+      } catch (e) {
+        debugPrint('saveDevice local $e');
       }
-      await c.from('pm_devices').delete().eq('token', token).neq('email', email.toLowerCase());
-      await c.from('pm_devices').upsert({
-        'token': token,
-        'email': email.toLowerCase(),
-        'updated_at': DateTime.now().toIso8601String(),
-      });
       await prefs.setString('pmDeviceToken', token);
+      await prefs.setStringList('pmDeviceTokens', known);
+      try {
+        await c.functions.invoke('claim-device', body: {
+          'email': email.toLowerCase(),
+          'token': token,
+          'old_tokens': known.where((item) => item != token).toList(),
+        });
+      } catch (e) {
+        debugPrint('claim-device $e');
+      }
     } catch (e) {
       debugPrint('saveDevice $e');
     }

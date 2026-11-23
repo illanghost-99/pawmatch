@@ -87,7 +87,12 @@ export default {
           });
         }
       }
-      const { data, error } = await ctx.supabaseAdmin.from("pm_devices").select("token").eq("email", email);
+      const { data, error } = await ctx.supabaseAdmin
+        .from("pm_devices")
+        .select("token, updated_at")
+        .eq("email", email)
+        .order("updated_at", { ascending: false })
+        .limit(1);
       if (error) throw error;
       const skip = new Set<string>();
       if (kind === "chat") {
