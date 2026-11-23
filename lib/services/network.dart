@@ -55,6 +55,27 @@ class Network {
     }
   }
 
+  static Future<String?> uploadChatPhoto(String path) async {
+    if (path.startsWith('http')) return path;
+    final c = _c;
+    if (c == null || path.isEmpty) return null;
+    try {
+      final file = File(path);
+      if (!file.existsSync()) return null;
+      final bytes = await compute(_shrinkPhoto, await file.readAsBytes());
+      final name = 'chat/${DateTime.now().microsecondsSinceEpoch}.jpg';
+      await c.storage.from('dog-photos').uploadBinary(
+            name,
+            bytes,
+            fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: true, cacheControl: '31536000'),
+          );
+      return c.storage.from('dog-photos').getPublicUrl(name);
+    } catch (e) {
+      debugPrint('uploadChatPhoto $e');
+      return null;
+    }
+  }
+
   static Future<String?> uploadOwnerPhoto(String email, String path) async {
     if (path.startsWith('http')) return path;
     final c = _c;

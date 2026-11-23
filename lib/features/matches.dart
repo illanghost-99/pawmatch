@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../models.dart';
 import '../services/fcm.dart';
+import '../services/media.dart';
 import '../services/moderator.dart';
 import '../services/network.dart';
 import '../v2/premium_page.dart';
@@ -22,7 +23,7 @@ String _groupPreview(GroupChat g) {
   final last = g.messages.last;
   if (last.recalled) return 'Meddelandet togs bort';
   final who = last.fromMe ? 'Du' : (last.senderName.isEmpty ? 'Någon' : last.senderName);
-  return '$who: ${last.text}';
+  return '$who: ${chatPreview(last.text)}';
 }
 
 int _stamp(ChatLine m) => m.createdAt?.millisecondsSinceEpoch ?? 8640000000000000;
@@ -70,6 +71,7 @@ class TalkBubble extends StatelessWidget {
     final status = !m.fromMe ? '' : (m.id.isEmpty ? 'Skickar…' : (m.seen ? 'Läst' : 'Levererat'));
     final meta = [time, status].where((s) => s.isNotEmpty).join(' · ');
     final name = m.fromMe ? 'Jag' : (m.senderName.trim().isNotEmpty ? m.senderName.trim() : otherName);
+    final photo = m.recalled ? null : chatPhotoUrl(m.text);
     return Align(
       alignment: m.fromMe ? Alignment.centerRight : Alignment.centerLeft,
       child: GestureDetector(
@@ -85,20 +87,32 @@ class TalkBubble extends StatelessWidget {
                 child: Text(name, style: const TextStyle(color: Color(0xFF8A939C), fontSize: 12, fontWeight: FontWeight.w700)),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: photo == null ? const EdgeInsets.symmetric(horizontal: 14, vertical: 10) : EdgeInsets.zero,
                 decoration: BoxDecoration(
-                  color: m.recalled ? const Color(0xFFE7E1DC) : (m.fromMe ? _coral : Colors.white),
+                  color: m.recalled ? const Color(0xFFE7E1DC) : (photo != null ? Colors.transparent : (m.fromMe ? _coral : Colors.white)),
                   borderRadius: BorderRadius.circular(18),
                 ),
-                child: Text(
-                  m.recalled ? 'Meddelandet togs bort' : m.text,
-                  style: TextStyle(
-                    color: m.recalled ? const Color(0xFF5C6B78) : (m.fromMe ? Colors.white : _ink),
-                    fontStyle: m.recalled ? FontStyle.italic : FontStyle.normal,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
-                  ),
-                ),
+                child: m.recalled
+                    ? const Text('Meddelandet togs bort', style: TextStyle(color: Color(0xFF5C6B78), fontStyle: FontStyle.italic, fontWeight: FontWeight.w600, fontSize: 15))
+                    : photo != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Image.network(
+                              photo,
+                              width: 220,
+                              height: 220,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const SizedBox(
+                                width: 220,
+                                height: 80,
+                                child: Center(child: Text('Bilden kunde inte visas', style: TextStyle(color: _ink, fontWeight: FontWeight.w600))),
+                              ),
+                            ),
+                          )
+                        : Text(
+                            m.text,
+                            style: TextStyle(color: m.fromMe ? Colors.white : _ink, fontWeight: FontWeight.w600, fontSize: 15),
+                          ),
               ),
               if (meta.isNotEmpty)
                 Padding(
@@ -168,7 +182,7 @@ String _preview(MatchThread m) {
   if (m.messages.isEmpty) return m.dog.breed.isEmpty ? 'Tryck för att skriva' : m.dog.breed;
   final last = m.messages.last;
   if (last.recalled) return 'Meddelandet togs bort';
-  return last.fromMe ? 'Du: ${last.text}' : last.text;
+  return last.fromMe ? 'Du: ${chatPreview(last.text)}' : chatPreview(last.text);
 }
 
 DateTime _lastActivity(MatchThread m) {
@@ -640,6 +654,24 @@ class _ChatPageState extends State<ChatPage> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
+                IconButton(
+                  tooltip: 'Bild',
+                  icon: const Icon(Icons.add_photo_alternate_outlined, color: _coral),
+                  onPressed: !t.accepted
+                      ? null
+                      : () async {
+                          final path = await Media.choose(context, title: 'Skicka bild');
+                          if (path == null || !context.mounted) return;
+                          final ok = await widget.state.sendPhoto(t, path);
+                          if (!context.mounted) return;
+                          if (!ok) {
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bilden kunde inte skickas.')));
+                            return;
+                          }
+                          setState(() {});
+                          _follow(force: true);
+                        },
+                ),
                 Expanded(
                   child: TextField(
                     controller: c,
@@ -885,6 +917,22 @@ class _GroupChatPageState extends State<GroupChatPage> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
+                IconButton(
+                  tooltip: 'Bild',
+                  icon: const Icon(Icons.add_photo_alternate_outlined, color: _coral),
+                  onPressed: () async {
+                    final path = await Media.choose(context, title: 'Skicka bild');
+                    if (path == null || !context.mounted) return;
+                    final ok = await widget.state.sendGroupPhoto(group, path);
+                    if (!context.mounted) return;
+                    if (!ok) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bilden kunde inte skickas.')));
+                      return;
+                    }
+                    setState(() {});
+                    _jump(force: true);
+                  },
+                ),
                 Expanded(
                   child: TextField(
                     controller: c,

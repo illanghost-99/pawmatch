@@ -1472,9 +1472,17 @@ class AppState extends ChangeNotifier {
     await Network.sendMessage(t.cloudMatchId, email, body);
     if (t.peerEmail.contains('@') && t.peerEmail.toLowerCase() != email.toLowerCase()) {
       final who = fullName.trim().isEmpty ? 'Någon' : fullName.trim();
-      await Network.pingChat(t.peerEmail, email, '$who: $body', peer: email);
+      await Network.pingChat(t.peerEmail, email, '$who: ${chatPreview(body)}', peer: email);
     }
     await refreshChat(t);
+  }
+
+  Future<bool> sendPhoto(MatchThread t, String path) async {
+    if (!t.accepted || path.isEmpty) return false;
+    final url = await Network.uploadChatPhoto(path);
+    if (url == null || url.isEmpty) return false;
+    await send(t, '$chatPhotoMark$url');
+    return true;
   }
 
   Future<void> pullGroups() async {
@@ -1593,9 +1601,17 @@ class AppState extends ChangeNotifier {
     final who = fullName.trim().isEmpty ? 'Någon' : fullName.trim();
     for (final m in g.members) {
       if (m.email == email.toLowerCase()) continue;
-      await Network.ping(m.email, 'Grupp', '$who i ${g.name}: $body', kind: 'group', peer: email, group: g.id);
+      await Network.ping(m.email, 'Grupp', '$who i ${g.name}: ${chatPreview(body)}', kind: 'group', peer: email, group: g.id);
     }
     await refreshGroup(g);
+  }
+
+  Future<bool> sendGroupPhoto(GroupChat g, String path) async {
+    if (path.isEmpty) return false;
+    final url = await Network.uploadChatPhoto(path);
+    if (url == null || url.isEmpty) return false;
+    await sendGroup(g, '$chatPhotoMark$url');
+    return true;
   }
 
   Future<void> addGroupMember(GroupChat g, GroupMember member) async {

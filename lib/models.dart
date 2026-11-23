@@ -150,6 +150,17 @@ class ChatLine {
   final bool system;
 }
 
+const chatPhotoMark = '[[pm-bild]]';
+
+String? chatPhotoUrl(String text) {
+  if (!text.startsWith(chatPhotoMark)) return null;
+  final url = text.substring(chatPhotoMark.length).trim();
+  if (!url.startsWith('http')) return null;
+  return url;
+}
+
+String chatPreview(String text) => chatPhotoUrl(text) == null ? text : 'Bild';
+
 class SigPoint {
   const SigPoint(this.x, this.y);
   final double x;
