@@ -152,14 +152,25 @@ class ChatLine {
 
 const chatPhotoMark = '[[pm-bild]]';
 
-String? chatPhotoUrl(String text) {
-  if (!text.startsWith(chatPhotoMark)) return null;
-  final url = text.substring(chatPhotoMark.length).trim();
-  if (!url.startsWith('http')) return null;
-  return url;
+List<String> chatPhotoUrls(String text) {
+  if (!text.startsWith(chatPhotoMark)) return const [];
+  final rest = text.substring(chatPhotoMark.length).trim();
+  return [
+    for (final part in rest.split('||'))
+      if (part.trim().startsWith('http')) part.trim(),
+  ];
 }
 
-String chatPreview(String text) => chatPhotoUrl(text) == null ? text : 'Bild';
+String? chatPhotoUrl(String text) {
+  final all = chatPhotoUrls(text);
+  return all.isEmpty ? null : all.first;
+}
+
+String chatPreview(String text) {
+  final n = chatPhotoUrls(text).length;
+  if (n == 0) return text;
+  return n == 1 ? 'Bild' : '$n bilder';
+}
 
 class SigPoint {
   const SigPoint(this.x, this.y);

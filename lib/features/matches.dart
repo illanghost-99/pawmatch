@@ -72,7 +72,7 @@ class TalkBubble extends StatelessWidget {
     final status = !m.fromMe ? '' : (m.id.isEmpty ? 'Skickar…' : (m.seen ? 'Läst' : 'Levererat'));
     final meta = [time, status].where((s) => s.isNotEmpty).join(' · ');
     final name = m.fromMe ? 'Jag' : (m.senderName.trim().isNotEmpty ? m.senderName.trim() : otherName);
-    final photo = m.recalled ? null : chatPhotoUrl(m.text);
+    final photo = m.recalled ? const <String>[] : chatPhotoUrls(m.text);
     return Align(
       alignment: m.fromMe ? Alignment.centerRight : Alignment.centerLeft,
       child: GestureDetector(
@@ -88,28 +88,15 @@ class TalkBubble extends StatelessWidget {
                 child: Text(name, style: const TextStyle(color: Color(0xFF8A939C), fontSize: 12, fontWeight: FontWeight.w700)),
               ),
               Container(
-                padding: photo == null ? const EdgeInsets.symmetric(horizontal: 14, vertical: 10) : EdgeInsets.zero,
+                padding: photo.isEmpty ? const EdgeInsets.symmetric(horizontal: 14, vertical: 10) : EdgeInsets.zero,
                 decoration: BoxDecoration(
-                  color: m.recalled ? const Color(0xFFE7E1DC) : (photo != null ? Colors.transparent : (m.fromMe ? _coral : Colors.white)),
+                  color: m.recalled ? const Color(0xFFE7E1DC) : (photo.isNotEmpty ? Colors.transparent : (m.fromMe ? _coral : Colors.white)),
                   borderRadius: BorderRadius.circular(18),
                 ),
                 child: m.recalled
                     ? const Text('Meddelandet togs bort', style: TextStyle(color: Color(0xFF5C6B78), fontStyle: FontStyle.italic, fontWeight: FontWeight.w600, fontSize: 15))
-                    : photo != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: Image.network(
-                              photo,
-                              width: 220,
-                              height: 220,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const SizedBox(
-                                width: 220,
-                                height: 80,
-                                child: Center(child: Text('Bilden kunde inte visas', style: TextStyle(color: _ink, fontWeight: FontWeight.w600))),
-                              ),
-                            ),
-                          )
+                    : photo.isNotEmpty
+                        ? _chatPhotos(context, photo)
                         : Text(
                             m.text,
                             style: TextStyle(color: m.fromMe ? Colors.white : _ink, fontWeight: FontWeight.w600, fontSize: 15),
@@ -173,6 +160,81 @@ class _SignedDealCard extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+Widget _chatPhotos(BuildContext context, List<String> urls) {
+  final big = urls.length == 1;
+  final wide = urls.length == 2 || urls.length == 4;
+  final size = big ? 220.0 : (wide ? 108.0 : 70.0);
+  final height = big ? 220.0 : (wide ? 140.0 : 70.0);
+  return SizedBox(
+    width: 220,
+    child: Wrap(
+      spacing: 4,
+      runSpacing: 4,
+      children: [
+        for (var i = 0; i < urls.length; i++)
+          GestureDetector(
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => _PhotoPager(urls: urls, start: i))),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(big ? 16 : 10),
+              child: Image.network(
+                urls[i],
+                width: size,
+                height: height,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  width: size,
+                  height: height,
+                  color: const Color(0xFFE7E1DC),
+                  alignment: Alignment.center,
+                  child: const Icon(Icons.broken_image_outlined, color: _ink),
+                ),
+              ),
+            ),
+          ),
+      ],
+    ),
+  );
+}
+
+class _PhotoPager extends StatefulWidget {
+  const _PhotoPager({required this.urls, required this.start});
+  final List<String> urls;
+  final int start;
+  @override
+  State<_PhotoPager> createState() => _PhotoPagerState();
+}
+
+class _PhotoPagerState extends State<_PhotoPager> {
+  late final PageController page = PageController(initialPage: widget.start);
+  late int index = widget.start;
+
+  @override
+  void dispose() {
+    page.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: Text('${index + 1} / ${widget.urls.length}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+      ),
+      body: PageView.builder(
+        controller: page,
+        itemCount: widget.urls.length,
+        onPageChanged: (i) => setState(() => index = i),
+        itemBuilder: (_, i) => InteractiveViewer(
+          child: Center(child: Image.network(widget.urls[i], fit: BoxFit.contain)),
         ),
       ),
     );
@@ -470,7 +532,7 @@ class _ChatPageState extends State<ChatPage> {
   Timer? poll;
   bool _nearBottom = true;
   double _inset = 0;
-  String? _photo;
+  final List<String> _photos = [];
 
   @override
   void initState() {
@@ -688,7 +750,16 @@ class _ChatPageState extends State<ChatPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (_photo != null) _pickedPhoto(_photo!, () => setState(() => _photo = null)),
+                if (_photos.isNotEmpty)
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        for (final path in List<String>.from(_photos))
+                          _pickedPhoto(path, () => setState(() => _photos.remove(path))),
+                      ],
+                    ),
+                  ),
                 Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -698,9 +769,14 @@ class _ChatPageState extends State<ChatPage> {
                   onPressed: !t.accepted
                       ? null
                       : () async {
-                          final path = await Media.choose(context, title: 'Skicka bild');
-                          if (path == null || !mounted) return;
-                          setState(() => _photo = path);
+                          final room = 5 - _photos.length;
+                          if (room <= 0) {
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Högst 5 bilder.')));
+                            return;
+                          }
+                          final paths = await Media.chooseUpTo(context, limit: room, title: 'Skicka bild');
+                          if (!mounted || paths.isEmpty) return;
+                          setState(() => _photos.addAll(paths.take(room)));
                         },
                 ),
                 Expanded(
@@ -733,15 +809,15 @@ class _ChatPageState extends State<ChatPage> {
                   onPressed: !t.accepted
                       ? null
                       : () async {
-                          final photo = _photo;
+                          final photos = List<String>.from(_photos);
                           final text = c.text.trim();
-                          if ((photo == null || photo.isEmpty) && text.isEmpty) return;
-                          if (photo != null) {
-                            setState(() => _photo = null);
-                            final ok = await widget.state.sendPhoto(t, photo);
+                          if (photos.isEmpty && text.isEmpty) return;
+                          if (photos.isNotEmpty) {
+                            setState(() => _photos.clear());
+                            final ok = await widget.state.sendPhotos(t, photos);
                             if (!mounted) return;
                             if (!ok) {
-                              setState(() => _photo = photo);
+                              setState(() => _photos.addAll(photos));
                               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bilden kunde inte skickas.')));
                               return;
                             }
@@ -874,7 +950,7 @@ class _GroupChatPageState extends State<GroupChatPage> {
   final c = TextEditingController();
   final scroll = ScrollController();
   Timer? poll;
-  String? _photo;
+  final List<String> _photos = [];
 
   bool atLatest = true;
 
@@ -968,7 +1044,16 @@ class _GroupChatPageState extends State<GroupChatPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (_photo != null) _pickedPhoto(_photo!, () => setState(() => _photo = null)),
+                if (_photos.isNotEmpty)
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        for (final path in List<String>.from(_photos))
+                          _pickedPhoto(path, () => setState(() => _photos.remove(path))),
+                      ],
+                    ),
+                  ),
                 Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -976,9 +1061,14 @@ class _GroupChatPageState extends State<GroupChatPage> {
                   tooltip: 'Bild',
                   icon: const Icon(Icons.add_photo_alternate_outlined, color: _coral),
                   onPressed: () async {
-                    final path = await Media.choose(context, title: 'Skicka bild');
-                    if (path == null || !mounted) return;
-                    setState(() => _photo = path);
+                    final room = 5 - _photos.length;
+                    if (room <= 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Högst 5 bilder.')));
+                      return;
+                    }
+                    final paths = await Media.chooseUpTo(context, limit: room, title: 'Skicka bild');
+                    if (!mounted || paths.isEmpty) return;
+                    setState(() => _photos.addAll(paths.take(room)));
                   },
                 ),
                 Expanded(
@@ -1001,15 +1091,15 @@ class _GroupChatPageState extends State<GroupChatPage> {
                 IconButton(
                   icon: const Icon(Icons.send_rounded, color: _coral),
                   onPressed: () async {
-                    final photo = _photo;
+                    final photos = List<String>.from(_photos);
                     final text = c.text.trim();
-                    if ((photo == null || photo.isEmpty) && text.isEmpty) return;
-                    if (photo != null) {
-                      setState(() => _photo = null);
-                      final ok = await widget.state.sendGroupPhoto(group, photo);
+                    if (photos.isEmpty && text.isEmpty) return;
+                    if (photos.isNotEmpty) {
+                      setState(() => _photos.clear());
+                      final ok = await widget.state.sendGroupPhotos(group, photos);
                       if (!mounted) return;
                       if (!ok) {
-                        setState(() => _photo = photo);
+                        setState(() => _photos.addAll(photos));
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bilden kunde inte skickas.')));
                         return;
                       }

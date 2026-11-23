@@ -61,4 +61,52 @@ class Media {
     if (source == null) return null;
     return pick(source: source);
   }
+
+  static Future<List<String>> chooseUpTo(BuildContext context, {int limit = 5, String title = 'Lägg till bild'}) async {
+    if (limit <= 0) return const [];
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text('Bild från galleri'),
+                onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_camera_outlined),
+                title: const Text('Ta foto'),
+                onTap: () => Navigator.pop(ctx, ImageSource.camera),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (source == null) return const [];
+    if (source == ImageSource.camera) {
+      final one = await pick(source: source);
+      return one == null ? const [] : [one];
+    }
+    try {
+      final files = await _picker.pickMultiImage(imageQuality: 80, maxWidth: 1800, limit: limit);
+      final out = <String>[];
+      for (final file in files.take(limit)) {
+        if (file.path.isEmpty) continue;
+        out.add(await _keep(file.path));
+      }
+      return out;
+    } catch (_) {
+      final one = await pick(source: source);
+      return one == null ? const [] : [one];
+    }
+  }
 }

@@ -1477,11 +1477,16 @@ class AppState extends ChangeNotifier {
     await refreshChat(t);
   }
 
-  Future<bool> sendPhoto(MatchThread t, String path) async {
-    if (!t.accepted || path.isEmpty) return false;
-    final url = await Network.uploadChatPhoto(path);
-    if (url == null || url.isEmpty) return false;
-    await send(t, '$chatPhotoMark$url');
+  Future<bool> sendPhotos(MatchThread t, List<String> paths) async {
+    if (!t.accepted) return false;
+    final urls = <String>[];
+    for (final path in paths.take(5)) {
+      if (path.isEmpty) continue;
+      final url = await Network.uploadChatPhoto(path);
+      if (url != null && url.startsWith('http')) urls.add(url);
+    }
+    if (urls.isEmpty) return false;
+    await send(t, '$chatPhotoMark${urls.join('||')}');
     return true;
   }
 
@@ -1606,11 +1611,15 @@ class AppState extends ChangeNotifier {
     await refreshGroup(g);
   }
 
-  Future<bool> sendGroupPhoto(GroupChat g, String path) async {
-    if (path.isEmpty) return false;
-    final url = await Network.uploadChatPhoto(path);
-    if (url == null || url.isEmpty) return false;
-    await sendGroup(g, '$chatPhotoMark$url');
+  Future<bool> sendGroupPhotos(GroupChat g, List<String> paths) async {
+    final urls = <String>[];
+    for (final path in paths.take(5)) {
+      if (path.isEmpty) continue;
+      final url = await Network.uploadChatPhoto(path);
+      if (url != null && url.startsWith('http')) urls.add(url);
+    }
+    if (urls.isEmpty) return false;
+    await sendGroup(g, '$chatPhotoMark${urls.join('||')}');
     return true;
   }
 

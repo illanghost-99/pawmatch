@@ -128,7 +128,7 @@ class _SwipeDeckState extends State<SwipeDeck> with SingleTickerProviderStateMix
                 fit: StackFit.expand,
                 children: [
                   _photo(current, widget.state.kmTo(current).round()),
-                  Positioned(top: 28, left: 22, child: Opacity(opacity: likeOpacity, child: _stamp('LIKE', const Color(0xFF2F6B4F)))),
+                  Positioned(top: 28, left: 22, child: Opacity(opacity: likeOpacity, child: _stamp('GILLA', const Color(0xFF2F6B4F)))),
                   Positioned(top: 28, right: 22, child: Opacity(opacity: noOpacity, child: _stamp('NEJ', const Color(0xFF8B3A32)))),
                 ],
               ),
