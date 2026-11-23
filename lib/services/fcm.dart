@@ -174,6 +174,23 @@ class Fcm {
     cb(data);
   }
 
+  static bool _readingChat = false;
+
+  static Future<void> readingChat(bool reading) async {
+    if (kIsWeb || _readingChat == reading) return;
+    _readingChat = reading;
+    try {
+      await _open();
+      await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+        alert: !reading,
+        badge: true,
+        sound: !reading,
+      );
+    } catch (e) {
+      debugPrint('FCM quiet: $e');
+    }
+  }
+
   static void flush() {
     final t = token;
     final cb = onToken;

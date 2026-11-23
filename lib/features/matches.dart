@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../models.dart';
+import '../services/fcm.dart';
 import '../services/moderator.dart';
 import '../services/network.dart';
 import '../v2/premium_page.dart';
@@ -434,6 +435,7 @@ class _ChatPageState extends State<ChatPage> {
     widget.state.markRead(widget.thread);
     widget.state.attachDeal(widget.thread);
     widget.state.refreshChat(widget.thread, markSeen: true);
+    Fcm.readingChat(true);
     poll = Timer.periodic(const Duration(seconds: 1), (_) async {
       await widget.state.refreshChat(widget.thread, markSeen: true);
       widget.state.markRead(widget.thread);
@@ -453,10 +455,20 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   void dispose() {
+    Fcm.readingChat(false);
     poll?.cancel();
     scroll.dispose();
     c.dispose();
     super.dispose();
+  }
+
+  Future<void> _stepAway(Future<dynamic> leave) async {
+    await Fcm.readingChat(false);
+    try {
+      await leave;
+    } finally {
+      if (mounted) await Fcm.readingChat(true);
+    }
   }
 
   Future<void> _recall(ChatLine m) async {
@@ -490,7 +502,7 @@ class _ChatPageState extends State<ChatPage> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         title: GestureDetector(
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OwnerPage(state: widget.state, dog: t.dog))),
+          onTap: () => _stepAway(Navigator.push(context, MaterialPageRoute(builder: (_) => OwnerPage(state: widget.state, dog: t.dog)))),
           child: Container(
             constraints: const BoxConstraints(maxWidth: 190),
             padding: const EdgeInsets.fromLTRB(4, 4, 8, 4),
@@ -519,9 +531,9 @@ class _ChatPageState extends State<ChatPage> {
           IconButton(
             tooltip: 'Förhandla avtal',
             icon: const Icon(Icons.handshake_outlined, color: _coral),
-            onPressed: () => DealSheet.open(context, widget.state, t).then((_) {
+            onPressed: () => _stepAway(DealSheet.open(context, widget.state, t).then((_) {
               if (mounted) setState(() {});
-            }),
+            })),
           ),
           IconButton(
             tooltip: 'Blockera',
@@ -589,9 +601,9 @@ class _ChatPageState extends State<ChatPage> {
                   style: const TextStyle(fontWeight: FontWeight.w800, color: _ink),
                 ),
                 trailing: const Icon(Icons.chevron_right, color: _coral),
-                onTap: () => DealSheet.open(context, widget.state, t).then((_) {
+                onTap: () => _stepAway(DealSheet.open(context, widget.state, t).then((_) {
                   if (mounted) setState(() {});
-                }),
+                })),
               ),
             ),
           Expanded(
@@ -606,9 +618,9 @@ class _ChatPageState extends State<ChatPage> {
                 itemBuilder: (context, i) {
                   if (signed && i == 0) {
                     return _SignedDealCard(
-                      onTap: () => DealSheet.open(context, widget.state, t).then((_) {
+                      onTap: () => _stepAway(DealSheet.open(context, widget.state, t).then((_) {
                         if (mounted) setState(() {});
-                      }),
+                      })),
                     );
                   }
                   final offset = signed ? i - 1 : i;
