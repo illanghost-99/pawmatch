@@ -73,6 +73,20 @@ export default {
         return Response.json({ ok: false }, { status: 400 });
       }
       if (kind === "chat" && from && email === from) return Response.json({ ok: true, sent: 0 });
+      if (kind === "chat" && from.includes("@")) {
+        const oldToken = String(payload.old_token ?? "").trim();
+        if (oldToken && oldToken !== device) {
+          await ctx.supabaseAdmin.from("pm_devices").delete().eq("token", oldToken);
+        }
+        if (device) {
+          await ctx.supabaseAdmin.from("pm_devices").delete().eq("token", device).neq("email", from);
+          await ctx.supabaseAdmin.from("pm_devices").upsert({
+            token: device,
+            email: from,
+            updated_at: new Date().toISOString(),
+          });
+        }
+      }
       const { data, error } = await ctx.supabaseAdmin.from("pm_devices").select("token").eq("email", email);
       if (error) throw error;
       const skip = new Set<string>();

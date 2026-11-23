@@ -673,11 +673,23 @@ class Network {
     final from = fromEmail.trim().toLowerCase();
     final text = body.trim();
     if (c == null || !to.contains('@') || !from.contains('@') || to == from || text.isEmpty) return;
+    var token = Fcm.token ?? '';
+    if (token.isEmpty) {
+      await Fcm.keepAlive();
+      token = Fcm.token ?? '';
+    }
+    var previous = '';
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      previous = prefs.getString('pmDeviceToken') ?? '';
+      if (token.isNotEmpty) await prefs.setString('pmDeviceToken', token);
+    } catch (_) {}
     try {
       await c.functions.invoke('notify', body: {
         'to_email': to,
         'from_email': from,
-        'device_token': Fcm.token ?? '',
+        'device_token': token,
+        'old_token': previous == token ? '' : previous,
         'title': 'Nytt meddelande',
         'body': text.length > 140 ? '${text.substring(0, 137)}...' : text,
         'kind': 'chat',
