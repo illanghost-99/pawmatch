@@ -10,6 +10,7 @@ class Session {
       'idConsent': (p.getBool('idConsent') ?? false).toString(),
       'firstName': p.getString('firstName') ?? '',
       'lastName': p.getString('lastName') ?? '',
+      'phone': p.getString('phone') ?? '',
     };
   }
 
@@ -20,6 +21,7 @@ class Session {
     required String email,
     required String firstName,
     required String lastName,
+    required String phone,
   }) async {
     final p = await SharedPreferences.getInstance();
     await p.setBool('signedIn', signedIn);
@@ -28,6 +30,7 @@ class Session {
     await p.setString('email', email);
     await p.setString('firstName', firstName);
     await p.setString('lastName', lastName);
+    await p.setString('phone', phone);
   }
 
   static Future<void> clear() async {

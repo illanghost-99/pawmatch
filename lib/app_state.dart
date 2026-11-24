@@ -164,6 +164,7 @@ class AppState extends ChangeNotifier {
     email = s['email'] ?? '';
     firstName = s['firstName'] ?? '';
     lastName = s['lastName'] ?? '';
+    phone = s['phone'] ?? '';
     onboarded = s['onboarded'] == 'true';
     idConsent = s['idConsent'] == 'true';
     signedIn = s['signedIn'] == 'true' && email.contains('@');
@@ -310,6 +311,7 @@ class AppState extends ChangeNotifier {
       email: email,
       firstName: firstName,
       lastName: lastName,
+      phone: phone,
     );
   }
 

@@ -90,4 +90,28 @@ class Cloud {
     }
     return 'Det gick inte just nu. Försök igen.';
   }
+
+  static Future<String> sendPasswordCode() async {
+    if (!ready) return 'Ingen kontakt med servern.';
+    try {
+      await Supabase.instance.client.auth.reauthenticate();
+      return '';
+    } catch (e) {
+      debugPrint('reauth $e');
+      return _text(e);
+    }
+  }
+
+  static Future<String> setPassword({required String password, required String code}) async {
+    if (!ready) return 'Ingen kontakt med servern.';
+    if (password.length < 6) return 'Lösenordet måste vara minst 6 tecken.';
+    if (code.trim().isEmpty) return 'Skriv koden från mejlet.';
+    try {
+      await Supabase.instance.client.auth.updateUser(UserAttributes(password: password, nonce: code.trim()));
+      return '';
+    } catch (e) {
+      debugPrint('password $e');
+      return _text(e);
+    }
+  }
 }
