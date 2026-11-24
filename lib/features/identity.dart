@@ -128,6 +128,14 @@ class _IdentityScreenState extends State<IdentityScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
             children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => widget.state.signOut(),
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: _ink),
+                  label: const Text('Tillbaka', style: TextStyle(color: _ink, fontWeight: FontWeight.w700)),
+                ),
+              ),
               const Text('Lite om dig', textAlign: TextAlign.center, style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: _ink)),
               const SizedBox(height: 8),
               const Text(

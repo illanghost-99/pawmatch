@@ -114,7 +114,7 @@ class _AuthScreenState extends State<AuthScreen> {
         widget.state.lastName = cred.familyName!.trim();
       }
       widget.state.idConsent = true;
-      widget.state.signIn(used);
+      widget.state.signIn(used, keepIdentity: true);
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

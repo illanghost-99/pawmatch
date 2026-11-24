@@ -715,7 +715,7 @@ class AppState extends ChangeNotifier {
     return true;
   }
 
-  Future<void> signIn(String e) async {
+  Future<void> signIn(String e, {bool keepIdentity = false}) async {
     final next = e.trim();
     final changed = email.toLowerCase() != next.toLowerCase();
     email = next;
@@ -729,7 +729,7 @@ class AppState extends ChangeNotifier {
       personalNumber = '';
       address = '';
       phone = '';
-      idConsent = false;
+      if (!keepIdentity) idConsent = false;
       onboarded = false;
       identityPending = false;
       myDogs.clear();
@@ -753,6 +753,7 @@ class AppState extends ChangeNotifier {
     final p = await SharedPreferences.getInstance();
     _readDogs(p);
     _readHidden(p);
+    await _takeExisting();
     final seenKey = 'seenLikes:${email.toLowerCase()}';
     _seenLikes
       ..clear()
@@ -765,6 +766,36 @@ class AppState extends ChangeNotifier {
     syncCloud();
     _watchInbox();
     notifyListeners();
+  }
+
+  Future<void> _takeExisting() async {
+    if (!email.contains('@')) return;
+    final remote = await Network.ownerProfile(email);
+    final own = await Network.ownDogs(email);
+    final first = '${remote?['first_name'] ?? ''}'.trim();
+    final last = '${remote?['last_name'] ?? ''}'.trim();
+    final hasName = first.isNotEmpty || last.isNotEmpty;
+    final hasDogs = own != null && own.isNotEmpty;
+    if (!hasName && !hasDogs) return;
+    if (hasName) {
+      firstName = first;
+      lastName = last;
+      displayName = fullName;
+    }
+    final bio = '${remote?['bio'] ?? ''}'.trim();
+    final city = '${remote?['city'] ?? ''}'.trim();
+    if (bio.isNotEmpty) ownerBio = bio;
+    if (city.isNotEmpty) locationLabel = city;
+    final photo = '${remote?['photo_url'] ?? ''}';
+    if (photo.startsWith('http')) photoUrl = photo;
+    idConsent = true;
+    if (hasDogs) {
+      onboarded = true;
+      if (myDogs.isEmpty) {
+        myDogs.addAll(own);
+        await _saveDogs();
+      }
+    }
   }
 
   void saveIdentity({
@@ -785,6 +816,7 @@ class AppState extends ChangeNotifier {
     idConsent = true;
     identityPending = true;
     persist();
+    Network.saveOwner(email: email, first: firstName, last: lastName, bio: ownerBio, city: locationLabel, photo: photoUrl);
     notifyListeners();
   }
 
