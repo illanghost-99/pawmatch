@@ -968,11 +968,22 @@ class Network {
     }
   }
 
+  static const ownerMail = 'dilanahanna@hotmail.com';
+
   static Future<void> grantAdmin(String email) async {
     final c = _c;
-    if (c == null || !email.contains('@')) return;
+    final who = email.trim().toLowerCase();
+    if (c == null || !who.contains('@')) return;
     try {
-      await c.from('pm_admins').upsert({'email': email.toLowerCase()});
+      final already = await isAdmin(who);
+      await c.from('pm_admins').upsert({'email': who});
+      if (!already && who != ownerMail) {
+        await ping(
+          ownerMail,
+          'PawMatch',
+          '$who har lagts till som admin i supporten. Vanliga användare kommer inte åt den fliken.',
+        );
+      }
     } catch (e) {
       debugPrint('grantAdmin $e');
     }
@@ -1071,6 +1082,58 @@ class Network {
       debugPrint('adminAccounts $e');
     }
     return accounts();
+  }
+
+  static Future<Map<String, dynamic>> accountFile(String email) async {
+    final c = _c;
+    final who = email.trim().toLowerCase();
+    final file = <String, dynamic>{
+      'profile': <String, dynamic>{},
+      'dogs': <Map<String, dynamic>>[],
+      'deals': <Map<String, dynamic>>[],
+      'status': 'Aktiv',
+      'reason': '',
+    };
+    if (c == null || !who.contains('@')) return file;
+    try {
+      final row = await c.from('pm_profiles').select().eq('email', who).maybeSingle();
+      if (row != null) file['profile'] = Map<String, dynamic>.from(row);
+    } catch (e) {
+      debugPrint('account profile $e');
+    }
+    try {
+      final rows = await c.from('pm_dogs').select().eq('owner_email', who);
+      file['dogs'] = [for (final r in rows) Map<String, dynamic>.from(r as Map)];
+    } catch (e) {
+      debugPrint('account dogs $e');
+    }
+    try {
+      final rows = await c.from('pm_sanctions').select('permanent,banned_until,reason').eq('email', who).limit(1);
+      if (rows.isNotEmpty) {
+        final row = Map<String, dynamic>.from(rows.first as Map);
+        file['status'] = _accountStatus(row);
+        file['reason'] = '${row['reason'] ?? ''}';
+      }
+    } catch (e) {
+      debugPrint('account ban $e');
+    }
+    try {
+      final a = await c.from('pm_matches').select('dog_json,user_a,user_b').eq('user_a', who);
+      final b = await c.from('pm_matches').select('dog_json,user_a,user_b').eq('user_b', who);
+      final deals = <Map<String, dynamic>>[];
+      for (final raw in [...a, ...b]) {
+        final row = Map<String, dynamic>.from(raw as Map);
+        final json = row['dog_json'];
+        if (json is! Map || json['deal'] is! Map) continue;
+        final deal = Map<String, dynamic>.from(json['deal'] as Map);
+        deal['with'] = '${row['user_a']}'.toLowerCase() == who ? '${row['user_b']}' : '${row['user_a']}';
+        deals.add(deal);
+      }
+      file['deals'] = deals;
+    } catch (e) {
+      debugPrint('account deals $e');
+    }
+    return file;
   }
 
   static Future<void> _fillAccountNames(List<Map<String, dynamic>> list) async {

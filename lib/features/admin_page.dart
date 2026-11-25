@@ -577,35 +577,6 @@ class _AccountsState extends State<_Accounts> {
     return rows.where((r) => '${r['name']} ${r['email']}'.toLowerCase().contains(text)).toList();
   }
 
-  Future<void> _act(Map<String, dynamic> row, String mode) async {
-    final name = '${row['name']}';
-    final word = switch (mode) {
-      'on' => 'aktivera',
-      'off' => 'avaktivera',
-      'closed' => 'stänga',
-      _ => 'radera',
-    };
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('${word[0].toUpperCase()}${word.substring(1)} $name?'),
-        content: Text(switch (mode) {
-          'off' => 'Hunden och kontot döljs i appen. Ingenting raderas. Aktivera igen så kommer de tillbaka.',
-          'on' => 'Hunden och kontot syns i appen igen.',
-          'closed' => 'Kontot stängs och hunden döljs tills du aktiverar det igen.',
-          _ => 'Personen ser ändringen nästa gång appen öppnas.',
-        }),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Avbryt')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Ja')),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    await Network.setAccount('${row['email']}', mode);
-    await _load();
-  }
-
   @override
   void dispose() {
     q.dispose();
@@ -649,25 +620,220 @@ class _AccountsState extends State<_Accounts> {
                         subtitle: Text('${r['email']}${dogs.isEmpty ? '' : '\n$dogs'}${photos > 0 ? '\n$photos bilder' : ''}'),
                         isThreeLine: dogs.isNotEmpty || photos > 0,
                         trailing: Text(status, style: TextStyle(color: status == 'Aktiv' ? const Color(0xFF1F8A4C) : _coral, fontWeight: FontWeight.w800)),
-                        onTap: () => showModalBottomSheet<void>(
-                          context: context,
-                          builder: (ctx) => SafeArea(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                ListTile(title: Text('${r['name']}', style: const TextStyle(fontWeight: FontWeight.w800)), subtitle: Text('${r['email']}')),
-                                ListTile(leading: const Icon(Icons.check_circle_outline), title: const Text('Aktivera'), onTap: () { Navigator.pop(ctx); _act(r, 'on'); }),
-                                ListTile(leading: const Icon(Icons.pause_circle_outline), title: const Text('Avaktivera'), onTap: () { Navigator.pop(ctx); _act(r, 'off'); }),
-                              ],
-                            ),
-                          ),
-                        ),
+                        onTap: () async {
+                          final changed = await Navigator.push<bool>(
+                            context,
+                            MaterialPageRoute(builder: (_) => _AccountFile(summary: r)),
+                          );
+                          if (changed == true) _load();
+                        },
                       ),
                     );
                   },
                 ),
         ),
       ],
+    );
+  }
+}
+
+class _AccountFile extends StatefulWidget {
+  const _AccountFile({required this.summary});
+  final Map<String, dynamic> summary;
+  @override
+  State<_AccountFile> createState() => _AccountFileState();
+}
+
+class _AccountFileState extends State<_AccountFile> {
+  Map<String, dynamic>? file;
+  bool loading = true;
+  bool changed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final next = await Network.accountFile('${widget.summary['email']}');
+    if (!mounted) return;
+    setState(() {
+      file = next;
+      loading = false;
+    });
+  }
+
+  Future<void> _act(String mode) async {
+    final name = '${widget.summary['name']}';
+    final off = mode == 'off';
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(off ? 'Avaktivera $name?' : 'Aktivera $name?'),
+        content: Text(off
+            ? 'Personen kommer inte in i appen, och hundarna döljs för andra. Ingenting raderas. Du kan aktivera kontot igen.'
+            : 'Personen kan använda appen igen, och hundarna syns i flödet. Ingenting som raderats kommer tillbaka, för avaktivering raderar inget.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Avbryt')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(off ? 'Avaktivera' : 'Aktivera')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await Network.setAccount('${widget.summary['email']}', mode);
+    changed = true;
+    await _load();
+  }
+
+  String _line(String label, String value) {
+    final text = value.trim();
+    return '$label: ${text.isEmpty ? 'Inte angivet' : text}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final email = '${widget.summary['email']}';
+    final created = '${widget.summary['created']}';
+    final day = created.length >= 10 ? created.substring(0, 10) : '';
+    final data = file;
+    final profile = Map<String, dynamic>.from(data?['profile'] as Map? ?? {});
+    final dogs = [for (final d in List.from(data?['dogs'] ?? const [])) Map<String, dynamic>.from(d as Map)];
+    final deals = [for (final d in List.from(data?['deals'] ?? const [])) Map<String, dynamic>.from(d as Map)];
+    final first = '${profile['first_name'] ?? ''}'.trim();
+    final last = '${profile['last_name'] ?? ''}'.trim();
+    final name = ('$first $last'.trim().isEmpty ? '${widget.summary['name']}' : '$first $last'.trim());
+    final photo = '${profile['photo_url'] ?? ''}';
+    final status = '${data?['status'] ?? widget.summary['status'] ?? 'Aktiv'}';
+    final premium = dogs.any((d) => d['owner_premium'] == true);
+    final verified = dogs.any((d) => d['owner_verified'] == true);
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        Navigator.pop(context, changed);
+      },
+      child: Scaffold(
+        backgroundColor: _cream,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          title: const Text('Konto', style: TextStyle(fontWeight: FontWeight.w800)),
+          leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.pop(context, changed)),
+          actions: [
+            PopupMenuButton<String>(
+              onSelected: _act,
+              itemBuilder: (ctx) => const [
+                PopupMenuItem(value: 'on', child: Text('Aktivera kontot')),
+                PopupMenuItem(value: 'off', child: Text('Avaktivera kontot')),
+              ],
+            ),
+          ],
+        ),
+        body: loading
+            ? const Center(child: CircularProgressIndicator(color: _coral))
+            : ListView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                children: [
+                  Card(
+                    color: Colors.white,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          CircleAvatar(
+                            radius: 36,
+                            backgroundColor: const Color(0xFFFFE0D4),
+                            backgroundImage: photo.startsWith('http') ? NetworkImage(photo) : null,
+                            child: photo.startsWith('http') ? null : Text(name.isEmpty ? '?' : name[0].toUpperCase(), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24)),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(name, textAlign: TextAlign.center, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+                          Text(email, textAlign: TextAlign.center),
+                          const SizedBox(height: 8),
+                          Text(status, style: TextStyle(color: status == 'Aktiv' ? const Color(0xFF1F8A4C) : _coral, fontWeight: FontWeight.w800)),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text('Registrering', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
+                  const SizedBox(height: 6),
+                  Card(
+                    color: Colors.white,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        [
+                          _line('Namn', name),
+                          _line('E-post', email),
+                          _line('Ort', '${profile['city'] ?? ''}'),
+                          _line('Om mig', '${profile['bio'] ?? ''}'),
+                          _line('Skapad', day),
+                          _line('Premium', premium ? 'Ja' : 'Nej'),
+                          _line('Ägare verifierad', verified ? 'Ja' : 'Nej'),
+                          'Adress, telefon och personnummer från registreringen sparas i telefonen, inte här. De syns nedan om de står i ett avtal.',
+                        ].join('\n'),
+                        style: const TextStyle(height: 1.45),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text('Hundar (${dogs.length})', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
+                  const SizedBox(height: 6),
+                  if (dogs.isEmpty) const Text('Inga hundar.'),
+                  for (final dog in dogs)
+                    Card(
+                      color: Colors.white,
+                      child: ListTile(
+                        title: Text('${dog['name']}', style: const TextStyle(fontWeight: FontWeight.w800)),
+                        subtitle: Text('${dog['breed'] ?? ''} · ${dog['city'] ?? ''}\n${dog['intent'] ?? 'friends'}${dog['dog_verified'] == true ? '\nHund verifierad' : ''}'),
+                        isThreeLine: true,
+                      ),
+                    ),
+                  const SizedBox(height: 14),
+                  Text('Avtal (${deals.length})', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
+                  const SizedBox(height: 6),
+                  if (deals.isEmpty) const Text('Inga avtal.'),
+                  for (final deal in deals)
+                    Card(
+                      color: Colors.white,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(
+                          [
+                            '${deal['a'] ?? 'Part 1'} och ${deal['b'] ?? 'Part 2'}',
+                            _line('Motpart', '${deal['with'] ?? ''}'),
+                            _line('Plats', '${deal['place'] ?? ''}'),
+                            _line('Pris per valp', '${deal['price'] ?? ''}'),
+                            _line('Signerad av', '${deal['me'] ?? ''}'),
+                            _line('Signerad av motpart', '${deal['other'] ?? ''}'),
+                            _line('Adress 1', '${deal['addrA'] ?? ''}'),
+                            _line('Telefon 1', '${deal['phoneA'] ?? ''}'),
+                            _line('Personnummer 1', '${deal['pnrA'] ?? ''}'),
+                            _line('Adress 2', '${deal['addrB'] ?? ''}'),
+                            _line('Telefon 2', '${deal['phoneB'] ?? ''}'),
+                            _line('Personnummer 2', '${deal['pnrB'] ?? ''}'),
+                          ].join('\n'),
+                          style: const TextStyle(height: 1.4),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 14),
+                  const Text('Vad knapparna gör', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
+                  const SizedBox(height: 6),
+                  const Card(
+                    color: Colors.white,
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Text(
+                        'De tre prickarna längst upp.\n\nAktivera kontot: personen kan använda appen igen och hundarna syns i flödet.\n\nAvaktivera kontot: personen kommer inte in i appen och hundarna döljs. Ingenting raderas. Du kan aktivera igen.',
+                        style: TextStyle(height: 1.4),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+      ),
     );
   }
 }
@@ -705,7 +871,9 @@ class _TeamState extends State<_Team> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       children: [
-        const Text('Skapa en kod och skicka den till personen. Hen trycker sju gånger på PawMatch i profilen och skriver in koden. Koden fungerar en gång.', style: TextStyle(height: 1.35, color: Color(0xFF3D4A57))),
+        const Text('Chefen äger appen och kan inte tas bort. Inbjudna admins kan öppna supporten, men vanliga användare kommer inte dit.', style: TextStyle(height: 1.35, color: Color(0xFF3D4A57))),
+        const SizedBox(height: 8),
+        const Text('Skapa en kod och skicka den till personen. Hen trycker sju gånger på PawMatch i profilen och skriver in koden. Koden fungerar en gång. När koden används får chefen en notis.', style: TextStyle(height: 1.35, color: Color(0xFF3D4A57))),
         const SizedBox(height: 12),
         FilledButton(
           onPressed: () async {
@@ -720,16 +888,30 @@ class _TeamState extends State<_Team> {
           Text(fresh, textAlign: TextAlign.center, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: 2)),
         ],
         const SizedBox(height: 18),
-        const Text('Admins', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
-        for (final email in people)
+        const Text('Chef', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
+        Card(
+          color: Colors.white,
+          child: ListTile(
+            title: const Text('dilanahanna@hotmail.com'),
+            subtitle: const Text('Chef. Äger appen och supporten. Kan inte tas bort.'),
+            leading: const Icon(Icons.verified_user, color: Color(0xFF1F8A4C)),
+          ),
+        ),
+        const SizedBox(height: 14),
+        const Text('Inbjudna admins', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
+        if (people.where((email) => email != 'dilanahanna@hotmail.com').isEmpty)
+          const Padding(padding: EdgeInsets.only(top: 8), child: Text('Ingen inbjuden admin ännu.')),
+        for (final email in people.where((email) => email != 'dilanahanna@hotmail.com'))
           Card(
             color: Colors.white,
             child: ListTile(
+              leading: const Icon(Icons.admin_panel_settings_outlined),
               title: Text(email),
-              subtitle: Text(email == 'dilanahanna@hotmail.com' ? 'Ägare' : 'Admin'),
-              trailing: email == 'dilanahanna@hotmail.com' || email == widget.email.toLowerCase()
+              subtitle: const Text('Inbjuden admin. Kan öppna supporten, inte äga appen.'),
+              trailing: email == widget.email.toLowerCase()
                   ? null
                   : IconButton(
+                      tooltip: 'Ta bort admin',
                       icon: const Icon(Icons.person_remove_outlined),
                       onPressed: () async {
                         await Network.revokeAdmin(email);
