@@ -160,10 +160,12 @@ class DealSheet {
       context: context,
       isScrollControlled: true,
       backgroundColor: const Color(0xFF5C4033),
-      builder: (ctx) => SizedBox(
-        height: MediaQuery.sizeOf(ctx).height,
+      builder: (sheet) {
+        final top = MediaQuery.viewPaddingOf(sheet).top;
+        return SizedBox(
+        height: MediaQuery.sizeOf(sheet).height,
         child: Padding(
-        padding: EdgeInsets.only(top: MediaQuery.viewPaddingOf(ctx).top + 4),
+        padding: EdgeInsets.only(top: (top < 47 ? 59 : top) + 18),
         child: StatefulBuilder(
           builder: (ctx, setLocal) {
             final me = state.email.trim().toLowerCase();
@@ -177,44 +179,23 @@ class DealSheet {
             }
             if (iAmA) iAmB = false;
             final otherName = iAmA ? deal.partyB : deal.partyA;
-            final waiting = deal.signedByMe.isNotEmpty && !deal.fullySigned;
             String sideName(bool mineSide) => mineSide ? deal.signedByMe : deal.signedByOther;
             List<List<SigPoint>> sideSign(bool mineSide) => mineSide ? deal.signature : deal.signatureOther;
             return Column(
               children: [
-                GestureDetector(
-                  onVerticalDragEnd: (d) {
-                    if ((d.primaryVelocity ?? 0) > 250) Navigator.pop(ctx);
-                  },
-                  child: Row(
-                    children: [
-                      IconButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFFF4E7D3)),
-                      ),
-                      const Expanded(child: Text('Avelsavtal', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFFF4E7D3), fontSize: 22, fontWeight: FontWeight.w800))),
-                      const SizedBox(width: 48),
-                    ],
-                  ),
-                ),
                 Expanded(
                   child: SingleChildScrollView(
               padding: EdgeInsets.fromLTRB(12, 0, 12, MediaQuery.viewInsetsOf(ctx).bottom + MediaQuery.viewPaddingOf(ctx).bottom + 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    deal.fullySigned
-                        ? 'Signerat av båda parter. Du kan ladda ner det.'
-                        : waiting
-                            ? 'Du har signerat. Väntar på $otherName.'
-                            : deal.signedByOther.isNotEmpty
-                                ? '${deal.signedByOther} har signerat. Din tur.'
-                                : 'Båda måste signera innan avtalet är klart.',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Color(0xFFF4E7D3)),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      onPressed: () => Navigator.of(sheet).pop(),
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFFF4E7D3), size: 22),
+                    ),
                   ),
-                  const SizedBox(height: 10),
                   Row(
                     children: [
                       Expanded(child: _OwnerChip(label: deal.partyA.isEmpty ? state.fullName : deal.partyA, color: const Color(0xFFE25C3A), onTap: () => _me(context, state))),
@@ -345,7 +326,8 @@ class DealSheet {
           },
         ),
         ),
-      ),
+      );
+      },
     );
   }
 
