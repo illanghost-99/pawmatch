@@ -160,8 +160,10 @@ class DealSheet {
       context: context,
       isScrollControlled: true,
       backgroundColor: const Color(0xFF5C4033),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(12, 12, 12, MediaQuery.viewInsetsOf(ctx).bottom + 16),
+      builder: (ctx) => SizedBox(
+        height: MediaQuery.sizeOf(ctx).height,
+        child: Padding(
+        padding: EdgeInsets.only(top: MediaQuery.viewPaddingOf(ctx).top + 4),
         child: StatefulBuilder(
           builder: (ctx, setLocal) {
             final me = state.email.trim().toLowerCase();
@@ -178,12 +180,29 @@ class DealSheet {
             final waiting = deal.signedByMe.isNotEmpty && !deal.fullySigned;
             String sideName(bool mineSide) => mineSide ? deal.signedByMe : deal.signedByOther;
             List<List<SigPoint>> sideSign(bool mineSide) => mineSide ? deal.signature : deal.signatureOther;
-            return SingleChildScrollView(
+            return Column(
+              children: [
+                GestureDetector(
+                  onVerticalDragEnd: (d) {
+                    if ((d.primaryVelocity ?? 0) > 250) Navigator.pop(ctx);
+                  },
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFFF4E7D3)),
+                      ),
+                      const Expanded(child: Text('Avelsavtal', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFFF4E7D3), fontSize: 22, fontWeight: FontWeight.w800))),
+                      const SizedBox(width: 48),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(12, 0, 12, MediaQuery.viewInsetsOf(ctx).bottom + MediaQuery.viewPaddingOf(ctx).bottom + 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text('Avelsavtal', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFFF4E7D3), fontSize: 22, fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 8),
                   Text(
                     deal.fullySigned
                         ? 'Signerat av båda parter. Du kan ladda ner det.'
@@ -319,8 +338,12 @@ class DealSheet {
                   ),
                 ],
               ),
+            ),
+                ),
+              ],
             );
           },
+        ),
         ),
       ),
     );
