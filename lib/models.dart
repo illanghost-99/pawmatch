@@ -193,6 +193,12 @@ class BreedingDeal {
     required this.body,
     this.signedByMe = '',
     this.signedByOther = '',
+    this.addrA = '',
+    this.phoneA = '',
+    this.pnrA = '',
+    this.addrB = '',
+    this.phoneB = '',
+    this.pnrB = '',
     List<List<SigPoint>>? signature,
     List<List<SigPoint>>? signatureOther,
   })  : signature = signature ?? [],
@@ -206,6 +212,12 @@ class BreedingDeal {
   final String body;
   String signedByMe;
   String signedByOther;
+  String addrA;
+  String phoneA;
+  String pnrA;
+  String addrB;
+  String phoneB;
+  String pnrB;
   List<List<SigPoint>> signature;
   List<List<SigPoint>> signatureOther;
   bool get fullySigned => signedByMe.isNotEmpty && signedByOther.isNotEmpty;
@@ -218,6 +230,12 @@ class BreedingDeal {
         'a': partyA,
         'b': partyB,
         'body': body,
+        'addrA': addrA,
+        'phoneA': phoneA,
+        'pnrA': pnrA,
+        'addrB': addrB,
+        'phoneB': phoneB,
+        'pnrB': pnrB,
         'me': signedByMe,
         'other': signedByOther,
         'sig': [
@@ -248,6 +266,12 @@ class BreedingDeal {
         partyA: '${j['a'] ?? ''}',
         partyB: '${j['b'] ?? ''}',
         body: '${j['body'] ?? ''}',
+        addrA: '${j['addrA'] ?? ''}',
+        phoneA: '${j['phoneA'] ?? ''}',
+        pnrA: '${j['pnrA'] ?? ''}',
+        addrB: '${j['addrB'] ?? ''}',
+        phoneB: '${j['phoneB'] ?? ''}',
+        pnrB: '${j['pnrB'] ?? ''}',
         signedByMe: '${j['me'] ?? ''}',
         signedByOther: '${j['other'] ?? ''}',
         signature: _strokes(j['sig']),

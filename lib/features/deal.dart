@@ -216,6 +216,47 @@ class DealSheet {
                         const Center(child: Text('AVELSAVTAL', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900))),
                         const Divider(height: 24),
                         Text(deal.body, style: const TextStyle(height: 1.45, fontSize: 14, color: Color(0xFF2C2118))),
+                        const SizedBox(height: 14),
+                        const Text('Uppgifter', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                        const SizedBox(height: 4),
+                        const Text('Varje part fyller i sina tre uppgifter. Signering är låst tills de är ifyllda.', style: TextStyle(fontSize: 12, height: 1.35)),
+                        const SizedBox(height: 10),
+                        _PartyFacts(
+                          title: deal.partyA.isEmpty ? 'Part 1' : deal.partyA,
+                          addr: deal.addrA,
+                          phone: deal.phoneA,
+                          pnr: deal.pnrA,
+                          edit: iAmA && deal.signedByMe.isEmpty,
+                          onChanged: (a, p, n) {
+                            deal.addrA = a;
+                            deal.phoneA = p;
+                            deal.pnrA = n;
+                            state.bump();
+                            setLocal(() {});
+                          },
+                        ),
+                        const SizedBox(height: 10),
+                        _PartyFacts(
+                          title: deal.partyB.isEmpty ? 'Part 2' : deal.partyB,
+                          addr: deal.addrB,
+                          phone: deal.phoneB,
+                          pnr: deal.pnrB,
+                          edit: iAmB && deal.signedByMe.isEmpty,
+                          onChanged: (a, p, n) {
+                            deal.addrB = a;
+                            deal.phoneB = p;
+                            deal.pnrB = n;
+                            state.bump();
+                            setLocal(() {});
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        const Text('Försäkran', style: TextStyle(fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Genom att signera intygar och svär varje part att uppgifterna är riktiga och stämmer överens med personen själv.',
+                          style: TextStyle(height: 1.4, fontSize: 13),
+                        ),
                       ],
                     ),
                   ),
@@ -227,7 +268,15 @@ class DealSheet {
                         name: sideName(iAmA),
                         strokes: sideSign(iAmA),
                         empty: iAmA ? 'Tryck för att signera' : 'Inte signerad',
-                        onTap: iAmA && deal.signedByMe.isEmpty ? () => _writeSign(context, ctx, setLocal, state, thread, deal, otherName) : null,
+                        onTap: !iAmA || deal.signedByMe.isNotEmpty
+                            ? null
+                            : () async {
+                                if (!_ownReady(deal, true)) {
+                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fyll i adress, telefonnummer och personnummer innan du signerar.')));
+                                  return;
+                                }
+                                await _writeSign(context, ctx, setLocal, state, thread, deal, otherName);
+                              },
                       )),
                       const SizedBox(width: 8),
                       Expanded(child: _signColumn(
@@ -235,7 +284,15 @@ class DealSheet {
                         name: sideName(iAmB),
                         strokes: sideSign(iAmB),
                         empty: iAmB ? 'Tryck för att signera' : 'Inte signerad',
-                        onTap: iAmB && deal.signedByMe.isEmpty ? () => _writeSign(context, ctx, setLocal, state, thread, deal, otherName) : null,
+                        onTap: !iAmB || deal.signedByMe.isNotEmpty
+                            ? null
+                            : () async {
+                                if (!_ownReady(deal, false)) {
+                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fyll i adress, telefonnummer och personnummer innan du signerar.')));
+                                  return;
+                                }
+                                await _writeSign(context, ctx, setLocal, state, thread, deal, otherName);
+                              },
                       )),
                     ],
                   ),
@@ -249,7 +306,7 @@ class DealSheet {
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFF4E7D3), side: const BorderSide(color: Color(0xFFF4E7D3)), minimumSize: const Size.fromHeight(48)),
                     onPressed: () async {
-                      await Clipboard.setData(ClipboardData(text: deal.body));
+                      await Clipboard.setData(ClipboardData(text: '${deal.body}${_factsText(deal)}'));
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Kopierat. Kan mejlas till ${state.email}.')));
                       }
@@ -377,7 +434,95 @@ class DealSheet {
     required String notes,
   }) {
     final day = DateTime.now().toIso8601String().split('T').first;
-    return 'Datum: $day\n\nParter\n1. $partyA ($mailA, $phoneA), ägare av $dogA\n2. $partyB, ägare av $dogB ($breed)\n\nÖverenskommelse\nAvel mellan ovan hundar. Förväntat antal valpar: $pups.\nPris per valp: $price kr.\nPlats: $place.\n\nÖvrigt\n${notes.isEmpty ? 'Inget ytterligare.' : notes}\n\nPawMatch är inte part och ger ingen veterinärrådgivning.\nMall, inte juridisk rådgivning.';
+    return 'Datum: $day\n\nParter\n1. $partyA ($mailA, $phoneA), ägare av $dogA\n2. $partyB, ägare av $dogB ($breed)\n\nÖverenskommelse\nAvel mellan ovan hundar. Förväntat antal valpar: $pups.\nPris per valp: $price kr.\nPlats: $place.\n\nÖvrigt\n${notes.isEmpty ? 'Inget ytterligare.' : notes}\n\nVarje part fyller i adress, telefonnummer och personnummer innan signering.\nPawMatch är inte part och ger ingen veterinärrådgivning.\nMall, inte juridisk rådgivning.';
+  }
+
+  static bool _ownReady(BreedingDeal deal, bool sideA) {
+    final addr = sideA ? deal.addrA : deal.addrB;
+    final phone = sideA ? deal.phoneA : deal.phoneB;
+    final pnr = sideA ? deal.pnrA : deal.pnrB;
+    return addr.trim().isNotEmpty && phone.trim().isNotEmpty && pnr.trim().isNotEmpty;
+  }
+
+  static String _factsText(BreedingDeal d) {
+    String block(String name, String addr, String phone, String pnr) =>
+        '$name\n1. Adress: ${addr.trim().isEmpty ? '—' : addr.trim()}\n2. Telefonnummer: ${phone.trim().isEmpty ? '—' : phone.trim()}\n3. Personnummer: ${pnr.trim().isEmpty ? '—' : pnr.trim()}';
+    return '\n\nUppgifter\n${block(d.partyA, d.addrA, d.phoneA, d.pnrA)}\n\n${block(d.partyB, d.addrB, d.phoneB, d.pnrB)}\n\nFörsäkran\nGenom att signera intygar och svär varje part att uppgifterna är riktiga och stämmer överens med personen själv.';
+  }
+}
+
+class _PartyFacts extends StatefulWidget {
+  const _PartyFacts({
+    required this.title,
+    required this.addr,
+    required this.phone,
+    required this.pnr,
+    required this.edit,
+    required this.onChanged,
+  });
+  final String title;
+  final String addr;
+  final String phone;
+  final String pnr;
+  final bool edit;
+  final void Function(String addr, String phone, String pnr) onChanged;
+
+  @override
+  State<_PartyFacts> createState() => _PartyFactsState();
+}
+
+class _PartyFactsState extends State<_PartyFacts> {
+  late final addr = TextEditingController(text: widget.addr);
+  late final phone = TextEditingController(text: widget.phone);
+  late final pnr = TextEditingController(text: widget.pnr);
+
+  @override
+  void dispose() {
+    addr.dispose();
+    phone.dispose();
+    pnr.dispose();
+    super.dispose();
+  }
+
+  void _push() => widget.onChanged(addr.text.trim(), phone.text.trim(), pnr.text.trim());
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.edit) {
+      String show(String live, TextEditingController box) {
+        final v = live.trim().isNotEmpty ? live.trim() : box.text.trim();
+        return v.isEmpty ? '—' : v;
+      }
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(widget.title, style: const TextStyle(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 4),
+          Text('1. Adress: ${show(widget.addr, addr)}'),
+          Text('2. Telefonnummer: ${show(widget.phone, phone)}'),
+          Text('3. Personnummer: ${show(widget.pnr, pnr)}'),
+        ],
+      );
+    }
+    InputDecoration field(String label) => InputDecoration(
+          labelText: label,
+          isDense: true,
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(widget.title, style: const TextStyle(fontWeight: FontWeight.w800)),
+        const SizedBox(height: 6),
+        TextField(controller: addr, textCapitalization: TextCapitalization.sentences, decoration: field('1. Adress'), onChanged: (_) => _push()),
+        const SizedBox(height: 6),
+        TextField(controller: phone, keyboardType: TextInputType.phone, decoration: field('2. Telefonnummer'), onChanged: (_) => _push()),
+        const SizedBox(height: 6),
+        TextField(controller: pnr, keyboardType: TextInputType.number, decoration: field('3. Personnummer'), onChanged: (_) => _push()),
+      ],
+    );
   }
 }
 

@@ -1033,6 +1033,12 @@ class AppState extends ChangeNotifier {
         next.signedByOther = prev.signedByOther;
         next.signatureOther = prev.signatureOther;
       }
+      if (next.addrA.isEmpty && prev.addrA.isNotEmpty) next.addrA = prev.addrA;
+      if (next.phoneA.isEmpty && prev.phoneA.isNotEmpty) next.phoneA = prev.phoneA;
+      if (next.pnrA.isEmpty && prev.pnrA.isNotEmpty) next.pnrA = prev.pnrA;
+      if (next.addrB.isEmpty && prev.addrB.isNotEmpty) next.addrB = prev.addrB;
+      if (next.phoneB.isEmpty && prev.phoneB.isNotEmpty) next.phoneB = prev.phoneB;
+      if (next.pnrB.isEmpty && prev.pnrB.isNotEmpty) next.pnrB = prev.pnrB;
     }
     t.deal = next;
   }
@@ -1051,6 +1057,7 @@ class AppState extends ChangeNotifier {
     final iAmA = author == email.toLowerCase();
     final signA = iAmA ? mine : (prior['signA'] is Map ? Map<String, dynamic>.from(prior['signA'] as Map) : {'name': '', 'sig': []});
     final signB = iAmA ? (prior['signB'] is Map ? Map<String, dynamic>.from(prior['signB'] as Map) : {'name': '', 'sig': []}) : mine;
+    String keep(String local, String key) => local.trim().isNotEmpty ? local.trim() : '${prior[key] ?? ''}'.trim();
     return {
       'author': author,
       'price': d.pricePerPuppy,
@@ -1060,6 +1067,12 @@ class AppState extends ChangeNotifier {
       'a': d.partyA,
       'b': d.partyB,
       'body': d.body,
+      'addrA': keep(d.addrA, 'addrA'),
+      'phoneA': keep(d.phoneA, 'phoneA'),
+      'pnrA': keep(d.pnrA, 'pnrA'),
+      'addrB': keep(d.addrB, 'addrB'),
+      'phoneB': keep(d.phoneB, 'phoneB'),
+      'pnrB': keep(d.pnrB, 'pnrB'),
       'signA': signA,
       'signB': signB,
     };
