@@ -21,6 +21,7 @@ class _OwnerPageState extends State<OwnerPage> {
   String bio = '';
   String city = '';
   String photo = '';
+  String profileName = '';
   bool loading = true;
   DogProfile? listing;
   final pager = PageController();
@@ -62,16 +63,18 @@ class _OwnerPageState extends State<OwnerPage> {
       final nextPhoto = '${row['photo_url'] ?? ''}';
       final nextBio = '${row['bio'] ?? ''}';
       final nextCity = '${row['city'] ?? ''}';
+      final nextName = '${row['first_name'] ?? ''} ${row['last_name'] ?? ''}'.trim();
       if (nextPhoto.startsWith('http')) photo = nextPhoto;
       if (nextBio.trim().isNotEmpty) bio = nextBio.trim();
       if (nextCity.trim().isNotEmpty) city = nextCity.trim();
+      if (nextName.isNotEmpty) profileName = nextName;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final dog = widget.dog;
-    final name = dog.owner.trim().isEmpty ? 'Hundägare' : dog.owner.trim();
+    final name = profileName.isNotEmpty ? profileName : (dog.owner.trim().isEmpty ? 'Hundägare' : dog.owner.trim());
     final adDog = ad;
     final photos = adDog.gallery.where((p) => p.startsWith('http')).toList();
     final intent = adDog.availableForBreeding && adDog.availableForFriends

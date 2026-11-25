@@ -566,6 +566,20 @@ class AppState extends ChangeNotifier {
     final rows = await Network.myMatches(email);
     if (rows == null) return;
     final me = email.toLowerCase();
+    final peers = <String>[];
+    for (final r in rows) {
+      final a = (r['user_a'] as String? ?? '').toLowerCase();
+      final b = (r['user_b'] as String? ?? '').toLowerCase();
+      final peer = a == me ? b : a;
+      if (peer.contains('@')) peers.add(peer);
+    }
+    final names = await Network.profileNames(peers);
+    if (names.isNotEmpty) {
+      for (var i = 0; i < liveDogs.length; i++) {
+        final next = names[liveDogs[i].ownerEmail.toLowerCase()];
+        if (next != null) liveDogs[i] = liveDogs[i].withOwner(next);
+      }
+    }
     for (final r in rows) {
       final id = '${r['id']}';
       final a = (r['user_a'] as String? ?? '').toLowerCase();
@@ -588,12 +602,12 @@ class AppState extends ChangeNotifier {
         }
       }
       if (thread == null) {
-        thread = MatchThread(_dogFromMatch(r, peer), [], accepted: true, outgoing: false, peerEmail: peer, cloudMatchId: id);
+        thread = MatchThread(_dogFromMatch(r, peer).withOwner(names[peer] ?? ''), [], accepted: true, outgoing: false, peerEmail: peer, cloudMatchId: id);
         matches.insert(0, thread);
       } else {
         thread.accepted = true;
         thread.cloudMatchId = id;
-        final dog = _dogFromMatch(r, peer);
+        final dog = _dogFromMatch(r, peer).withOwner(names[peer] ?? '');
         if (dog.name.isNotEmpty && dog.name != 'Hund' && dog.name != 'Match') thread.dog = dog;
       }
       attachDeal(thread);
@@ -844,6 +858,7 @@ class AppState extends ChangeNotifier {
     await prefs.setString('photoUrl', photoUrl);
     persist();
     await Network.saveOwner(email: email, first: firstName, last: lastName, bio: ownerBio, city: locationLabel, photo: photoUrl);
+    await Network.renameOwner(email, fullName);
     notifyListeners();
   }
 

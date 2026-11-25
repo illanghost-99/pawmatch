@@ -115,6 +115,48 @@ class DogProfile {
     return all.toSet().toList();
   }
 
+  DogProfile withOwner(String name) {
+    final next = name.trim();
+    if (next.isEmpty || next == owner) return this;
+    return DogProfile(
+      id: id,
+      name: this.name,
+      breed: breed,
+      age: age,
+      city: city,
+      lat: lat,
+      lng: lng,
+      bio: bio,
+      owner: next,
+      tags: tags,
+      photoUrl: photoUrl,
+      photos: photos,
+      sex: sex,
+      weightKg: weightKg,
+      ownerPhoto: ownerPhoto,
+      intent: intent,
+      pedigreeStatus: pedigreeStatus,
+      vaccineStatus: vaccineStatus,
+      availableForBreeding: availableForBreeding,
+      availableForFriends: availableForFriends,
+      reviews: reviews,
+      ownerEmail: ownerEmail,
+      chipped: chipped,
+      vaccinated: vaccinated,
+      dewormed: dewormed,
+      neutered: neutered,
+      hasPedigree: hasPedigree,
+      hasAllergies: hasAllergies,
+      allergyNote: allergyNote,
+      healthNote: healthNote,
+      vaccineNote: vaccineNote,
+      pedigreeNote: pedigreeNote,
+      ownerVerified: ownerVerified,
+      dogVerified: dogVerified,
+      ownerPremium: ownerPremium,
+    );
+  }
+
   String get sexLabel {
     final s = sex.toLowerCase();
     if (s == 'hane') return 'Hane';

@@ -85,7 +85,7 @@ class Network {
       if (!file.existsSync()) return null;
       final bytes = await compute(_shrinkPhoto, await file.readAsBytes());
       final id = email.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_');
-      final name = 'owners/$id.jpg';
+      final name = 'owners/$id-${DateTime.now().millisecondsSinceEpoch}.jpg';
       await c.storage.from('dog-photos').uploadBinary(
             name,
             bytes,
@@ -120,6 +120,36 @@ class Network {
       });
     } catch (e) {
       debugPrint('saveOwner $e');
+    }
+  }
+
+  static Future<void> renameOwner(String email, String name) async {
+    final c = _c;
+    final next = name.trim();
+    if (c == null || !email.contains('@') || next.isEmpty) return;
+    try {
+      await c.from('pm_dogs').update({'owner_name': next}).eq('owner_email', email.toLowerCase());
+    } catch (e) {
+      debugPrint('renameOwner $e');
+    }
+  }
+
+  static Future<Map<String, String>> profileNames(Iterable<String> emails) async {
+    final c = _c;
+    final list = emails.map((e) => e.toLowerCase()).where((e) => e.contains('@')).toSet().toList();
+    if (c == null || list.isEmpty) return {};
+    try {
+      final rows = await c.from('pm_profiles').select('email,first_name,last_name').inFilter('email', list);
+      final out = <String, String>{};
+      for (final r in List.from(rows)) {
+        final mail = '${r['email'] ?? ''}'.toLowerCase();
+        final who = '${r['first_name'] ?? ''} ${r['last_name'] ?? ''}'.trim();
+        if (mail.contains('@') && who.isNotEmpty) out[mail] = who;
+      }
+      return out;
+    } catch (e) {
+      debugPrint('profileNames $e');
+      return {};
     }
   }
 
