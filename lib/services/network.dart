@@ -1006,15 +1006,17 @@ class Network {
     }
   }
 
-  static Future<void> revokeAdmin(String email) async {
+  static Future<bool> revokeAdmin(String email) async {
     final who = email.trim().toLowerCase();
-    if (who == 'dilanahanna@hotmail.com') return;
+    if (who == ownerMail) return false;
     final c = _c;
-    if (c == null || !who.contains('@')) return;
+    if (c == null || !who.contains('@')) return false;
     try {
-      await c.from('pm_admins').delete().eq('email', who);
+      final rows = await c.from('pm_admins').delete().eq('email', who).select('email');
+      return rows.isNotEmpty;
     } catch (e) {
       debugPrint('revokeAdmin $e');
+      return false;
     }
   }
 

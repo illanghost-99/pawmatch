@@ -22,6 +22,7 @@ class _ProfilePageState extends State<ProfilePage> {
   int taps = 0;
   DateTime tapped = DateTime.fromMillisecondsSinceEpoch(0);
   bool admin = false;
+  DateTime _adminChecked = DateTime.fromMillisecondsSinceEpoch(0);
 
   AppState get state => widget.state;
 
@@ -36,6 +37,13 @@ class _ProfilePageState extends State<ProfilePage> {
 
   void _tick() {
     if (mounted) setState(() {});
+    if (!admin) return;
+    final now = DateTime.now();
+    if (now.difference(_adminChecked) < const Duration(seconds: 8)) return;
+    _adminChecked = now;
+    Network.isAdmin(state.email).then((v) {
+      if (mounted && v != admin) setState(() => admin = v);
+    });
   }
 
   @override
@@ -71,7 +79,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
     if (ok == true) {
       final typed = code.text.trim();
-      if (typed == '19461') {
+      if (typed == '19461' && state.email.toLowerCase() == Network.ownerMail) {
         await Network.grantAdmin(state.email);
         if (!mounted) return;
         setState(() => admin = true);
@@ -208,7 +216,13 @@ class _ProfilePageState extends State<ProfilePage> {
             Navigator.push(context, MaterialPageRoute(builder: (_) => ReportPage(state: state)));
           }),
           if (admin)
-            _tile(context, const Color(0xFF8C6A2F), Icons.admin_panel_settings_outlined, 'Supportinkorg', 'Rapporter och verifiering', () {
+            _tile(context, const Color(0xFF8C6A2F), Icons.admin_panel_settings_outlined, 'Supportinkorg', 'Rapporter och verifiering', () async {
+              final ok = await Network.isAdmin(state.email);
+              if (!mounted) return;
+              if (!ok) {
+                setState(() => admin = false);
+                return;
+              }
               Navigator.push(context, MaterialPageRoute(builder: (_) => AdminPage(state: state)));
             }),
           _tile(context, const Color(0xFF3D5A80), Icons.gavel_outlined, 'Villkor', 'Användarvillkor och GDPR', () => openLegalHub(context)),

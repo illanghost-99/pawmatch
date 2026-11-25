@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -20,6 +21,28 @@ class AdminPage extends StatefulWidget {
 
 class _AdminPageState extends State<AdminPage> {
   int tab = 0;
+  Timer? _gate;
+
+  @override
+  void initState() {
+    super.initState();
+    _gate = Timer.periodic(const Duration(seconds: 6), (_) => _keep());
+    _keep();
+  }
+
+  Future<void> _keep() async {
+    final mail = widget.state.email.toLowerCase();
+    if (mail == Network.ownerMail) return;
+    final ok = await Network.isAdmin(mail);
+    if (!mounted || ok) return;
+    Navigator.pop(context);
+  }
+
+  @override
+  void dispose() {
+    _gate?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -908,16 +931,30 @@ class _TeamState extends State<_Team> {
               leading: const Icon(Icons.admin_panel_settings_outlined),
               title: Text(email),
               subtitle: const Text('Inbjuden admin. Kan öppna supporten, inte äga appen.'),
-              trailing: email == widget.email.toLowerCase()
-                  ? null
-                  : IconButton(
-                      tooltip: 'Ta bort admin',
-                      icon: const Icon(Icons.person_remove_outlined),
-                      onPressed: () async {
-                        await Network.revokeAdmin(email);
-                        _load();
-                      },
+              trailing: TextButton(
+                onPressed: () async {
+                  final ok = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Ta bort admin?'),
+                      content: Text('$email förlorar supporten direkt. Supportinkorgen försvinner från hens konto. Inget annat på kontot ändras.'),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Avbryt')),
+                        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Ta bort')),
+                      ],
                     ),
+                  );
+                  if (ok != true || !mounted) return;
+                  final gone = await Network.revokeAdmin(email);
+                  if (!mounted) return;
+                  if (!gone) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kunde inte ta bort. Personen är kvar.')));
+                    return;
+                  }
+                  _load();
+                },
+                child: const Text('Ta bort'),
+              ),
             ),
           ),
       ],
