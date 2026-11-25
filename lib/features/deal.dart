@@ -73,6 +73,8 @@ class DealSheet {
                     partyA: state.fullName,
                     partyB: thread.dog.owner,
                     body: body,
+                    mailA: state.email.trim().toLowerCase(),
+                    mailB: thread.peerEmail.trim().toLowerCase(),
                   );
                   state.bump();
                   state.publishDeal(thread, tell: false);
@@ -162,15 +164,16 @@ class DealSheet {
         padding: EdgeInsets.fromLTRB(12, 12, 12, MediaQuery.viewInsetsOf(ctx).bottom + 16),
         child: StatefulBuilder(
           builder: (ctx, setLocal) {
-            final mine = state.fullName.trim().toLowerCase();
-            final nameA = deal.partyA.trim().toLowerCase();
-            final nameB = deal.partyB.trim().toLowerCase();
-            var iAmB = mine.isNotEmpty && mine == nameB;
-            var iAmA = !iAmB && mine.isNotEmpty && mine == nameA;
+            final me = state.email.trim().toLowerCase();
+            final mailA = deal.mailA.trim().toLowerCase();
+            final mailB = deal.mailB.trim().toLowerCase();
+            var iAmA = mailA.isNotEmpty && me == mailA;
+            var iAmB = mailB.isNotEmpty && me == mailB;
             if (!iAmA && !iAmB) {
-              iAmA = state.email.isNotEmpty && deal.body.toLowerCase().contains(state.email.toLowerCase());
-              iAmB = !iAmA;
+              iAmA = me.isNotEmpty && _exactMail(deal.body, me);
+              iAmB = !iAmA && me.isNotEmpty;
             }
+            if (iAmA) iAmB = false;
             final otherName = iAmA ? deal.partyB : deal.partyA;
             final waiting = deal.signedByMe.isNotEmpty && !deal.fullySigned;
             String sideName(bool mineSide) => mineSide ? deal.signedByMe : deal.signedByOther;
@@ -222,7 +225,7 @@ class DealSheet {
                         const Text('Varje part fyller i sina tre uppgifter. Signering är låst tills de är ifyllda.', style: TextStyle(fontSize: 12, height: 1.35)),
                         const SizedBox(height: 10),
                         _PartyFacts(
-                          title: deal.partyA.isEmpty ? 'Part 1' : deal.partyA,
+                          title: iAmA && deal.signedByMe.isEmpty ? 'Dina uppgifter' : (deal.partyA.isEmpty ? 'Part 1' : deal.partyA),
                           addr: deal.addrA,
                           phone: deal.phoneA,
                           pnr: deal.pnrA,
@@ -237,7 +240,7 @@ class DealSheet {
                         ),
                         const SizedBox(height: 10),
                         _PartyFacts(
-                          title: deal.partyB.isEmpty ? 'Part 2' : deal.partyB,
+                          title: iAmB && deal.signedByMe.isEmpty ? 'Dina uppgifter' : (deal.partyB.isEmpty ? 'Part 2' : deal.partyB),
                           addr: deal.addrB,
                           phone: deal.phoneB,
                           pnr: deal.pnrB,
@@ -435,6 +438,12 @@ class DealSheet {
   }) {
     final day = DateTime.now().toIso8601String().split('T').first;
     return 'Datum: $day\n\nParter\n1. $partyA ($mailA, $phoneA), ägare av $dogA\n2. $partyB, ägare av $dogB ($breed)\n\nÖverenskommelse\nAvel mellan ovan hundar. Förväntat antal valpar: $pups.\nPris per valp: $price kr.\nPlats: $place.\n\nÖvrigt\n${notes.isEmpty ? 'Inget ytterligare.' : notes}\n\nVarje part fyller i adress, telefonnummer och personnummer innan signering.\nPawMatch är inte part och ger ingen veterinärrådgivning.\nMall, inte juridisk rådgivning.';
+  }
+
+  static bool _exactMail(String body, String email) {
+    final me = email.trim().toLowerCase();
+    if (me.isEmpty) return false;
+    return RegExp('(?<![a-z0-9._%+-])${RegExp.escape(me)}(?![a-z0-9._%+-])').hasMatch(body.toLowerCase());
   }
 
   static bool _ownReady(BreedingDeal deal, bool sideA) {

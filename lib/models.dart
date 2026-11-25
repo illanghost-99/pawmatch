@@ -199,6 +199,8 @@ class BreedingDeal {
     this.addrB = '',
     this.phoneB = '',
     this.pnrB = '',
+    this.mailA = '',
+    this.mailB = '',
     List<List<SigPoint>>? signature,
     List<List<SigPoint>>? signatureOther,
   })  : signature = signature ?? [],
@@ -218,6 +220,8 @@ class BreedingDeal {
   String addrB;
   String phoneB;
   String pnrB;
+  String mailA;
+  String mailB;
   List<List<SigPoint>> signature;
   List<List<SigPoint>> signatureOther;
   bool get fullySigned => signedByMe.isNotEmpty && signedByOther.isNotEmpty;
@@ -236,6 +240,8 @@ class BreedingDeal {
         'addrB': addrB,
         'phoneB': phoneB,
         'pnrB': pnrB,
+        'mailA': mailA,
+        'mailB': mailB,
         'me': signedByMe,
         'other': signedByOther,
         'sig': [
@@ -272,6 +278,8 @@ class BreedingDeal {
         addrB: '${j['addrB'] ?? ''}',
         phoneB: '${j['phoneB'] ?? ''}',
         pnrB: '${j['pnrB'] ?? ''}',
+        mailA: '${j['mailA'] ?? ''}',
+        mailB: '${j['mailB'] ?? ''}',
         signedByMe: '${j['me'] ?? ''}',
         signedByOther: '${j['other'] ?? ''}',
         signature: _strokes(j['sig']),

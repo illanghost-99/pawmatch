@@ -1039,6 +1039,8 @@ class AppState extends ChangeNotifier {
       if (next.addrB.isEmpty && prev.addrB.isNotEmpty) next.addrB = prev.addrB;
       if (next.phoneB.isEmpty && prev.phoneB.isNotEmpty) next.phoneB = prev.phoneB;
       if (next.pnrB.isEmpty && prev.pnrB.isNotEmpty) next.pnrB = prev.pnrB;
+      if (next.mailA.isEmpty && prev.mailA.isNotEmpty) next.mailA = prev.mailA;
+      if (next.mailB.isEmpty && prev.mailB.isNotEmpty) next.mailB = prev.mailB;
     }
     t.deal = next;
   }
@@ -1073,6 +1075,8 @@ class AppState extends ChangeNotifier {
       'addrB': keep(d.addrB, 'addrB'),
       'phoneB': keep(d.phoneB, 'phoneB'),
       'pnrB': keep(d.pnrB, 'pnrB'),
+      'mailA': keep(d.mailA, 'mailA'),
+      'mailB': keep(d.mailB, 'mailB'),
       'signA': signA,
       'signB': signB,
     };
